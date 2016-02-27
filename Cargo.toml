@@ -1,0 +1,13 @@
+[package]
+name = "encode_unicode"
+keywords = ["unicode"]
+description = """
+"""
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/tormol/encode_unicode"
+documentation = "http://tormol.github.io/rustdoc/encode_unicode"
+authors = ["Torbjørn Birch Moltu <t.b.moltu@lyse.net>"]
+
+[dependencies]
+clippy = {optional=true, version="0.*"}# wildest wildcard crates.io will allow.
