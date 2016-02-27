@@ -1,8 +1,20 @@
 # encode_unicode
+Alternative and extension to to the unstable `char.encode_utf8()` and `char.encode_utf16()`.
 
+The goal was to fill in those methods for stable via a trait,
+but that didn't work since the methods already exist; they're just un-callable.
+
+## Contains:
+* **Utf8Char**: A `char` stored as UTF-8. Can be borrowed as a `str`.
+* **Utf8Iterator**: Iterate over or read the bytes of an UTF-8 codepoint.
+* **Utf16Char**: A `char` stored as UTF-16. Can be borrowed as a `u16` slice.
+* **Utf8Iterator**: Iterate over the units of an UTF-16 codepoint.
+* **Conversion methods on `char`**:
+  * to UTF-8 as `[u8; 4]` or into `&mut[u8]`. and vice versa.
+  * to UTF-16 as `(u16, Option<u16>)` or into `&mut[u16]`. and vice versa.
+* **Precise errors when decoding a char from UTF-8, UTF-16 or `u32` fails.**
 
 ## Feature flags:
-
 * **clipp**: Get extra warnings, see lib.rs for why I haven't fixed or `allow()`ed them.
 
 
