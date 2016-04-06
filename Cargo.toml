@@ -17,7 +17,7 @@ Alternative and extension to the unstable `char.encode_utf8()` and char.encode_u
 Can integrate with [ascii](https://tomprogrammer.github.io/rust-ascii/ascii/index.html) with the feature \"ascii\". (requires nightly)
 """
 readme = "README.md"
-version = "0.0.1"
+version = "0.1.0"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/tormol/encode_unicode"
 documentation = "http://tormol.github.io/rustdoc/encode_unicode"
