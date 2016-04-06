@@ -19,6 +19,8 @@
 #![cfg_attr(feature="clippy", allow(derive_hash_xor_eq))]// tested
 // precedence: I prefer spaces to parentheses, but it's nice to recheck.
 
+#![cfg_attr(feature="ascii", feature(ascii))]// one is a crate, the other is a std feature
+
 mod errors;
 mod traits;
 mod utf8_char;

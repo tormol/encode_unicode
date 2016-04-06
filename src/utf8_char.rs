@@ -17,6 +17,13 @@ use std::borrow::Borrow;
 use std::ops::Deref;
 use std::mem::transmute;
 
+#[cfg(feature="ascii")]
+use std::ascii::AsciiExt;
+#[cfg(feature="ascii")]
+extern crate ascii;
+#[cfg(feature="ascii")]
+use self::ascii::{Ascii,AsciiCast};
+
 
 // I don't think there is any good default value for char, but char does.
 #[derive(Default)]
@@ -101,6 +108,54 @@ impl Deref for Utf8Char {
     type Target = str;
     fn deref(&self) -> &Self::Target {
         self.as_ref()
+    }
+}
+
+
+  ////////////////
+ //ascii traits//
+////////////////
+#[cfg(feature="ascii")]
+/// Requires feature "ascii".
+impl AsciiExt for Utf8Char {
+    type Owned = Utf8Char;
+    fn is_ascii(&self) -> bool {
+        self.bytes[0].is_ascii()
+    }
+    fn eq_ignore_ascii_case(&self,  other: &Self) -> bool {
+        self.to_char().eq_ignore_ascii_case(&other.to_char())
+    }
+    fn to_ascii_uppercase(&self) -> Self::Owned {
+        let ascii = self.bytes[0].to_ascii_uppercase();
+        if ascii == self.bytes[0] {*self}
+        else {Utf8Char{ bytes: [ascii,0,0,0] }}
+    }
+    fn to_ascii_lowercase(&self) -> Self::Owned {
+        let ascii = self.bytes[0].to_ascii_lowercase();
+        if ascii == self.bytes[0] {*self}// unchanged
+        else {Utf8Char{ bytes: [ascii,0,0,0] }}// is ascii
+    }
+    // Theese methods are what prevents this from becoming stable
+    fn make_ascii_uppercase(&mut self) {
+        *self = self.to_ascii_uppercase()
+    }
+    fn make_ascii_lowercase(&mut self) {
+        *self = self.to_ascii_lowercase();
+    }
+}
+#[cfg(feature="ascii")]
+/// Requires feature "ascii".
+impl From<Ascii> for Utf8Char {
+    fn from(ac: Ascii) -> Self {
+        Utf8Char{ bytes: [ac.as_byte(),0,0,0] }
+    }
+}
+#[cfg(feature="ascii")]
+/// Requires feature "ascii".
+impl<'a> AsciiCast<'a> for Utf8Char {
+    type Target = Ascii;
+    unsafe fn to_ascii_nocheck(&'a self) -> Ascii {
+        self.bytes[0].to_ascii_nocheck()
     }
 }
 

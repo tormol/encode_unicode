@@ -15,6 +15,8 @@ but that didn't work since the methods already exist; they're just un-callable.
 * **Precise errors when decoding a char from UTF-8, UTF-16 or `u32` fails.**
 
 ## Feature flags:
+(both require nightly)
+* **ascii**: Implement `AsciiExt` and integrate with [ascii](https://tomprogrammer.github.io/rust-ascii/ascii/index.html)::`Ascii`.
 * **clippy**: Get extra warnings, see lib.rs for why I haven't fixed or `allow()`ed them.
 
 The unit tests only work on nightly since they use encode_utf{8,16}() as a reference.

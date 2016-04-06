@@ -13,6 +13,8 @@ Alternative and extension to the unstable `char.encode_utf8()` and char.encode_u
   * to UTF-8 as `[u8; 4]` or into `&mut[u8]`. and vice versa.
   * to UTF-16 as `(u16, Option<u16>)` or into `&mut[u16]`. and vice versa.
 * **Precise errors when decoding a char from UTF-8, UTF-16 or `u32` fails.**
+
+Can integrate with [ascii](https://tomprogrammer.github.io/rust-ascii/ascii/index.html) with the feature \"ascii\". (requires nightly)
 """
 readme = "README.md"
 version = "0.0.1"
@@ -22,4 +24,5 @@ documentation = "http://tormol.github.io/rustdoc/encode_unicode"
 authors = ["Torbjørn Birch Moltu <t.b.moltu@lyse.net>"]
 
 [dependencies]
+ascii = {optional=true, version="0.6"}
 clippy = {optional=true, version="0.*"}# wildest wildcard crates.io will allow.
