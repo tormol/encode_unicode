@@ -3,22 +3,9 @@ name = "encode_unicode"
 keywords = ["unicode"]
 description = """
 Alternative and extension to the unstable `char.encode_utf8()` and char.encode_utf16()` methods.
-
-<h2>Contains</h2>:
-<ul>
-<li>Utf8Char: A char stored as UTF-8. Can be borrowed as a str.</li>
-<li>Utf8Iterator: Iterate over or read the bytes of an UTF-8 codepoint.</li>
-<li>Utf16Char: A char stored as UTF-16. Can be borrowed as a u16 slice.</li>
-<li>Utf8Iterator: Iterate over the units of an UTF-16 codepoint.</li>
-<li>Conversion methods on char:<ol>
- <li>to UTF-8 as [u8; 4] or into &mut[u8]. and vice versa.</li>
- <li>to UTF-16 as (u16, Option<u16>) or into &mut[u16]. and vice versa.</li></ol>
-<li>Precise errors when decoding a char from UTF-8, UTF-16 or `u32` fails.
-</ul>
-Can integrate with <a href=\"https://tomprogrammer.github.io/rust-ascii/ascii/index.html\">ascii</a> with the feature \"ascii\". (requires nightly)
 """
 readme = "README.md"
-version = "0.1.2"
+version = "0.1.3"
 license = "MIT/Apache-2.0"
 repository = "https://github.com/tormol/encode_unicode"
 documentation = "http://tormol.github.io/rustdoc/encode_unicode"
