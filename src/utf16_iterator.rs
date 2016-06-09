@@ -11,32 +11,35 @@ use Utf16Char;
 extern crate std;
 use std::fmt;
 
+// Invalid values that says the field consumed or empty.
+const FIRST_USED: u16 = 0x_dc_00;
+const SECOND_USED: u16 = 0;
 
 /// Iterate over the units in an UTF-16 representation of a codepoint.
 #[derive(Clone,Copy)]
 pub struct Utf16Iterator {
-    first: Option<u16>,
-    second: Option<u16>,
+    first: u16,
+    second: u16,
 }
 impl From<char> for Utf16Iterator {
     fn from(c: char) -> Self {
         let (first, second) = c.to_utf16_tuple();
-        Utf16Iterator{ first: Some(first),  second: second }
+        Utf16Iterator{ first: first,  second: second.unwrap_or(SECOND_USED) }
     }
 }
 impl From<Utf16Char> for Utf16Iterator {
     fn from(uc: Utf16Char) -> Self {
         let (first, second) = uc.to_tuple();
-        Utf16Iterator{ first: Some(first),  second: second }
+        Utf16Iterator{ first: first,  second: second.unwrap_or(SECOND_USED) }
     }
 }
 impl Iterator for Utf16Iterator {
     type Item=u16;
     fn next(&mut self) -> Option<u16> {
         match (self.first, self.second) {
-            (Some(first), _)     => {self.first = None;   Some(first) },
-            (None, Some(second)) => {self.second = None;  Some(second)},
-            (None, None)         => {                     None        },
+            (FIRST_USED, SECOND_USED)  =>  {                            None        },
+            (FIRST_USED, second     )  =>  {self.second = SECOND_USED;  Some(second)},
+            (first     ,      _     )  =>  {self.first = FIRST_USED;    Some(first )},
         }
     }
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -45,12 +48,8 @@ impl Iterator for Utf16Iterator {
 }
 impl ExactSizeIterator for Utf16Iterator {
     fn len(&self) -> usize {
-        match (self.first, self.second) {
-            (None   ,  None   )  =>  0,
-            (Some(_),  None   )  =>  1,
-            (None   ,  Some(_))  =>  1,
-            (Some(_),  Some(_))  =>  2,
-        }
+        (if self.first == FIRST_USED {0} else {1}) +
+        (if self.second == SECOND_USED {0} else {1})
     }
 }
 impl fmt::Debug for Utf16Iterator {
