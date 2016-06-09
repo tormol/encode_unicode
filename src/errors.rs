@@ -16,12 +16,12 @@ use std::error::Error;
 
 
 
-/// Reason why Utf8Char::from_str() failed.
+/// Reasons why `Utf8Char::from_str()` failed.
 #[derive(Clone,Copy, Debug, PartialEq,Eq)]
 pub enum FromStrError {
-    /// Utf8Char cannot store more than a single codepoint.
+    /// `Utf8Char` cannot store more than a single codepoint.
     SeveralCodePoints,
-    /// Utf8Char cannot be empty.
+    /// `Utf8Char` cannot be empty.
     Empty,
 }
 use self::FromStrError::*;
@@ -39,10 +39,10 @@ impl Display for FromStrError {
 
 
 
-/// Reasons why an u32 is not a valid utf codepoint.
+/// Reasons why an `u32` is not a valid UTF codepoint.
 #[derive(Clone,Copy, Debug, PartialEq,Eq)]
 pub enum InvalidCodePoint {
-    /// It's reserved for utf-16 surrogate pairs.
+    /// It's reserved for UTF-16 surrogate pairs.
     Utf16Reserved,
     /// It's higher than the highest codepoint of 0x10ffff.
     TooHigh,

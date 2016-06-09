@@ -1,5 +1,5 @@
 # encode_unicode
-Alternative and extension to to the unstable `char.encode_utf8()` and `char.encode_utf16()`.
+Alternative and extension to to the unstable `char.encode_utf{8,16}()` and the proposed `char.encode_utf{8,16}()`.
 
 The goal was to fill in those methods for stable via a trait,
 but that didn't work since the methods already exist; they're just un-callable.
@@ -15,11 +15,12 @@ but that didn't work since the methods already exist; they're just un-callable.
 * **Precise errors when decoding a char from UTF-8, UTF-16 or `u32` fails.**
 
 ## Feature flags:
-(both require nightly)
-* **ascii**: Implement `AsciiExt` and integrate with [ascii](https://tomprogrammer.github.io/rust-ascii/ascii/index.html)::`Ascii`.
-* **clippy**: Get extra warnings, see lib.rs for why I haven't fixed or `allow()`ed them.
+* **ascii**: Integrate with [ascii](https://tomprogrammer.github.io/rust-ascii/ascii/index.html)::`Ascii`.
+* **clippy**: Get extra warnings on nightly, see lib.rs for why I haven't fixed or `allow()`ed them.
 
-The unit tests only work on nightly since they use encode_utf{8,16}() as a reference.
+The unit tests only work on old nightlies since they use `encode_utf{8,16}()` as a reference,
+but expect the old signature.  
+The code they test has not been changed since they broke.
 
 ## License
 

@@ -96,31 +96,37 @@ pub trait CharExt: Sized {
 
     /// Iterate over or [read](https://doc.rust-lang.org/std/io/trait.Read.html)
     /// the one to four bytes in the UTF-8 representation of this codepoint.
+    ///
+    /// An identical alternative to the unstable `char.encode_utf8()`.
+    /// That method somehow still exist on stable, so I have to use a different name.
     fn iter_utf8_bytes(self) -> Utf8Iterator;
 
     /// Iterate over the one or two units in the UTF-16 representation of this codepoint.
+    ///
+    /// An identical alternative to the unstable `char.encode_utf16()`.
+    /// That method somehow still exist on stable, so I have to use a different name.
     fn iter_utf16_units(self) -> Utf16Iterator;
 
 
     /// Convert this char to UTF-8, and then
     /// returns the number of bytes written.
     ///
-    /// `None` is returned if the buffer is too small; then the buffer is left unmodified.
+    /// # Panics
+    /// Will panic if the buffer is too small.
     /// A buffer of length four is always large enough.
     ///
-    /// Similar to the unstable `.encode_utf8()`,
-    /// but that method somehow still exist on stable, so I have to use a different name.
-    fn to_utf8_slice(self,  dst: &mut[u8]) -> Option<usize>;
+    /// A similar alternative to the proposed `char.write_utf8()`,
+    fn to_utf8_slice(self,  dst: &mut[u8]) -> usize;
 
     /// Convert this char to UTF-16, and then
     /// returns the number of units written.
     ///
-    /// `None` is returned if the buffer is too small; then the buffer is left unmodified.
+    /// # Panics
+    /// Will panic if the buffer is too small.
     /// A buffer of length two is always large enough.
     ///
-    /// Similar to the unstable `.encode_utf16()`,
-    /// but that method somehow still exist on stable, so I have to use a different name.
-    fn to_utf16_slice(self,  dst: &mut[u16]) -> Option<usize>;
+    /// a similar alternative to the proposed `char.write_utf16()`,
+    fn to_utf16_slice(self,  dst: &mut[u16]) -> usize;
 
 
     /// Convert this char to an UTF-8 array and lenght,
@@ -182,8 +188,8 @@ impl CharExt for char {
     fn iter_utf8_bytes(self) -> Utf8Iterator {
         self.to_utf8().into_iter()
     }
-    fn to_utf8_slice(self,  dst: &mut[u8]) -> Option<usize> {
-        self.to_utf8().to_slice(dst)
+    fn to_utf8_slice(self,  dst: &mut[u8]) -> usize {
+        self.to_utf8().to_slice(dst).expect("The provided buffer is too small.")
     }
 
     fn to_utf8_array(self) -> ([u8; 4], usize) {
@@ -280,17 +286,17 @@ impl CharExt for char {
         self.to_utf16().into_iter()
     }
 
-    fn to_utf16_slice(self,  dst: &mut[u16]) -> Option<usize> {
+    fn to_utf16_slice(self,  dst: &mut[u16]) -> usize {
         let (first, second) = self.to_utf16_tuple();
         match (dst.len(), second) {
-            (0, _)            =>  None,
-            (1, Some(_))      =>  None,
+            (0, _)            =>  panic!("The provided buffer is empty."),
+            (1, Some(_))      =>  panic!("The provided buffer is too small."),
             (_, Some(second)) => {dst[0] = first;
                                   dst[1] = second;
-                                  Some(2)
+                                  2
                                  },
             (_, None)         => {dst[0] = first;
-                                  Some(1)
+                                  1
                                  },
         }
     }
