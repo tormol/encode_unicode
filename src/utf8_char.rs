@@ -17,7 +17,6 @@ use std::borrow::Borrow;
 use std::ops::Deref;
 use std::mem::transmute;
 
-#[cfg(feature="ascii")]
 use std::ascii::AsciiExt;
 #[cfg(feature="ascii")]
 extern crate ascii;
@@ -115,8 +114,6 @@ impl Deref for Utf8Char {
   ////////////////
  //ascii traits//
 ////////////////
-#[cfg(feature="ascii")]
-/// Requires feature "ascii".
 impl AsciiExt for Utf8Char {
     type Owned = Utf8Char;
     fn is_ascii(&self) -> bool {
@@ -135,7 +132,6 @@ impl AsciiExt for Utf8Char {
         if ascii == self.bytes[0] {*self}// unchanged
         else {Utf8Char{ bytes: [ascii,0,0,0] }}// is ascii
     }
-    // Theese methods are what prevents this from becoming stable
     fn make_ascii_uppercase(&mut self) {
         *self = self.to_ascii_uppercase()
     }
@@ -143,6 +139,7 @@ impl AsciiExt for Utf8Char {
         *self = self.to_ascii_lowercase();
     }
 }
+
 #[cfg(feature="ascii")]
 /// Requires feature "ascii".
 impl From<Ascii> for Utf8Char {

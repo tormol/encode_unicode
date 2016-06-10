@@ -12,14 +12,13 @@
 
 // warnings
 #![warn(missing_docs)]
+// either `cargo clippy` doesn't see theese, or I get a warning when I build.
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
 #![cfg_attr(feature="clippy", allow(len_without_is_empty))]// UtfxChar is never empty
 #![cfg_attr(feature="clippy", allow(match_same_arms))]
 #![cfg_attr(feature="clippy", allow(derive_hash_xor_eq))]// tested
 // precedence: I prefer spaces to parentheses, but it's nice to recheck.
-
-#![cfg_attr(feature="ascii", feature(ascii))]// one is a crate, the other is a std feature
 
 mod errors;
 mod traits;
