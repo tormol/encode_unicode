@@ -12,5 +12,5 @@ documentation = "http://tormol.github.io/rustdoc/encode_unicode"
 authors = ["Torbjørn Birch Moltu <t.b.moltu@lyse.net>"]
 
 [dependencies]
-ascii = {optional=true, version="0.6"}
+ascii = {optional=true, version="0.7"}
 clippy = {optional=true, version="0.*"}# wildest wildcard crates.io will allow.

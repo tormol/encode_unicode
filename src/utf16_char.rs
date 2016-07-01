@@ -13,13 +13,13 @@ extern crate std;
 use std::{hash,fmt,cmp};
 use std::borrow::Borrow;
 use std::ops::Deref;
-
-#[cfg(feature="ascii")]
 use std::ascii::AsciiExt;
+#[cfg(feature="ascii")]
+use std::char;
 #[cfg(feature="ascii")]
 extern crate ascii;
 #[cfg(feature="ascii")]
-use self::ascii::{Ascii,AsciiCast};
+use self::ascii::{AsciiChar,ToAsciiChar,ToAsciiCharError};
 
 
 // I don't think there is any good default value for char, but char does.
@@ -89,12 +89,11 @@ impl Deref for Utf16Char {
   ////////////////
  //ascii traits//
 ////////////////
-#[cfg(feature="ascii")]
 /// Requires feature "ascii".
 impl AsciiExt for Utf16Char {
     type Owned = Self;
     fn is_ascii(&self) -> bool {
-        self.units[0] < 0x80
+        self.units[0] < 128
     }
     fn eq_ignore_ascii_case(&self,  other: &Self) -> bool {
         self.to_char().eq_ignore_ascii_case(&other.to_char())
@@ -113,19 +112,22 @@ impl AsciiExt for Utf16Char {
         *self = self.to_ascii_lowercase();
     }
 }
+
 #[cfg(feature="ascii")]
 /// Requires feature "ascii".
-impl From<Ascii> for Utf16Char {
-    fn from(ac: Ascii) -> Self {
-        Utf16Char{ units: [ac.as_byte() as u16,0] }
+impl From<AsciiChar> for Utf16Char {
+    fn from(ac: AsciiChar) -> Self {
+        Utf16Char{ units: [ac.as_byte() as u16, 0] }
     }
 }
 #[cfg(feature="ascii")]
 /// Requires feature "ascii".
-impl<'a> AsciiCast<'a> for Utf16Char {
-    type Target = Ascii;
-    unsafe fn to_ascii_nocheck(&'a self) -> Ascii {
-        (self.units[0] as u8).to_ascii_nocheck()
+impl ToAsciiChar for Utf16Char {
+    fn to_ascii_char(self) -> Result<AsciiChar, ToAsciiCharError> {
+        unsafe{ AsciiChar::from(char::from_u32_unchecked(self.units[0] as u32)) }
+    }
+    unsafe fn to_ascii_char_unchecked(self) -> AsciiChar {
+        AsciiChar::from_unchecked(self.units[0] as u8)
     }
 }
 

@@ -21,7 +21,7 @@ use std::ascii::AsciiExt;
 #[cfg(feature="ascii")]
 extern crate ascii;
 #[cfg(feature="ascii")]
-use self::ascii::{Ascii,AsciiCast};
+use self::ascii::{AsciiChar,ToAsciiChar,ToAsciiCharError};
 
 
 // I don't think there is any good default value for char, but char does.
@@ -142,17 +142,19 @@ impl AsciiExt for Utf8Char {
 
 #[cfg(feature="ascii")]
 /// Requires feature "ascii".
-impl From<Ascii> for Utf8Char {
-    fn from(ac: Ascii) -> Self {
+impl From<AsciiChar> for Utf8Char {
+    fn from(ac: AsciiChar) -> Self {
         Utf8Char{ bytes: [ac.as_byte(),0,0,0] }
     }
 }
 #[cfg(feature="ascii")]
-/// Requires feature "ascii".
-impl<'a> AsciiCast<'a> for Utf8Char {
-    type Target = Ascii;
-    unsafe fn to_ascii_nocheck(&'a self) -> Ascii {
-        self.bytes[0].to_ascii_nocheck()
+/// Requires feature "asciiChar".
+impl ToAsciiChar for Utf8Char {
+    fn to_ascii_char(self) -> Result<AsciiChar, ToAsciiCharError> {
+        self.bytes[0].to_ascii_char()
+    }
+    unsafe fn to_ascii_char_unchecked(self) -> AsciiChar {
+        self.bytes[0].to_ascii_char_unchecked()
     }
 }
 
