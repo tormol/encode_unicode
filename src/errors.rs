@@ -57,7 +57,7 @@ impl InvalidCodePoint {
 }
 impl Error for InvalidCodePoint {
     fn description(&self) -> &'static str {match *self {
-        Utf16Reserved => "is reserved for utf-16 surrogate pairs",
+        Utf16Reserved => "is reserved for UTF-16 surrogate pairs",
         TooHigh => "is higher than the highest codepoint of 0x10ffff",
     }}
 }
