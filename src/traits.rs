@@ -22,15 +22,18 @@ use std::ops::Not;
 /// Methods for working with `u8`s UTF-8.
 pub trait U8UtfExt {
     /// How many more bytes will you need to complete this codepoint?
-    /// Failures:
     ///
+    /// # Errors
+    /// An error is returned if this is not a valid start of an UTF-8 codepoint:
     /// * `128..192`: ContinuationByte
     /// * `240..`: TooLongSequence
     fn extra_utf8_bytes(self) -> Result<usize,InvalidUtf8FirstByte>;
 
     /// How many more bytes will you need to complete this codepoint?
-    /// Assumes that self is a valid UTF-8 start.
-    /// Returns `self.not().leading_zeros().saturating_sub(1)`
+    ///
+    /// This function assumes that self is a valid UTF-8 start,
+    /// and will return gibberish otherwize.
+    /// The formula is `self.not().leading_zeros().saturating_sub(1)`.
     fn extra_utf8_bytes_unchecked(self) -> usize;
 }
 
@@ -38,10 +41,10 @@ impl U8UtfExt for u8 {
     fn extra_utf8_bytes(self) -> Result<usize,InvalidUtf8FirstByte> {
         use error::InvalidUtf8FirstByte::{ContinuationByte,TooLongSeqence};
         match self.not().leading_zeros() {
-            0           =>  Ok(0),// ascii
-            1           =>  Err(ContinuationByte),// following byte
-            n if n < 5  =>  Ok(n as usize-1),// start of multibyte
-            _           =>  Err(TooLongSeqence),// too big
+            1       =>  Err(ContinuationByte),// following byte
+            5...255 =>  Err(TooLongSeqence),// too big
+            0       =>  Ok(0),// ASCII
+            n       =>  Ok(n as usize-1),// start of multibyte
         }
     }
     fn extra_utf8_bytes_unchecked(self) -> usize {
@@ -90,7 +93,7 @@ pub trait CharExt: Sized {
 
     /// Get the UTF-16 representation of this codepoint.
     ///
-    /// `Utf16Char` is to `(u16,Option<u16>)` what `char` is to `u32`:
+    /// `Utf16Char` is to `[u16;2]` what `char` is to `u32`:
     /// a restricted type that cannot be mutated internally.
     fn to_utf16(self) -> Utf16Char;
 
@@ -112,8 +115,9 @@ pub trait CharExt: Sized {
     /// returns the number of bytes written.
     ///
     /// # Panics
-    /// Will panic if the buffer is too small.
-    /// A buffer of length four is always large enough.
+    /// Will panic the buffer is too small;
+    /// You can get the required length from `.len_utf8()`,
+    /// but a buffer of length four is always large enough.
     ///
     /// A similar alternative to the proposed `char.write_utf8()`,
     fn to_utf8_slice(self,  dst: &mut[u8]) -> usize;
@@ -122,16 +126,18 @@ pub trait CharExt: Sized {
     /// returns the number of units written.
     ///
     /// # Panics
-    /// Will panic if the buffer is too small.
-    /// A buffer of length two is always large enough.
+    /// Will panic the buffer is too small;
+    /// You can get the required length from `.len_utf16()`,
+    /// but a buffer of length two is always large enough.
     ///
     /// a similar alternative to the proposed `char.write_utf16()`,
     fn to_utf16_slice(self,  dst: &mut[u16]) -> usize;
 
 
     /// Convert this char to an UTF-8 array and lenght,
-    /// The returned array is left-aligned, and the usize is how many bytes are used.
-    /// The unused bytes are zero.
+    ///
+    /// The returned array is left-aligned with unused bytes set to zero,
+    /// and the usize is how many bytes are used.
     fn to_utf8_array(self) -> ([u8; 4], usize);
 
     /// Convert this char to UTF-16.
@@ -157,8 +163,7 @@ pub trait CharExt: Sized {
     /// Convert an UTF-8 sequence into a char.
     /// The length of the slice is the length of the sequence, should be 1,2,3 or 4.
     ///
-    /// # Panics:
-    ///
+    /// # Panics
     /// If the slice is empty
     unsafe fn from_utf8_exact_slice_unchecked(src: &[u8]) -> Self;
 
@@ -168,8 +173,8 @@ pub trait CharExt: Sized {
 
     /// Perform some extra validations compared to `char::from_u32_unchecked()`
     ///
-    /// # Failures:
-    ///
+    /// # Errors
+    /// This function will return an error if
     /// * the value is greater than 0x10ffff
     /// * the value is between 0xd800 and 0xdfff (inclusive)
     fn from_u32_detailed(c: u32) -> Result<Self,InvalidCodePoint>;
@@ -189,7 +194,7 @@ impl CharExt for char {
         self.to_utf8().into_iter()
     }
     fn to_utf8_slice(self,  dst: &mut[u8]) -> usize {
-        self.to_utf8().to_slice(dst).expect("The provided buffer is too small.")
+        self.to_utf8().to_slice(dst)
     }
 
     fn to_utf8_array(self) -> ([u8; 4], usize) {
@@ -287,18 +292,7 @@ impl CharExt for char {
     }
 
     fn to_utf16_slice(self,  dst: &mut[u16]) -> usize {
-        let (first, second) = self.to_utf16_tuple();
-        match (dst.len(), second) {
-            (0, _)            =>  panic!("The provided buffer is empty."),
-            (1, Some(_))      =>  panic!("The provided buffer is too small."),
-            (_, Some(second)) => {dst[0] = first;
-                                  dst[1] = second;
-                                  2
-                                 },
-            (_, None)         => {dst[0] = first;
-                                  1
-                                 },
-        }
+        self.to_utf16().to_slice(dst)
     }
 
     fn to_utf16_tuple(self) -> (u16, Option<u16>) {

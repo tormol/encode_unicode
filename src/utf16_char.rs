@@ -186,18 +186,19 @@ impl Utf16Char {
     /// Write the internal representation to a slice,
     /// and then returns the number of `u16`s written.
     ///
-    /// `None` is returned if the buffer is too small; then the buffer is left unmodified.
-    /// A buffer of length two is always large enough.
-    pub fn to_slice(self,  dst: &mut[u16]) -> Option<usize> {
-        if self.len() <= dst.len() {
-            dst[0] = self.units[0];
-            if self.len() == 2 {
-                dst[1] = self.units[1];
-            }
-            Some(self.len())
-        } else {
-            None
+    /// # Panics
+    /// Will panic the buffer is too small;
+    /// You can get the required length from `.len()`,
+    /// but a buffer of length two is always large enough.
+    pub fn to_slice(self,  dst: &mut[u16]) -> usize {
+        match self.len() {
+            l if l > dst.len() => panic!("The provided buffer is too small."),
+            2 => {dst[1] = self.units[1];
+                  dst[0] = self.units[0];},
+            1 => {dst[0] = self.units[0];},
+            _ => unreachable!()
         }
+        self.len()
     }
     /// The second `u16` is used for surrogate pairs.
     pub fn to_tuple(self) -> (u16,Option<u16>) {

@@ -212,17 +212,18 @@ impl Utf8Char {
     /// Write the internal representation to a slice,
     /// and then returns the number of bytes written.
     ///
-    /// `None` is returned if the buffer is too small; then the buffer is left unmodified.
-    /// A buffer of length four is always large enough.
-    pub fn to_slice(self,  dst: &mut[u8]) -> Option<usize> {
-        if self.len() <= dst.len() {
-            for (dst, src) in dst.iter_mut().zip(self.bytes.iter()) {
-                *dst  = *src;
-            }
-            Some(self.len())
-        } else {
-            None
+    /// # Panics
+    /// Will panic the buffer is too small;
+    /// You can get the required length from `.len()`,
+    /// but a buffer of length four is always large enough.
+    pub fn to_slice(self,  dst: &mut[u8]) -> usize {
+        if self.len() > dst.len() {
+            panic!("The provided buffer is too small.");
         }
+        for (dst, src) in dst.iter_mut().zip(self.bytes.iter()) {
+            *dst  = *src;
+        }
+        self.len()
     }
     /// Expose the internal array and the number of used bytes.
     pub fn to_array(self) -> ([u8;4],usize) {
