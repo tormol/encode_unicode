@@ -48,85 +48,101 @@ const EDGES_AND_BETWEEN: [u32;13] = [
     0x10ffff,// max
 ];
 
+fn eq_cmp_hash(c: char) -> (Utf8Char, Utf16Char) {
+    let sh = &mut SipHasher::new();
+    let u8c = c.to_utf8();
+    assert_eq!(u8c.to_char(), c);
+    assert_eq!(u8c.hash(sh), c.hash(sh));
+    let u16c = c.to_utf16();
+    assert_eq!(u16c.to_char(), c);
+    assert_eq!(u16c.hash(sh), c.hash(sh));
+
+    for other in &EDGES_AND_BETWEEN {
+        let other = unsafe{ char::from_u32_unchecked(*other) };
+
+        let u8other = other.to_utf8();
+        assert_eq!(u8c == u8other,  c == other);
+        assert_eq!(u8c.hash(sh)==other.hash(sh),  c.hash(sh)==u8other.hash(sh));
+        assert_eq!(u8c.cmp(&u8other), c.cmp(&other));
+
+        let u16other = other.to_utf16();
+        assert_eq!(u16c == u16other,  c == other);
+        assert_eq!(u16c.hash(sh)==other.hash(sh),  c.hash(sh)==u16other.hash(sh));
+        assert_eq!(u16c.cmp(&u16other), c.cmp(&other));
+    }
+    (u8c, u16c)
+}
+
+fn iterators(c: char) {
+    let mut iter = c.iter_utf8_bytes();
+    let mut iter_ref = c.encode_utf8();
+    for _ in 0..6 {
+        assert_eq!(iter.size_hint(), iter_ref.size_hint());
+        assert_eq!(iter.next(), iter_ref.next());
+    }
+
+    let mut iter = c.iter_utf16_units();
+    let mut iter_ref = c.encode_utf16();
+    for _ in 0..4 {
+        assert_eq!(iter.size_hint(), iter_ref.size_hint());
+        assert_eq!(iter.next(), iter_ref.next());
+    }
+}
 
 fn test(c: u32) {
     let c = char::from_u32(c).expect(&format!("{:x} is not a valid char", c));
     assert_eq!(char::from_u32_detailed(c as u32), Ok(c));
-    let sh = &mut SipHasher::new();
+    let (u8c, u16c) = eq_cmp_hash(c);
+    iterators(c);
 
     // UTF-8
-    let uc = c.to_utf8();
-    assert_eq!(uc.to_char(), c);
-    assert_eq!(uc.hash(sh), c.hash(sh));
+    let reference = c.encode_utf8();
+    let reference = reference.as_slice();
+    let len = reference.len(); // short name because it is used in many places.
+    assert_eq!(reference[0].extra_utf8_bytes(), Ok(len-1));
+    assert_eq!(reference[0].extra_utf8_bytes_unchecked(), len-1);
 
-    let mut reference_dst = [0;4];
-    let mut len = None;
-    for i in 0..5 {
-        let mut test_dst = [0;4];
-        len = c.encode_utf8(&mut reference_dst[..i]);
+    for i in c.len_utf8()..5 {
+        let mut test_dst = [b'F';4];
         assert_eq!(c.to_utf8_slice(&mut test_dst[..i]), len);
-        assert_eq!(test_dst, reference_dst);
-        assert_eq!(uc.to_slice(&mut test_dst[..i]), len);
-        assert_eq!(test_dst, reference_dst);
+        for b in &mut test_dst[len..] {// Test that it doesn't write too much
+            assert_eq!(*b, b'F', "c={:?}, i={}, utf8_len={}", c, i, len);
+            *b = 0;
+        }
+        assert_eq!(&test_dst[..len], reference);
+        assert_eq!(AsRef::<[u8]>::as_ref(&u8c), reference);
+        assert_eq!(u8c.to_array(), (test_dst, len));
     }
-    let len = len.expect(&format!("encode_utf8 never succeded: c={}={:x}, utf8={:?}", c, c as u32, reference_dst));
-    let str_ = str::from_utf8(&reference_dst[..len]).unwrap();
-    let ustr = Utf8Char::from_str(str_).unwrap();
-    assert_eq!(ustr.to_array().0, uc.to_array().0);// bitwise equality
+    let (arr,arrlen) = u8c.to_array();
+    assert_eq!(arrlen, len);
+    assert_eq!(Utf8Char::from_array(arr), Ok(u8c));
+    assert_eq!(c.to_utf8_array(),  (arr, len));
+    assert_eq!(Utf8Char::from_slice_start(&arr), Ok((u8c,len)));// Test that it doesn't read too much
+    assert_eq!(Utf8Char::from_slice_start(reference), Ok((u8c,len)));
 
-    assert_eq!(reference_dst[0].extra_utf8_bytes(), Ok(len-1));
-    assert_eq!(reference_dst[0].extra_utf8_bytes_unchecked(), len-1);
-    assert_eq!(c.to_utf8_array(),  (reference_dst, len));
-    assert_eq!(char::from_utf8_array(reference_dst), Ok(c));
-    assert_eq!(char::from_utf8_slice(&reference_dst[..len]), Ok((c,len)));
-    for other in &EDGES_AND_BETWEEN {
-        let other = unsafe{ char::from_u32_unchecked(*other) };
-        let uother = other.to_utf8();
-        assert_eq!(uc == uother,  c == other);
-        assert_eq!(uc.hash(sh)==other.hash(sh),  c.hash(sh)==uother.hash(sh));
-        assert_eq!(uc.cmp(&uother), c.cmp(&other));
-    }
-    assert_eq!(uc.to_array(),  (reference_dst, len));
-    assert_eq!(Utf8Char::from_array(reference_dst), Ok(uc));
-    assert_eq!(Utf8Char::from_slice_start(&reference_dst[..len]), Ok((uc,len)));
-    assert_eq!(c.iter_utf8_bytes().len(), len);
-    let iterated: Vec<_> = c.iter_utf8_bytes().collect();
-    assert_eq!(iterated[..], reference_dst[..len]);
-    assert_eq!(<AsRef<[u8]>>::as_ref(&uc), &iterated[..]);
+    let str_ = str::from_utf8(reference).unwrap();
+    let ustr = Utf8Char::from_str(str_).unwrap();
+    assert_eq!(ustr.to_array().0, arr);// bitwise equality
+    assert_eq!(char::from_utf8_array(arr), Ok(c));
+    assert_eq!(char::from_utf8_slice(reference), Ok((c,len)));
 
     // UTF-16
-    let uc = c.to_utf16();
-    assert_eq!(uc.to_char(), c);
-    assert_eq!(uc.hash(sh), c.hash(sh));
-    let mut reference_dst = [0;2];
-    let mut len = None;
-    for i in 0..3 {
+    let reference = c.encode_utf16();
+    let reference = reference.as_slice();
+    let len = reference.len();
+    for i in c.len_utf16()..3 {
         let mut test_dst = [0;2];
-        len = c.encode_utf16(&mut reference_dst[..i]);
         assert_eq!(c.to_utf16_slice(&mut test_dst[..i]), len);
-        assert_eq!(test_dst, reference_dst);
-        assert_eq!(uc.to_slice(&mut test_dst[..i]), len);
-        assert_eq!(test_dst, reference_dst);
+        assert_eq!(&test_dst[..len], reference);
+        assert_eq!(u16c.to_slice(&mut test_dst[..i]), len);
     }
-    let len = len.unwrap();
-    assert_eq!(reference_dst[0].utf16_needs_extra_unit(), Some(len==2));
-    assert_eq!(reference_dst[0].utf16_is_leading_surrogate(), len==2);
-    assert_eq!(char::from_utf16_slice(&reference_dst[..len]), Ok((c,len)));
-    for other in &EDGES_AND_BETWEEN {
-        let other = unsafe{ char::from_u32_unchecked(*other) };
-        let uother = other.to_utf16();
-        assert_eq!(uc == uother,  c == other);
-        assert_eq!(uc.hash(sh)==other.hash(sh),  c.hash(sh)==uother.hash(sh));
-        assert_eq!(uc.cmp(&uother), c.cmp(&other));
-    }
+    assert_eq!(reference[0].utf16_needs_extra_unit(), Some(len==2));
+    assert_eq!(reference[0].utf16_is_leading_surrogate(), len==2);
+    assert_eq!(char::from_utf16_slice(&reference[..len]), Ok((c,len)));
     let tuple = c.to_utf16_tuple();
-    assert_eq!([tuple.0, tuple.1.unwrap_or(0)],  reference_dst);
+    assert_eq!(tuple, (reference[0],reference.get(1).cloned()));
     assert_eq!(char::from_utf16_tuple(tuple), Ok(c));
     assert_eq!(c.to_utf16().to_char(), c);
-    assert_eq!(c.iter_utf16_units().len(), len);
-    let iterated: Vec<_> = c.iter_utf16_units().collect();
-    assert_eq!(*iterated, reference_dst[0..len]);
-    assert_eq!(<AsRef<[u16]>>::as_ref(&uc), &iterated[..]);
 }
 
 
