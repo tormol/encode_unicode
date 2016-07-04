@@ -72,7 +72,7 @@ impl Display for InvalidCodePoint {
 /// Reasons why a byte is not the start of a UTF-8 codepoint.
 #[derive(Clone,Copy, Debug, PartialEq,Eq)]
 pub enum InvalidUtf8FirstByte {
-    /// Sequences cannot be longer than 4 bytes. Is given for bytes >= 240.
+    /// Sequences cannot be longer than 4 bytes. Is given for values >= 240.
     TooLongSeqence,
     /// This byte belongs to a previous seqence. Is given for values between 128 and 192 (exclusive).
     ContinuationByte,
@@ -95,14 +95,20 @@ impl Display for InvalidUtf8FirstByte {
 /// In sinking precedence.
 #[derive(Clone,Copy, Debug, PartialEq,Eq)]
 pub enum InvalidUtf8 {
-    /// Something is certainly wrong with the first byte.
+    /// Something is wrong with the first byte.
     FirstByte(InvalidUtf8FirstByte),
-    /// One of the continuation bytes doesnt fit the pattern 0b10xx_xxxx.
+    /// Thee byte at index 1...3 should be a continuation byte,
+    /// but dosesn't fit the pattern 0b10xx_xxxx.
     NotAContinuationByte(usize),
-    /// There are too many leading zeros; it could be a byte shorter.
+    /// There are too many leading zeros: it could be a byte shorter.
     OverLong,
 }
 use self::InvalidUtf8::*;
+impl From<InvalidUtf8FirstByte> for InvalidUtf8 {
+    fn from(error: InvalidUtf8FirstByte) -> InvalidUtf8 {
+        FirstByte(error)
+    }
+}
 impl Error for InvalidUtf8 {
     fn description(&self) -> &'static str {match *self {
         FirstByte(TooLongSeqence) => "the first byte is greater than 239 (UTF-8 seqences cannot be longer than four bytes)",
@@ -126,10 +132,20 @@ impl Display for InvalidUtf8 {
 /// Reasons why a byte array is not valid UTF-8, in sinking precedence.
 #[derive(Clone,Copy, Debug, PartialEq,Eq)]
 pub enum InvalidUtf8Array {
-    /// Something is certainly wrong with the first byte.
+    /// Not a valid UTF-8 sequence.
     Utf8(InvalidUtf8),
-    /// The encoded codepoint is invalid:
+    /// Not a valid unicode codepoint.
     CodePoint(InvalidCodePoint),
+}
+impl From<InvalidUtf8> for InvalidUtf8Array {
+    fn from(error: InvalidUtf8) -> InvalidUtf8Array {
+        InvalidUtf8Array::Utf8(error)
+    }
+}
+impl From<InvalidCodePoint> for InvalidUtf8Array {
+    fn from(error: InvalidCodePoint) -> InvalidUtf8Array {
+        InvalidUtf8Array::CodePoint(error)
+    }
 }
 impl Error for InvalidUtf8Array {
     fn description(&self) -> &'static str {match *self {
@@ -158,6 +174,16 @@ pub enum InvalidUtf8Slice {
     CodePoint(InvalidCodePoint),
     /// The slice is too short; n bytes was required.
     TooShort(usize),
+}
+impl From<InvalidUtf8> for InvalidUtf8Slice {
+    fn from(error: InvalidUtf8) -> InvalidUtf8Slice {
+        InvalidUtf8Slice::Utf8(error)
+    }
+}
+impl From<InvalidCodePoint> for InvalidUtf8Slice {
+    fn from(error: InvalidCodePoint) -> InvalidUtf8Slice {
+        InvalidUtf8Slice::CodePoint(error)
+    }
 }
 impl Error for InvalidUtf8Slice {
     fn description(&self) -> &'static str {match *self {
