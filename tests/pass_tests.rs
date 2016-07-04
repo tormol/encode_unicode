@@ -14,6 +14,8 @@
 use std::char;
 use std::str::{self,FromStr};
 use std::hash::{Hash,SipHasher};
+use std::io::Read;
+use std::cmp::min;
 extern crate encode_unicode;
 use encode_unicode::*;
 
@@ -30,6 +32,27 @@ fn same_size_as_char() {
     assert_eq!(size_of::<Utf8Char>(), size_of::<char>());
     assert_eq!(size_of::<Utf16Char>(), size_of::<char>());
 }
+
+#[test]
+fn read_iterator() {
+    let uc = 'ä'.to_utf8();
+    assert_eq!(uc.len(), 2);
+    for chunk in 1..5 {
+        let mut buf = [b'E'; 6];
+        let mut iter = uc.into_iter();
+        let mut written = 0;
+        for _ in 0..4 {
+            assert_eq!(iter.read(&mut buf[..0]).unwrap(), 0);
+            let wrote = iter.read(&mut buf[written..written+chunk]).unwrap();
+            assert_eq!(wrote, min(2-written, chunk));
+            written += wrote;
+            for &b in &buf[written..] {assert_eq!(b, b'E');}
+            assert_eq!(buf[..written], AsRef::<[u8]>::as_ref(&uc)[..written]);
+        }
+        assert_eq!(written, 2);
+    }
+}
+
 
 
 const EDGES_AND_BETWEEN: [u32;13] = [

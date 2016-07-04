@@ -55,16 +55,14 @@ impl ExactSizeIterator for Utf8Iterator {
 impl Read for Utf8Iterator {
     /// Always returns Ok
     fn read(&mut self,  buf: &mut[u8]) -> Result<usize, ioError> {
-        let mut wrote = 0;
-        while let Some(ptr) = buf.get_mut(wrote) {// while loop because I need the counter afterwards
-            if let Some(b) = self.next() {// don't call self.next() untill I know I can write the result.
-                *ptr = b;
-                wrote += 1;
-            } else {
-                 break;
+        // Cannot call self.next() until I know I can write the result.
+        for (i, dst) in buf.iter_mut().enumerate() {
+            match self.next() {
+                Some(b) => *dst = b,
+                None    => return Ok(i),
             }
         }
-        Ok(wrote)
+        Ok(buf.len())
     }
 }
 impl fmt::Debug for Utf8Iterator {
