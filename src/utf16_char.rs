@@ -9,13 +9,14 @@
 use Utf16Iterator;
 use CharExt;
 use errors::{InvalidUtf16Slice,InvalidUtf16Tuple};
-extern crate std;
-use std::{hash,fmt,cmp};
-use std::borrow::Borrow;
-use std::ops::Deref;
+extern crate core;
+use self::core::{hash,fmt,cmp};
+use self::core::borrow::Borrow;
+use self::core::ops::Deref;
+#[cfg(not(feature="no_std"))]
 use std::ascii::AsciiExt;
 #[cfg(feature="ascii")]
-use std::char;
+use self::core::char;
 #[cfg(feature="ascii")]
 extern crate ascii;
 #[cfg(feature="ascii")]
@@ -89,7 +90,7 @@ impl Deref for Utf16Char {
   ////////////////
  //ascii traits//
 ////////////////
-/// Requires feature "ascii".
+#[cfg(not(feature="no_std"))]
 impl AsciiExt for Utf16Char {
     type Owned = Self;
     fn is_ascii(&self) -> bool {

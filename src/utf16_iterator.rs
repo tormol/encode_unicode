@@ -8,8 +8,10 @@
 
 use CharExt;
 use Utf16Char;
-extern crate std;
-use std::fmt;
+#[cfg(not(feature="no_std"))]
+extern crate core;
+#[cfg(not(feature="no_std"))]
+use self::core::fmt;
 
 // Invalid values that says the field consumed or empty.
 const FIRST_USED: u16 = 0x_dc_00;
@@ -52,6 +54,7 @@ impl ExactSizeIterator for Utf16Iterator {
         (if self.second == SECOND_USED {0} else {1})
     }
 }
+#[cfg(not(feature="no_std"))]
 impl fmt::Debug for Utf16Iterator {
     fn fmt(&self,  fmtr: &mut fmt::Formatter) -> fmt::Result {
         let v: Vec<u16> = self.collect();

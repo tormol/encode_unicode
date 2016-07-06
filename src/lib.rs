@@ -10,8 +10,9 @@
 //! Alternative and extension to the unstable `char.encode_utf8()` and `char.encode_utf16()`.
 
 
-// warnings
 #![warn(missing_docs)]
+
+#![cfg_attr(feature="no_std", no_std)]
 // either `cargo clippy` doesn't see theese, or I get a warning when I build.
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]

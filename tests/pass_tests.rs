@@ -14,8 +14,6 @@
 use std::char;
 use std::str::{self,FromStr};
 use std::hash::{Hash,SipHasher};
-use std::io::Read;
-use std::cmp::min;
 extern crate encode_unicode;
 use encode_unicode::*;
 
@@ -34,7 +32,11 @@ fn same_size_as_char() {
 }
 
 #[test]
+#[cfg(not(feature="no_std"))]
 fn read_iterator() {
+    use std::io::Read;
+    use std::cmp::min;
+
     let uc = 'ä'.to_utf8();
     assert_eq!(uc.len(), 2);
     for chunk in 1..5 {

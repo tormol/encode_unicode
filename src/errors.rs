@@ -9,44 +9,48 @@
 
 //! Boilerplatey error enums
 
-
-extern crate std;
-use std::fmt::{self,Display,Formatter};
+extern crate core;
+use self::core::fmt::{self,Display,Formatter};
+#[cfg(not(feature="no_std"))]
 use std::error::Error;
 
 
-
-/// Reasons why `Utf8Char::from_str()` failed.
-#[derive(Clone,Copy, Debug, PartialEq,Eq)]
-pub enum FromStrError {
-    /// `Utf8Char` cannot store more than a single codepoint.
-    SeveralCodePoints,
-    /// `Utf8Char` cannot be empty.
-    Empty,
-}
-use self::FromStrError::*;
-impl Error for FromStrError {
-    fn description(&self) -> &'static str {match *self {
-        SeveralCodePoints => "has more than one codepoint",
-        Empty => "is empty",
-    }}
-}
-impl Display for FromStrError {
-    fn fmt(&self,  fmtr: &mut Formatter) -> fmt::Result {
-        write!(fmtr, "{}", self.description())
+macro_rules! simple {(#[$tydoc:meta] $err:ident  {
+                          $($(#[$vardoc:meta])* ::$variant:ident => $string:expr),+,
+                      } ) => {
+    #[$tydoc]
+    #[derive(Clone,Copy, Debug, PartialEq,Eq)]
+    pub enum $err {
+        $($(#[$vardoc])* $variant),*
     }
-}
+    #[cfg(feature="no_std")]
+    impl $err {
+        #[allow(missing_docs)]
+        pub fn description(&self) -> &'static str {
+            match *self {$($err::$variant=>$string),*}
+        }
+    }
+    #[cfg(not(feature="no_std"))]
+    impl Error for $err {
+        fn description(&self) -> &'static str {
+            match *self {$($err::$variant=>$string),*}
+        }
+    }
+    impl Display for $err {
+        fn fmt(&self,  fmtr: &mut Formatter) -> fmt::Result {
+            write!(fmtr, "{}", self.description())
+        }
+    }
+}}
 
 
-
-/// Reasons why an `u32` is not a valid UTF codepoint.
-#[derive(Clone,Copy, Debug, PartialEq,Eq)]
-pub enum InvalidCodePoint {
-    /// It's reserved for UTF-16 surrogate pairs.
-    Utf16Reserved,
-    /// It's higher than the highest codepoint of 0x10ffff.
-    TooHigh,
-}
+simple!{/// Reasons why an `u32` is not a valid UTF codepoint.
+    InvalidCodePoint {
+        /// It's reserved for UTF-16 surrogate pairs."
+        ::Utf16Reserved => "is reserved for UTF-16 surrogate pairs",
+        /// It's higher than the highest codepoint (which is 0x10ffff).
+        ::TooHigh => "is higher than the highest codepoint",
+    }}
 use self::InvalidCodePoint::*;
 impl InvalidCodePoint {
     /// Get the range of values for which this error would be given.
@@ -55,40 +59,96 @@ impl InvalidCodePoint {
         TooHigh => (0x00_10_ff_ff, 0xff_ff_ff_ff),
     }}
 }
-impl Error for InvalidCodePoint {
-    fn description(&self) -> &'static str {match *self {
-        Utf16Reserved => "is reserved for UTF-16 surrogate pairs",
-        TooHigh => "is higher than the highest codepoint of 0x10ffff",
+
+
+simple!{/// Reasons why one or two `u16`s are not valid UTF-16, in sinking precedence.
+    InvalidUtf16Tuple {
+        /// The first unit is a trailing/low surrogate, which is never valid.
+        ///
+        /// Note that the value of a low surrogate is actually higher than a high surrogate.
+        ::FirstIsTrailingSurrogate => "the first unit is a trailing / low surrogate, which is never valid",
+        /// You provided a second unit, but the first one stands on its own.
+        ::SuperfluousSecond => "the second unit is superfluous",
+        /// The first and only unit requires a second unit.
+        ::MissingSecond => "the first unit requires a second unit",
+        /// The first unit requires a second unit, but it's not a trailing/low surrogate.
+        ///
+        /// Note that the value of a low surrogate is actually higher than a high surrogate.
+        ::InvalidSecond => "the required second unit is not a trailing / low surrogate",
     }}
-}
-impl Display for InvalidCodePoint {
-    fn fmt(&self,  fmtr: &mut Formatter) -> fmt::Result {
-        write!(fmtr, "{}", self.description())
-    }
-}
+
+simple!{/// Reasons why a slice of `u16`s doesn't start with valid UTF-16.
+    InvalidUtf16Slice {
+        /// The slice is empty.
+        ::EmptySlice => "the slice is empty",
+        /// The first unit is a low surrogate.
+        ::FirstLowSurrogate => "the first unit is a low surrogate",
+        /// The first and only unit requires a second unit.
+        ::MissingSecond => "the first and only unit requires a second one",
+        /// The first unit requires a second one, but it's not a low surrogate.
+        ::SecondNotLowSurrogate => "the required second unit is not a low surrogate",
+    }}
 
 
+simple!{/// Reasons why `Utf8Char::from_str()` failed.
+    FromStrError {
+        /// `Utf8Char` cannot store more than a single codepoint.
+        ::SeveralCodePoints => "has more than one codepoint",
+        /// `Utf8Char` cannot be empty.
+        ::Empty => "is empty",
+    }}
 
-/// Reasons why a byte is not the start of a UTF-8 codepoint.
-#[derive(Clone,Copy, Debug, PartialEq,Eq)]
-pub enum InvalidUtf8FirstByte {
-    /// Sequences cannot be longer than 4 bytes. Is given for values >= 240.
-    TooLongSeqence,
-    /// This byte belongs to a previous seqence. Is given for values between 128 and 192 (exclusive).
-    ContinuationByte,
-}
+simple!{/// Reasons why a byte is not the start of a UTF-8 codepoint.
+    InvalidUtf8FirstByte {
+        /// Sequences cannot be longer than 4 bytes. Is given for values >= 240.
+        ::TooLongSeqence => "is greater than 239 (UTF-8 seqences cannot be longer than four bytes)",
+        /// This byte belongs to a previous seqence. Is given for values between 128 and 192 (exclusive).
+        ::ContinuationByte => "is a continuation of a previous sequence",
+    }}
 use self::InvalidUtf8FirstByte::*;
-impl Error for InvalidUtf8FirstByte {
-    fn description(&self) -> &'static str {match *self {
-        TooLongSeqence => "is greater than 239 (UTF-8 seqences cannot be longer than four bytes)",
-        ContinuationByte => "is a continuation of a previous sequence",
-    }}
-}
-impl Display for InvalidUtf8FirstByte {
-    fn fmt(&self,  fmtr: &mut Formatter) -> fmt::Result {
-        write!(fmtr, "{}", self.description())
+
+
+
+macro_rules! complex {
+($err:ty
+ {$($sub:ty => $to:expr,)*}
+ {$($desc:pat => $string:expr),+,}
+ => $use_cause:expr =>
+ {$($cause:pat => $result:expr),+,} $(#[$causedoc:meta])*
+) => {
+    $(impl From<$sub> for $err {
+          fn from(error: $sub) -> $err {
+              $to(error)
+          }
+      })*
+    #[cfg(feature="no_std")]
+    impl $err {
+        #[allow(missing_docs)]
+        pub fn description(&self) -> &'static str {
+            match *self{ $($desc => $string,)* }
+        }
+        /// A hack to avoid two Display impls
+        fn cause(&self) -> Option<&Display> {None}
     }
-}
+    #[cfg(not(feature="no_std"))]
+    impl Error for $err {
+        fn description(&self) -> &'static str {
+            match *self{ $($desc => $string,)* }
+        }
+        $(#[$causedoc])*
+        fn cause(&self) -> Option<&Error> {
+            match *self{ $($cause => $result,)* }
+        }
+    }
+    impl Display for $err {
+        fn fmt(&self,  fmtr: &mut Formatter) -> fmt::Result {
+            match (self.cause(), $use_cause) {
+                (Some(d),true) => write!(fmtr, "{}: {}", self.description(), d),
+                        _      => write!(fmtr, "{}", self.description()),
+            }
+        }
+    }
+}}
 
 
 /// Reasons why a byte sequence is not valid UTF-8, excluding invalid codepoint.
@@ -104,28 +164,17 @@ pub enum InvalidUtf8 {
     OverLong,
 }
 use self::InvalidUtf8::*;
-impl From<InvalidUtf8FirstByte> for InvalidUtf8 {
-    fn from(error: InvalidUtf8FirstByte) -> InvalidUtf8 {
-        FirstByte(error)
-    }
-}
-impl Error for InvalidUtf8 {
-    fn description(&self) -> &'static str {match *self {
+complex!{InvalidUtf8 {
+        InvalidUtf8FirstByte => FirstByte,
+    } {
         FirstByte(TooLongSeqence) => "the first byte is greater than 239 (UTF-8 seqences cannot be longer than four bytes)",
         FirstByte(ContinuationByte) => "the first byte is a continuation of a previous sequence",
         OverLong => "the seqence contains too many zeros and could be shorter",
         NotAContinuationByte(_) => "the sequence is too short",
-    }}
-    /// When `Some` is returned, the `Error` is a `InvalidUtf8FirstByte`.
-    fn cause(&self) -> Option<&Error> {match *self {
+    } => false => {
         FirstByte(ref cause) => Some(cause),
         _ => None,
-    }}
-}
-impl Display for InvalidUtf8 {
-    fn fmt(&self,  fmtr: &mut Formatter) -> fmt::Result {
-        write!(fmtr, "{}", self.description())
-    }
+    }/// Returns `Some` if the error is a `InvalidUtf8FirstByte`.
 }
 
 
@@ -137,31 +186,16 @@ pub enum InvalidUtf8Array {
     /// Not a valid unicode codepoint.
     CodePoint(InvalidCodePoint),
 }
-impl From<InvalidUtf8> for InvalidUtf8Array {
-    fn from(error: InvalidUtf8) -> InvalidUtf8Array {
-        InvalidUtf8Array::Utf8(error)
-    }
-}
-impl From<InvalidCodePoint> for InvalidUtf8Array {
-    fn from(error: InvalidCodePoint) -> InvalidUtf8Array {
-        InvalidUtf8Array::CodePoint(error)
-    }
-}
-impl Error for InvalidUtf8Array {
-    fn description(&self) -> &'static str {match *self {
+complex!{InvalidUtf8Array {
+        InvalidUtf8 => InvalidUtf8Array::Utf8,
+        InvalidCodePoint => InvalidUtf8Array::CodePoint,
+    } {
         InvalidUtf8Array::Utf8(_) => "the seqence is invalid UTF-8",
         InvalidUtf8Array::CodePoint(_) => "the encoded codepoint is invalid",
-    }}
-    /// Always returns `Some`.
-    fn cause(&self) -> Option<&Error> {match *self {
+    } => true => {
         InvalidUtf8Array::Utf8(ref u) => Some(u),
         InvalidUtf8Array::CodePoint(ref c) => Some(c),
-    }}
-}
-impl Display for InvalidUtf8Array {
-    fn fmt(&self,  fmtr: &mut Formatter) -> fmt::Result {
-        write!(fmtr, "{}: {}", self.description(), self.cause().unwrap().description())
-    }
+    }/// Always returns `Some`.
 }
 
 
@@ -175,93 +209,17 @@ pub enum InvalidUtf8Slice {
     /// The slice is too short; n bytes was required.
     TooShort(usize),
 }
-impl From<InvalidUtf8> for InvalidUtf8Slice {
-    fn from(error: InvalidUtf8) -> InvalidUtf8Slice {
-        InvalidUtf8Slice::Utf8(error)
-    }
-}
-impl From<InvalidCodePoint> for InvalidUtf8Slice {
-    fn from(error: InvalidCodePoint) -> InvalidUtf8Slice {
-        InvalidUtf8Slice::CodePoint(error)
-    }
-}
-impl Error for InvalidUtf8Slice {
-    fn description(&self) -> &'static str {match *self {
+complex!{InvalidUtf8Slice {
+        InvalidUtf8 => InvalidUtf8Slice::Utf8,
+        InvalidCodePoint => InvalidUtf8Slice::CodePoint,
+    } {
         InvalidUtf8Slice::Utf8(_) => "the seqence is invalid UTF-8",
         InvalidUtf8Slice::CodePoint(_) => "the encoded codepoint is invalid",
         InvalidUtf8Slice::TooShort(0) => "the slice is empty",
         InvalidUtf8Slice::TooShort(_) => "the slice is shorter than the seqence",
-    }}
-    fn cause(&self) -> Option<&Error> {match *self {
+    } => true => {
         InvalidUtf8Slice::Utf8(ref u) => Some(u),
         InvalidUtf8Slice::CodePoint(ref c) => Some(c),
         InvalidUtf8Slice::TooShort(_) => None,
-    }}
-}
-impl Display for InvalidUtf8Slice {
-    fn fmt(&self,  fmtr: &mut Formatter) -> fmt::Result {
-        match self.cause() {
-            Some(d) => write!(fmtr, "{}: {}", self.description(), d),
-            None    => write!(fmtr, "{}", self.description()),
-        }
-    }
-}
-
-
-
-/// Reasons why one or two `u16`s are not valid UTF-16, in sinking precedence.
-#[derive(Clone,Copy, Debug, PartialEq,Eq)]
-pub enum InvalidUtf16Tuple {
-    /// The first unit is a trailing/low surrogate, which is never valid.
-    ///
-    /// Note that the value of a low surrogate is actually higher than a high surrogate.
-    FirstIsTrailingSurrogate,
-    /// You provided a second unit, but the first one stands on its own.
-    SuperfluousSecond,
-    /// The first and only unit requires a second unit.
-    MissingSecond,
-    /// The first unit requires a second unit, but it's not a trailing/low surrogate.
-    ///
-    /// Note that the value of a low surrogate is actually higher than a high surrogate.
-    InvalidSecond,
-}
-impl Error for InvalidUtf16Tuple {
-    fn description(&self) -> &'static str {match *self {
-        InvalidUtf16Tuple::FirstIsTrailingSurrogate => "the first unit is a trailing / low surrogate, which is never valid",
-        InvalidUtf16Tuple::SuperfluousSecond => "the second unit is superfluous",
-        InvalidUtf16Tuple::MissingSecond => "the first unit requires a second unit",
-        InvalidUtf16Tuple::InvalidSecond => "the required second unit is not a trailing / low surrogate",
-    }}
-}
-impl Display for InvalidUtf16Tuple {
-    fn fmt(&self,  fmtr: &mut Formatter) -> fmt::Result {
-        write!(fmtr, "{}", self.description())
-    }
-}
-
-
-/// Reasons why a slice of `u16`s doesn't start with valid UTF-16.
-#[derive(Clone,Copy, Debug, PartialEq,Eq)]
-pub enum InvalidUtf16Slice {
-    /// The slice is empty.
-    EmptySlice,
-    /// The first unit is a low surrogate.
-    FirstLowSurrogate,
-    /// The first and only unit requires a second unit.
-    MissingSecond,
-    /// The first unit requires a second one, but it's not a low surrogate.
-    SecondNotLowSurrogate,
-}
-impl Error for InvalidUtf16Slice {
-    fn description(&self) -> &'static str {match *self {
-        InvalidUtf16Slice::EmptySlice => "the slice is empty",
-        InvalidUtf16Slice::FirstLowSurrogate => "the first unit is a low surrogate",
-        InvalidUtf16Slice::MissingSecond => "the first and only unit requires a second one",
-        InvalidUtf16Slice::SecondNotLowSurrogate => "the required second unit is not a low surrogate",
-    }}
-}
-impl Display for InvalidUtf16Slice {
-    fn fmt(&self,  fmtr: &mut Formatter) -> fmt::Result {
-        write!(fmtr, "{}", self.description())
     }
 }

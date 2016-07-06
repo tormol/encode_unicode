@@ -11,12 +11,12 @@ use error::{InvalidUtf8Slice,InvalidUtf8Array};
 use Utf8Iterator;
 use CharExt;
 use U8UtfExt;
-extern crate std;
-use std::{hash,fmt, str};
-use std::borrow::Borrow;
-use std::ops::Deref;
-use std::mem::transmute;
-
+extern crate core;
+use self::core::{hash, fmt, str};
+use self::core::borrow::Borrow;
+use self::core::ops::Deref;
+use self::core::mem::transmute;
+#[cfg(not(feature="no_std"))]
 use std::ascii::AsciiExt;
 #[cfg(feature="ascii")]
 extern crate ascii;
@@ -92,7 +92,7 @@ impl AsRef<[u8]> for Utf8Char {
 }
 impl AsRef<str> for Utf8Char {
     fn as_ref(&self) -> &str {
-        unsafe{ std::str::from_utf8_unchecked( self.as_ref() ) }
+        unsafe{ str::from_utf8_unchecked( self.as_ref() ) }
     }
 }
 impl Borrow<[u8]> for Utf8Char {
@@ -116,6 +116,7 @@ impl Deref for Utf8Char {
   ////////////////
  //ascii traits//
 ////////////////
+#[cfg(not(feature="no_std"))]
 impl AsciiExt for Utf8Char {
     type Owned = Utf8Char;
     fn is_ascii(&self) -> bool {

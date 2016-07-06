@@ -14,3 +14,7 @@ authors = ["Torbjørn Birch Moltu <t.b.moltu@lyse.net>"]
 [dependencies]
 ascii = {optional=true, version="0.7"}
 clippy = {optional=true, version="0.*"}# wildest wildcard crates.io will allow.
+
+[features]
+no_std = []
+ascii_no_std = ["no_std","ascii/no_std"]

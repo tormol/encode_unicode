@@ -13,9 +13,9 @@ use Utf16Char;
 use Utf8Iterator;
 use Utf16Iterator;
 use error::*;
-extern crate std;
-use std::{char,u32, mem};
-use std::ops::Not;
+extern crate core;
+use self::core::{char, u32, mem};
+use self::core::ops::Not;
 
 // TODO better docs and tests
 
