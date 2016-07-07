@@ -1,8 +1,9 @@
 [package]
 name = "encode_unicode"
-keywords = ["unicode"]
+keywords = ["unicode","UTF-8","UTF-16"]
 description = """
 Alternative and extension to the unstable `char.encode_utf8()` and char.encode_utf16()` methods.
+Also has UTF-8- and UTF-16-encoded character types.
 """
 readme = "README.md"
 version = "0.1.3"

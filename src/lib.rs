@@ -7,7 +7,22 @@
  */
 
 
-//! Alternative and extension to the unstable `char.encode_utf8()` and `char.encode_utf16()`.
+/*!
+Alternatives and extensions to the unstable `char.encode_utf8()` and `char.encode_utf16()`.
+
+[crates.io page](https://crates.io/crates/encode_unicode)
+[github repository](https://github.com/tormol/encode_unicode)
+
+# Optional features:
+* **no_std**: Use `#[no_std]`; There are some differences:
+  * `AsciiExt` doesn't exist, but `is_ascii()` is made available as an inherent impl.
+  * `Error` doesn't exist, but `description()` is made available as an inherent impl.
+  * There is no `io`, so `Utf8Iterator` doesn't implement `Read`.
+  * The iterators doesn't implement `Debug`.
+* **ascii**: Convert `Utf8Char` and `Utf16Char` to and from [ascii](https://tomprogrammer.github.io/rust-ascii/ascii/index.html)::[`AsciiChar`](https://tomprogrammer.github.io/rust-ascii/ascii/enum.AsciiChar.html).
+* **ascii_no_std**: You need to use this feature instead of both ascii and no_std.
+  This is because the ascii crate needs to know about `#[no_std]`, but the features are otherwize independent.
+*/
 
 
 #![warn(missing_docs)]
