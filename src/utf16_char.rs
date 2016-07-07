@@ -208,4 +208,8 @@ impl Utf16Char {
     pub fn to_tuple(self) -> (u16,Option<u16>) {
         (self.units[0],  if self.len()==2 {Some(self.units[1])} else {None})
     }
+    #[cfg(feature="no_std")]
+    pub fn is_ascii(&self) -> bool {
+        self.units[0] <= 127
+    }
 }

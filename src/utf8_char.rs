@@ -230,4 +230,8 @@ impl Utf8Char {
     pub fn to_array(self) -> ([u8;4],usize) {
         (self.bytes, self.len())
     }
+    #[cfg(feature="no_std")]
+    pub fn is_ascii(&self) -> bool {
+        self.bytes[0] <= 127
+    }
 }
