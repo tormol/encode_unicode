@@ -54,7 +54,7 @@ impl str::FromStr for Utf8Char {
         if s.is_empty() {
             Err(FromStrError::Empty)
         } else if s.len() != 1+s.as_bytes()[0].extra_utf8_bytes_unchecked() {
-            Err(FromStrError::SeveralCodePoints)
+            Err(FromStrError::MultipleCodepoints)
         } else {
             let mut bytes = [0; 4];
             bytes[..s.len()].copy_from_slice(s.as_bytes());

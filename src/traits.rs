@@ -177,7 +177,7 @@ pub trait CharExt: Sized {
     /// This function will return an error if
     /// * the value is greater than 0x10ffff
     /// * the value is between 0xd800 and 0xdfff (inclusive)
-    fn from_u32_detailed(c: u32) -> Result<Self,InvalidCodePoint>;
+    fn from_u32_detailed(c: u32) -> Result<Self,InvalidCodepoint>;
 }
 
 
@@ -241,7 +241,7 @@ impl CharExt for char {
             let c = unsafe{ char::from_utf8_exact_slice_unchecked(src) };
             char::from_u32_detailed(c as u32)
                 .map(|c| (c,src.len()) )
-                .map_err(|e| CodePoint(e) )
+                .map_err(|e| Codepoint(e) )
         }
     }
 
@@ -260,7 +260,7 @@ impl CharExt for char {
         } else {
             let c = unsafe{ char::from_utf8_exact_slice_unchecked(src) };
             char::from_u32_detailed(c as u32)
-                 .map_err(|e| CodePoint(e) )
+                 .map_err(|e| Codepoint(e) )
         }
     }
 
@@ -344,8 +344,8 @@ impl CharExt for char {
     }
 
 
-    fn from_u32_detailed(c: u32) -> Result<Self,InvalidCodePoint> {
-        use errors::InvalidCodePoint::*;
+    fn from_u32_detailed(c: u32) -> Result<Self,InvalidCodepoint> {
+        use errors::InvalidCodepoint::*;
         match c {
             // reserved for UTF-16 surrogate pairs
             0xd8_00...0xdf_ff => Err(Utf16Reserved),

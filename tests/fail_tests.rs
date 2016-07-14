@@ -18,7 +18,7 @@ use encode_unicode::error::*;
 
 #[test]
 fn from_u32() {
-    use encode_unicode::error::InvalidCodePoint::*;
+    use encode_unicode::error::InvalidCodepoint::*;
     for c in 0xd800..0xe000 {
         assert_eq!(char::from_u32_detailed(c),  Err(Utf16Reserved));
     }
@@ -92,6 +92,6 @@ fn utf8_char_from_str() {
     use std::str::FromStr;
     use encode_unicode::error::FromStrError::*;
     assert_eq!(Utf8Char::from_str(""), Err(Empty));
-    assert_eq!(Utf8Char::from_str("ab"), Err(SeveralCodePoints));
-    assert_eq!(Utf8Char::from_str("́e"), Err(SeveralCodePoints));// 'e'+u301 combining mark
+    assert_eq!(Utf8Char::from_str("ab"), Err(MultipleCodepoints));
+    assert_eq!(Utf8Char::from_str("́e"), Err(MultipleCodepoints));// 'e'+u301 combining mark
 }

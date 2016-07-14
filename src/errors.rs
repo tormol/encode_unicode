@@ -45,14 +45,14 @@ macro_rules! simple {(#[$tydoc:meta] $err:ident  {
 
 
 simple!{/// Reasons why an `u32` is not a valid UTF codepoint.
-    InvalidCodePoint {
+    InvalidCodepoint {
         /// It's reserved for UTF-16 surrogate pairs."
         ::Utf16Reserved => "is reserved for UTF-16 surrogate pairs",
         /// It's higher than the highest codepoint (which is 0x10ffff).
         ::TooHigh => "is higher than the highest codepoint",
     }}
-use self::InvalidCodePoint::*;
-impl InvalidCodePoint {
+use self::InvalidCodepoint::*;
+impl InvalidCodepoint {
     /// Get the range of values for which this error would be given.
     pub fn error_range(self) -> (u32,u32) {match self {
         Utf16Reserved => (0xd8_00, 0xdf_ff),
@@ -93,7 +93,7 @@ simple!{/// Reasons why a slice of `u16`s doesn't start with valid UTF-16.
 simple!{/// Reasons why `Utf8Char::from_str()` failed.
     FromStrError {
         /// `Utf8Char` cannot store more than a single codepoint.
-        ::SeveralCodePoints => "has more than one codepoint",
+        ::MultipleCodepoints => "has more than one codepoint",
         /// `Utf8Char` cannot be empty.
         ::Empty => "is empty",
     }}
@@ -184,17 +184,17 @@ pub enum InvalidUtf8Array {
     /// Not a valid UTF-8 sequence.
     Utf8(InvalidUtf8),
     /// Not a valid unicode codepoint.
-    CodePoint(InvalidCodePoint),
+    Codepoint(InvalidCodepoint),
 }
 complex!{InvalidUtf8Array {
         InvalidUtf8 => InvalidUtf8Array::Utf8,
-        InvalidCodePoint => InvalidUtf8Array::CodePoint,
+        InvalidCodepoint => InvalidUtf8Array::Codepoint,
     } {
         InvalidUtf8Array::Utf8(_) => "the seqence is invalid UTF-8",
-        InvalidUtf8Array::CodePoint(_) => "the encoded codepoint is invalid",
+        InvalidUtf8Array::Codepoint(_) => "the encoded codepoint is invalid",
     } => true => {
         InvalidUtf8Array::Utf8(ref u) => Some(u),
-        InvalidUtf8Array::CodePoint(ref c) => Some(c),
+        InvalidUtf8Array::Codepoint(ref c) => Some(c),
     }/// Always returns `Some`.
 }
 
@@ -205,21 +205,21 @@ pub enum InvalidUtf8Slice {
     /// Something is certainly wrong with the first byte.
     Utf8(InvalidUtf8),
     /// The encoded codepoint is invalid:
-    CodePoint(InvalidCodePoint),
+    Codepoint(InvalidCodepoint),
     /// The slice is too short; n bytes was required.
     TooShort(usize),
 }
 complex!{InvalidUtf8Slice {
         InvalidUtf8 => InvalidUtf8Slice::Utf8,
-        InvalidCodePoint => InvalidUtf8Slice::CodePoint,
+        InvalidCodepoint => InvalidUtf8Slice::Codepoint,
     } {
         InvalidUtf8Slice::Utf8(_) => "the seqence is invalid UTF-8",
-        InvalidUtf8Slice::CodePoint(_) => "the encoded codepoint is invalid",
+        InvalidUtf8Slice::Codepoint(_) => "the encoded codepoint is invalid",
         InvalidUtf8Slice::TooShort(0) => "the slice is empty",
         InvalidUtf8Slice::TooShort(_) => "the slice is shorter than the seqence",
     } => true => {
         InvalidUtf8Slice::Utf8(ref u) => Some(u),
-        InvalidUtf8Slice::CodePoint(ref c) => Some(c),
+        InvalidUtf8Slice::Codepoint(ref c) => Some(c),
         InvalidUtf8Slice::TooShort(_) => None,
     }
 }
