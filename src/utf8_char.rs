@@ -222,9 +222,7 @@ impl Utf8Char {
         if self.len() > dst.len() {
             panic!("The provided buffer is too small.");
         }
-        for (dst, src) in dst.iter_mut().zip(self.bytes.iter()) {
-            *dst  = *src;
-        }
+        dst[..self.len()].copy_from_slice(&self.bytes[..self.len()]);
         self.len()
     }
     /// Expose the internal array and the number of used bytes.
