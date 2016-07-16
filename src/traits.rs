@@ -226,44 +226,42 @@ impl CharExt for char {
         use errors::InvalidUtf8::*;
         use errors::InvalidUtf8Slice::*;
         let first = *try!(src.first().ok_or(TooShort(1)));
-        let extra = try!(first.extra_utf8_bytes().map_err(|e| Utf8(FirstByte(e)) ));
-        if extra == 0 {
-            return Ok((first as char, 1));
-        } else if src.len() <= extra {
-            return Err(TooShort(extra+1))
+        let src = match first.extra_utf8_bytes() {
+            Err(e)    => return Err(Utf8(FirstByte(e))),
+            Ok(0)     => return Ok((first as char, 1)),
+            Ok(extra) if extra >= src.len()
+                      => return Err(TooShort(extra+1)),
+            Ok(extra) => &src[..extra+1],
+        };
+        if let Some(i) = src.iter().skip(1).position(|&b| (b >> 6) != 0b10 ) {
+            Err(Utf8(NotAContinuationByte(i+1)))
+        } else if overlong(src[0], src[1]) {
+            Err(Utf8(OverLong))
+        } else {
+            let c = unsafe{ char::from_utf8_exact_slice_unchecked(src) };
+            char::from_u32_detailed(c as u32)
+                .map(|c| (c,src.len()) )
+                .map_err(|e| CodePoint(e) )
         }
-        let src = &src[..1+extra];
-        for (i, &b) in src.iter().enumerate().skip(1) {
-            if b < 0b1000_0000  ||  b > 0b1011_1111 {
-                return Err(Utf8(NotAContinuationByte(i)));
-            }
-        }
-        if overlong(src[0], src[1]) {
-            return Err(Utf8(OverLong));
-        }
-        let c = unsafe{ char::from_utf8_exact_slice_unchecked(src) };
-        char::from_u32_detailed(c as u32).map(|c| (c,src.len()) ).map_err( CodePoint )
     }
 
     fn from_utf8_array(utf8: [u8; 4]) -> Result<Self,InvalidUtf8Array> {
         use errors::InvalidUtf8::*;
         use errors::InvalidUtf8Array::*;
-        let len = match utf8[0].extra_utf8_bytes() {
-            Ok(0)     =>  return Ok(utf8[0] as char),
-            Ok(l)     =>  l+1,
-            Err(err)  =>  return Err(Utf8(FirstByte(err))),
+        let src = match utf8[0].extra_utf8_bytes() {
+            Err(error) => return Err(Utf8(FirstByte(error))),
+            Ok(0)      => return Ok(utf8[0] as char),
+            Ok(extra)  => &utf8[..extra+1],
         };
-        for (i, &b) in utf8[..len].iter().enumerate().skip(1) {
-            if b < 0b1000_0000  ||  b > 0b1011_1111 {
-                return Err(Utf8(NotAContinuationByte(i)));
-            }
+        if let Some(i) = src[1..].iter().position(|&b| (b >> 6) != 0b10 ) {
+            Err(Utf8(NotAContinuationByte(i+1)))
+        } else if overlong(utf8[0], utf8[1]) {
+            Err(Utf8(OverLong))
+        } else {
+            let c = unsafe{ char::from_utf8_exact_slice_unchecked(src) };
+            char::from_u32_detailed(c as u32)
+                 .map_err(|e| CodePoint(e) )
         }
-
-        if overlong(utf8[0], utf8[1]) {
-            return Err(Utf8(OverLong));
-        }
-        let c = unsafe{ char::from_utf8_exact_slice_unchecked(&utf8[..len]) };
-        char::from_u32_detailed(c as u32).map_err( CodePoint )
     }
 
     unsafe fn from_utf8_exact_slice_unchecked(src: &[u8]) -> Self {

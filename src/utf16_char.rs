@@ -164,14 +164,15 @@ impl Utf16Char {
     /// Validate and store the first UTF-16 codepoint in the slice.
     /// Also return how many units were needed.
     pub fn from_slice(src: &[u16]) -> Result<(Self,usize),InvalidUtf16Slice> {
-        char::from_utf16_slice(src).map(
-            |(_,len)|  (Utf16Char{ units: [src[0], if len==2 {src[1]} else {0}] }, len)
-        )
+        char::from_utf16_slice(src).map(|(_,len)| {
+            let second = if len==2 {src[1]} else {0};
+            (Utf16Char{ units: [src[0], second] }, len)
+        })
     }
     /// Validate and store a UTF-16 pair as returned from `char.to_utf16_tuple()`.
     pub fn from_tuple(utf16: (u16,Option<u16>)) -> Result<Self,InvalidUtf16Tuple> {
-        char::from_utf16_tuple(utf16).map(
-            |_| Utf16Char{ units: [utf16.0, utf16.1.unwrap_or(0)] }
+        char::from_utf16_tuple(utf16).map(|_|
+            Utf16Char{ units: [utf16.0, utf16.1.unwrap_or(0)] }
         )
     }
 

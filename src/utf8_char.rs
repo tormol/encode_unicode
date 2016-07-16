@@ -51,13 +51,15 @@ impl str::FromStr for Utf8Char {
     type Err = FromStrError;
     /// The string must contain exactly one codepoint
     fn from_str(s: &str) -> Result<Self, FromStrError> {
-        let mut uc = Utf8Char::default();
-        for (src, dst) in s.as_bytes().iter().zip(uc.bytes.iter_mut()) {
-            *dst = *src;// happens min(s.len(), 4) times
+        if s.is_empty() {
+            Err(FromStrError::Empty)
+        } else if s.len() != 1+s.as_bytes()[0].extra_utf8_bytes_unchecked() {
+            Err(FromStrError::SeveralCodePoints)
+        } else {
+            let mut bytes = [0; 4];
+            bytes[..s.len()].copy_from_slice(s.as_bytes());
+            Ok(Utf8Char{bytes: bytes})
         }
-        if uc.len() == s.len() {Ok(uc)}
-        else if s.is_empty()   {Err(FromStrError::Empty)}
-        else                   {Err(FromStrError::SeveralCodePoints)}
     }
 }
 impl From<char> for Utf8Char {
@@ -184,19 +186,17 @@ impl Utf8Char {
     /// If it's a str and you know it contains only one codepoint,
     /// use `.from_str()` to skip the validation.
     pub fn from_slice_start(src: &[u8]) -> Result<(Self,usize),InvalidUtf8Slice> {
-        // need to convert to char to check codepoint, but not convert back.
+        // Converts to char to check codepoint, but we don't need the char.
         let len = try!(char::from_utf8_slice(src)).1;
-        let mut uc = Self::default();
-        for (dst, src) in uc.bytes.iter_mut().zip(src).take(len) {
-            *dst = *src;
-        }
-        Ok((uc,len))
+        let mut bytes = [0; 4];
+        bytes[..len].copy_from_slice(&src[..len]);
+        Ok((Utf8Char{bytes: bytes}, len))
     }
     /// Validate the array and store it.
     pub fn from_array(utf8: [u8;4]) -> Result<Self,InvalidUtf8Array> {
         try!(char::from_utf8_array(utf8));
-        let len = Utf8Char{ bytes: utf8 }.len() as u32;
-        let mask = u32::from_le(0xff_ff_ff_ff >> 8*(4-len));
+        let extra = utf8[0].extra_utf8_bytes_unchecked() as u32;
+        let mask = u32::from_le(0xff_ff_ff_ff >> 8*(3-extra));
         let unused_zeroed = mask  &  unsafe{ transmute::<_,u32>(utf8) };
         Ok(unsafe{ transmute(unused_zeroed) })
     }
