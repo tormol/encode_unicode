@@ -136,18 +136,21 @@ fn test(c: u32) {
         assert_eq!(AsRef::<[u8]>::as_ref(&u8c), reference);
         assert_eq!(u8c.to_array(), (test_dst, len));
     }
-    let (arr,arrlen) = u8c.to_array();
+    let (mut arr,arrlen) = u8c.to_array();
     assert_eq!(arrlen, len);
     assert_eq!(Utf8Char::from_array(arr), Ok(u8c));
     assert_eq!(c.to_utf8_array(),  (arr, len));
-    assert_eq!(Utf8Char::from_slice_start(&arr), Ok((u8c,len)));// Test that it doesn't read too much
-    assert_eq!(Utf8Char::from_slice_start(reference), Ok((u8c,len)));
 
     let str_ = str::from_utf8(reference).unwrap();
     let ustr = Utf8Char::from_str(str_).unwrap();
     assert_eq!(ustr.to_array().0, arr);// bitwise equality
     assert_eq!(char::from_utf8_array(arr), Ok(c));
     assert_eq!(char::from_utf8_slice(reference), Ok((c,len)));
+    for b in arr.iter_mut().skip(arrlen) {
+        *b = b'F';// from_slice_start must not read these.
+    }
+    assert_eq!(Utf8Char::from_slice_start(&arr), Ok((u8c,len)));// Test that it doesn't read too much
+    assert_eq!(Utf8Char::from_slice_start(reference), Ok((u8c,len)));
 
     // UTF-16
     let reference = c.encode_utf16();
