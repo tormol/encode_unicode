@@ -6,7 +6,7 @@ Alternative and extension to the unstable `char.encode_utf8()` and char.encode_u
 Also has UTF-8- and UTF-16-encoded character types.
 """
 readme = "README.md"
-version = "0.1.3"
+version = "0.2.0"
 license = "MIT/Apache-2.0"
 repository = "https://github.com/tormol/encode_unicode"
 documentation = "http://tormol.github.io/rustdoc/encode_unicode"
