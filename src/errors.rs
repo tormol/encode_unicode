@@ -161,6 +161,9 @@ pub enum InvalidUtf8 {
     /// but dosesn't fit the pattern 0b10xx_xxxx.
     NotAContinuationByte(usize),
     /// There are too many leading zeros: it could be a byte shorter.
+    ///
+    /// [Decoding this could allow someone to input otherwise prohibited
+    /// characters and sequences, such as "../"](https://tools.ietf.org/html/rfc3629#section-10).
     OverLong,
 }
 use self::InvalidUtf8::*;
