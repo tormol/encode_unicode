@@ -11,7 +11,7 @@
 
 extern crate core;
 use self::core::fmt::{self,Display,Formatter};
-#[cfg(not(feature="no_std"))]
+#[cfg(feature="std")]
 use std::error::Error;
 
 
@@ -23,14 +23,14 @@ macro_rules! simple {(#[$tydoc:meta] $err:ident  {
     pub enum $err {
         $($(#[$vardoc])* $variant),*
     }
-    #[cfg(feature="no_std")]
+    #[cfg(not(feature="std"))]
     impl $err {
         #[allow(missing_docs)]
         pub fn description(&self) -> &'static str {
             match *self {$($err::$variant=>$string),*}
         }
     }
-    #[cfg(not(feature="no_std"))]
+    #[cfg(feature="std")]
     impl Error for $err {
         fn description(&self) -> &'static str {
             match *self {$($err::$variant=>$string),*}
@@ -121,7 +121,7 @@ macro_rules! complex {
               $to(error)
           }
       })*
-    #[cfg(feature="no_std")]
+    #[cfg(not(feature="std"))]
     impl $err {
         #[allow(missing_docs)]
         pub fn description(&self) -> &'static str {
@@ -130,7 +130,7 @@ macro_rules! complex {
         /// A hack to avoid two Display impls
         fn cause(&self) -> Option<&Display> {None}
     }
-    #[cfg(not(feature="no_std"))]
+    #[cfg(feature="std")]
     impl Error for $err {
         fn description(&self) -> &'static str {
             match *self{ $($desc => $string,)* }

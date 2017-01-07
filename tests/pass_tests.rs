@@ -32,7 +32,7 @@ fn same_size_as_char() {
 }
 
 #[test]
-#[cfg(not(feature="no_std"))]
+#[cfg(feature="std")]
 fn read_iterator() {
     use std::io::Read;
     use std::cmp::min;

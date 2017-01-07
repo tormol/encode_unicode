@@ -13,7 +13,7 @@ extern crate core;
 use self::core::{hash,fmt,cmp};
 use self::core::borrow::Borrow;
 use self::core::ops::Deref;
-#[cfg(not(feature="no_std"))]
+#[cfg(feature="std")]
 use std::ascii::AsciiExt;
 #[cfg(feature="ascii")]
 use self::core::char;
@@ -90,7 +90,7 @@ impl Deref for Utf16Char {
   ////////////////
  //ascii traits//
 ////////////////
-#[cfg(not(feature="no_std"))]
+#[cfg(feature="std")]
 impl AsciiExt for Utf16Char {
     type Owned = Self;
     fn is_ascii(&self) -> bool {
@@ -208,7 +208,7 @@ impl Utf16Char {
     pub fn to_tuple(self) -> (u16,Option<u16>) {
         (self.units[0],  if self.len()==2 {Some(self.units[1])} else {None})
     }
-    #[cfg(feature="no_std")]
+    #[cfg(not(feature="std"))]
     pub fn is_ascii(&self) -> bool {
         self.units[0] <= 127
     }

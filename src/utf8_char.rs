@@ -16,7 +16,7 @@ use self::core::{hash, fmt, str};
 use self::core::borrow::Borrow;
 use self::core::ops::Deref;
 use self::core::mem::transmute;
-#[cfg(not(feature="no_std"))]
+#[cfg(feature="std")]
 use std::ascii::AsciiExt;
 #[cfg(feature="ascii")]
 extern crate ascii;
@@ -116,7 +116,7 @@ impl Deref for Utf8Char {
   ////////////////
  //ascii traits//
 ////////////////
-#[cfg(not(feature="no_std"))]
+#[cfg(feature="std")]
 impl AsciiExt for Utf8Char {
     type Owned = Utf8Char;
     fn is_ascii(&self) -> bool {
@@ -230,7 +230,7 @@ impl Utf8Char {
     pub fn to_array(self) -> ([u8;4],usize) {
         (self.bytes, self.len())
     }
-    #[cfg(feature="no_std")]
+    #[cfg(not(feature="std"))]
     pub fn is_ascii(&self) -> bool {
         self.bytes[0] <= 127
     }

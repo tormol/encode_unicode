@@ -10,9 +10,9 @@ use Utf8Char;
 extern crate core;
 use self::core::{mem, u32, u64};
 use self::core::ops::Not;
-#[cfg(not(feature="no_std"))]
+#[cfg(feature="std")]
 use self::core::fmt;
-#[cfg(not(feature="no_std"))]
+#[cfg(feature="std")]
 use std::io::{Read, Error as ioError};
 
 
@@ -55,7 +55,7 @@ impl ExactSizeIterator for Utf8Iterator {
         4 - unused_bytes as usize
     }
 }
-#[cfg(not(feature="no_std"))]
+#[cfg(feature="std")]
 impl Read for Utf8Iterator {
     /// Always returns Ok
     fn read(&mut self,  buf: &mut[u8]) -> Result<usize, ioError> {
@@ -69,7 +69,7 @@ impl Read for Utf8Iterator {
         Ok(buf.len())
     }
 }
-#[cfg(not(feature="no_std"))]
+#[cfg(feature="std")]
 impl fmt::Debug for Utf8Iterator {
     fn fmt(&self,  fmtr: &mut fmt::Formatter) -> fmt::Result {
         let content: Vec<u8> = self.collect();
