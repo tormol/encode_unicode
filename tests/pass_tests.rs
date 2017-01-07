@@ -6,14 +6,13 @@
  * copied, modified, or distributed except according to those terms.
  */
 
-#![feature(unicode)]// reference implementations of to_slice
-
 //! Test that every method gives the correct result for valid values.
 //! Except iterators, which are stateful.
 
 use std::char;
 use std::str::{self,FromStr};
-use std::hash::{Hash,SipHasher};
+use std::hash::Hash;
+use std::collections::hash_map::DefaultHasher;
 extern crate encode_unicode;
 use encode_unicode::*;
 
@@ -74,7 +73,7 @@ const EDGES_AND_BETWEEN: [u32;13] = [
 ];
 
 fn eq_cmp_hash(c: char) -> (Utf8Char, Utf16Char) {
-    let sh = &mut SipHasher::new();
+    let sh = &mut DefaultHasher::new();
     let u8c = c.to_utf8();
     assert_eq!(u8c.to_char(), c);
     assert_eq!(u8c.hash(sh), c.hash(sh));
@@ -100,14 +99,16 @@ fn eq_cmp_hash(c: char) -> (Utf8Char, Utf16Char) {
 
 fn iterators(c: char) {
     let mut iter = c.iter_utf8_bytes();
-    let mut iter_ref = c.encode_utf8();
+    let mut buf = [0; 4];
+    let mut iter_ref = c.encode_utf8(&mut buf[..]).bytes();
     for _ in 0..6 {
         assert_eq!(iter.size_hint(), iter_ref.size_hint());
         assert_eq!(iter.next(), iter_ref.next());
     }
 
     let mut iter = c.iter_utf16_units();
-    let mut iter_ref = c.encode_utf16();
+    let mut buf = [0; 2];
+    let mut iter_ref = c.encode_utf16(&mut buf[..]).iter().cloned();
     for _ in 0..4 {
         assert_eq!(iter.size_hint(), iter_ref.size_hint());
         assert_eq!(iter.next(), iter_ref.next());
@@ -121,8 +122,8 @@ fn test(c: u32) {
     iterators(c);
 
     // UTF-8
-    let reference = c.encode_utf8();
-    let reference = reference.as_slice();
+    let mut buf = [0; 4];
+    let reference = c.encode_utf8(&mut buf[..]).as_bytes();
     let len = reference.len(); // short name because it is used in many places.
     assert_eq!(reference[0].extra_utf8_bytes(), Ok(len-1));
     assert_eq!(reference[0].extra_utf8_bytes_unchecked(), len-1);
@@ -155,8 +156,8 @@ fn test(c: u32) {
     assert_eq!(Utf8Char::from_slice_start(reference), Ok((u8c,len)));
 
     // UTF-16
-    let reference = c.encode_utf16();
-    let reference = reference.as_slice();
+    let mut buf = [0; 2];
+    let reference = c.encode_utf16(&mut buf[..]);
     let len = reference.len();
     for i in c.len_utf16()..3 {
         let mut test_dst = [0;2];

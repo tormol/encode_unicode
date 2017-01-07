@@ -25,7 +25,7 @@ Alternatives and extensions to the unstable `char.encode_utf8()` and `char.encod
 */
 
 
-#![warn(missing_docs)]
+#![cfg_attr(feature="std", warn(missing_docs))] // Don't bother documenting std standins.
 
 #![cfg_attr(not(feature="std"), no_std)]
 // either `cargo clippy` doesn't see theese, or I get a warning when I build.

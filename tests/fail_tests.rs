@@ -6,7 +6,6 @@
  * copied, modified, or distributed except according to those terms.
  */
 
-#![feature(step_by)]
 //! Test that methods gives the correct error.
 //! Some also test a bit more because it's easy.
 
@@ -22,8 +21,14 @@ fn from_u32() {
     for c in 0xd800..0xe000 {
         assert_eq!(char::from_u32_detailed(c),  Err(Utf16Reserved));
     }
-    for c in (0x110000..0xffffffff).step_by(0xfff) {
+    let mut c = 0x11_00_00;
+    loop {
         assert_eq!(char::from_u32_detailed(c),  Err(TooHigh));
+        // Don't test every value. (Range.step_by() is unstable)
+        match c.checked_add(0x10_11_11) {
+            Some(next) => c = next,
+            None => break,
+        }
     }
 }
 
