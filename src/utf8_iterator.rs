@@ -10,7 +10,6 @@ use Utf8Char;
 extern crate core;
 use self::core::{mem, u32, u64};
 use self::core::ops::Not;
-#[cfg(feature="std")]
 use self::core::fmt;
 #[cfg(feature="std")]
 use std::io::{Read, Error as ioError};
@@ -69,10 +68,14 @@ impl Read for Utf8Iterator {
         Ok(buf.len())
     }
 }
-#[cfg(feature="std")]
 impl fmt::Debug for Utf8Iterator {
     fn fmt(&self,  fmtr: &mut fmt::Formatter) -> fmt::Result {
-        let content: Vec<u8> = self.collect();
-        write!(fmtr, "{:?}", content)
+        let mut content = [0; 4];
+        let mut i = 0;
+        for b in self.clone() {
+            content[i] = b;
+            i += 1;
+        }
+        write!(fmtr, "{:?}", &content[..i])
     }
 }
