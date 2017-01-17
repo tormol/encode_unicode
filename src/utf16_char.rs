@@ -97,15 +97,18 @@ impl AsciiExt for Utf16Char {
         self.units[0] < 128
     }
     fn eq_ignore_ascii_case(&self,  other: &Self) -> bool {
-        self.to_char().eq_ignore_ascii_case(&other.to_char())
+        self.to_ascii_lowercase() == other.to_ascii_lowercase()
     }
     fn to_ascii_uppercase(&self) -> Self {
-        self.to_char().to_ascii_uppercase().to_utf16()
+        let n = self.units[0].wrapping_sub(b'a' as u16);
+        if n < 26 {Utf16Char{ units: [n+b'A' as u16, 0] }}
+        else      {*self}
     }
     fn to_ascii_lowercase(&self) -> Self {
-        self.to_char().to_ascii_lowercase().to_utf16()
+        let n = self.units[0].wrapping_sub(b'A' as u16);
+        if n < 26 {Utf16Char{ units: [n+b'a' as u16, 0] }}
+        else      {*self}
     }
-    // Theese methods are what prevents this from becoming stable
     fn make_ascii_uppercase(&mut self) {
         *self = self.to_ascii_uppercase()
     }

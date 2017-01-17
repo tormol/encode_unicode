@@ -123,23 +123,24 @@ impl AsciiExt for Utf8Char {
         self.bytes[0].is_ascii()
     }
     fn eq_ignore_ascii_case(&self,  other: &Self) -> bool {
-        self.to_char().eq_ignore_ascii_case(&other.to_char())
+        if self.is_ascii() {self.bytes[0].eq_ignore_ascii_case(&other.bytes[0])}
+        else               {self == other}
     }
     fn to_ascii_uppercase(&self) -> Self::Owned {
-        let ascii = self.bytes[0].to_ascii_uppercase();
-        if ascii == self.bytes[0] {*self}
-        else {Utf8Char{ bytes: [ascii,0,0,0] }}
+        let mut uc = *self;
+        uc.make_ascii_uppercase();
+        uc
     }
     fn to_ascii_lowercase(&self) -> Self::Owned {
-        let ascii = self.bytes[0].to_ascii_lowercase();
-        if ascii == self.bytes[0] {*self}// unchanged
-        else {Utf8Char{ bytes: [ascii,0,0,0] }}// is ascii
+        let mut uc = *self;
+        uc.make_ascii_lowercase();
+        uc
     }
     fn make_ascii_uppercase(&mut self) {
-        *self = self.to_ascii_uppercase()
+        self.bytes[0].make_ascii_uppercase()
     }
     fn make_ascii_lowercase(&mut self) {
-        *self = self.to_ascii_lowercase();
+        self.bytes[0].make_ascii_lowercase();
     }
 }
 
