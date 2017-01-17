@@ -16,7 +16,7 @@ const FIRST_USED: u16 = 0x_dc_00;
 const SECOND_USED: u16 = 0;
 
 /// Iterate over the units in an UTF-16 representation of a codepoint.
-#[derive(Clone,Copy)]
+#[derive(Clone)]
 pub struct Utf16Iterator {
     first: u16,
     second: u16,
