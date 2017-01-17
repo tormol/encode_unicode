@@ -111,29 +111,6 @@ pub trait CharExt: Sized {
     fn iter_utf16_units(self) -> Utf16Iterator;
 
 
-    /// Convert this char to UTF-8, and then
-    /// returns the number of bytes written.
-    ///
-    /// # Panics
-    /// Will panic the buffer is too small;
-    /// You can get the required length from `.len_utf8()`,
-    /// but a buffer of length four is always large enough.
-    ///
-    /// A similar alternative to the proposed `char.write_utf8()`,
-    fn to_utf8_slice(self,  dst: &mut[u8]) -> usize;
-
-    /// Convert this char to UTF-16, and then
-    /// returns the number of units written.
-    ///
-    /// # Panics
-    /// Will panic the buffer is too small;
-    /// You can get the required length from `.len_utf16()`,
-    /// but a buffer of length two is always large enough.
-    ///
-    /// a similar alternative to the proposed `char.write_utf16()`,
-    fn to_utf16_slice(self,  dst: &mut[u16]) -> usize;
-
-
     /// Convert this char to an UTF-8 array and lenght,
     ///
     /// The returned array is left-aligned with unused bytes set to zero,
@@ -192,9 +169,6 @@ impl CharExt for char {
     }
     fn iter_utf8_bytes(self) -> Utf8Iterator {
         self.to_utf8().into_iter()
-    }
-    fn to_utf8_slice(self,  dst: &mut[u8]) -> usize {
-        self.to_utf8().to_slice(dst)
     }
 
     fn to_utf8_array(self) -> ([u8; 4], usize) {
@@ -287,10 +261,6 @@ impl CharExt for char {
     }
     fn iter_utf16_units(self) -> Utf16Iterator {
         self.to_utf16().into_iter()
-    }
-
-    fn to_utf16_slice(self,  dst: &mut[u16]) -> usize {
-        self.to_utf16().to_slice(dst)
     }
 
     fn to_utf16_tuple(self) -> (u16, Option<u16>) {

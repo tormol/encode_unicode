@@ -131,16 +131,6 @@ fn test(c: u32) {
     assert_eq!(reference[0].extra_utf8_bytes_unchecked(), len-1);
     assert_eq!(AsRef::<[u8]>::as_ref(&u8c), reference);
 
-    for i in c.len_utf8()..5 {
-        let mut test_dst = [b'F';4];
-        assert_eq!(c.to_utf8_slice(&mut test_dst[..i]), len);
-        for b in &mut test_dst[len..] {// Test that it doesn't write too much
-            assert_eq!(*b, b'F', "c={:?}, i={}, utf8_len={}", c, i, len);
-            *b = 0;
-        }
-        assert_eq!(&test_dst[..len], reference);
-        assert_eq!(u8c.to_array(), (test_dst, len));
-    }
     let (mut arr,arrlen) = u8c.to_array();
     assert_eq!(arrlen, len);
     assert_eq!(Utf8Char::from_array(arr), Ok(u8c));
@@ -161,12 +151,6 @@ fn test(c: u32) {
     let mut buf = [0; 2];
     let reference = c.encode_utf16(&mut buf[..]);
     let len = reference.len();
-    for i in c.len_utf16()..3 {
-        let mut test_dst = [0;2];
-        assert_eq!(c.to_utf16_slice(&mut test_dst[..i]), len);
-        assert_eq!(&test_dst[..len], reference);
-        assert_eq!(u16c.to_slice(&mut test_dst[..i]), len);
-    }
     assert_eq!(reference[0].utf16_needs_extra_unit(), Some(len==2));
     assert_eq!(reference[0].utf16_is_leading_surrogate(), len==2);
     assert_eq!(u16c.as_ref(), reference);
