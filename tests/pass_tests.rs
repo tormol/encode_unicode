@@ -100,18 +100,20 @@ fn eq_cmp_hash(c: char) -> (Utf8Char, Utf16Char) {
 fn iterators(c: char) {
     let mut iter = c.iter_utf8_bytes();
     let mut buf = [0; 4];
-    let mut iter_ref = c.encode_utf8(&mut buf[..]).bytes();
+    let mut iter_ref = c.encode_utf8(&mut buf[..]).as_bytes().iter();
     for _ in 0..6 {
         assert_eq!(iter.size_hint(), iter_ref.size_hint());
-        assert_eq!(iter.next(), iter_ref.next());
+        assert_eq!(format!("{:?}", iter), format!("{:?}", iter_ref.as_slice()));
+        assert_eq!(iter.next(), iter_ref.next().cloned());
     }
 
     let mut iter = c.iter_utf16_units();
     let mut buf = [0; 2];
-    let mut iter_ref = c.encode_utf16(&mut buf[..]).iter().cloned();
+    let mut iter_ref = c.encode_utf16(&mut buf[..]).iter();
     for _ in 0..4 {
         assert_eq!(iter.size_hint(), iter_ref.size_hint());
-        assert_eq!(iter.next(), iter_ref.next());
+        assert_eq!(format!("{:?}", iter), format!("{:?}", iter_ref.as_slice()));
+        assert_eq!(iter.next(), iter_ref.next().cloned());
     }
 }
 
