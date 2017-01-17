@@ -73,6 +73,6 @@ impl Read for Utf8Iterator {
 impl fmt::Debug for Utf8Iterator {
     fn fmt(&self,  fmtr: &mut fmt::Formatter) -> fmt::Result {
         let content: Vec<u8> = self.collect();
-        write!(fmtr, "bytes left: {:?}, content: {:x}", content, self.0)
+        write!(fmtr, "{:?}", content)
     }
 }
