@@ -129,6 +129,7 @@ fn test(c: u32) {
     let len = reference.len(); // short name because it is used in many places.
     assert_eq!(reference[0].extra_utf8_bytes(), Ok(len-1));
     assert_eq!(reference[0].extra_utf8_bytes_unchecked(), len-1);
+    assert_eq!(AsRef::<[u8]>::as_ref(&u8c), reference);
 
     for i in c.len_utf8()..5 {
         let mut test_dst = [b'F';4];
@@ -138,7 +139,6 @@ fn test(c: u32) {
             *b = 0;
         }
         assert_eq!(&test_dst[..len], reference);
-        assert_eq!(AsRef::<[u8]>::as_ref(&u8c), reference);
         assert_eq!(u8c.to_array(), (test_dst, len));
     }
     let (mut arr,arrlen) = u8c.to_array();
@@ -169,6 +169,7 @@ fn test(c: u32) {
     }
     assert_eq!(reference[0].utf16_needs_extra_unit(), Some(len==2));
     assert_eq!(reference[0].utf16_is_leading_surrogate(), len==2);
+    assert_eq!(u16c.as_ref(), reference);
     assert_eq!(char::from_utf16_slice(&reference[..len]), Ok((c,len)));
     let tuple = c.to_utf16_tuple();
     assert_eq!(tuple, (reference[0],reference.get(1).cloned()));
