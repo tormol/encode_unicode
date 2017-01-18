@@ -122,6 +122,8 @@ fn test(c: u32) {
     assert_eq!(char::from_u32_detailed(c as u32), Ok(c));
     let (u8c, u16c) = eq_cmp_hash(c);
     iterators(c);
+    assert_eq!(Utf16Char::from(u8c), u16c);
+    assert_eq!(Utf8Char::from(u16c), u8c);
 
     // UTF-8
     let mut buf = [0; 4];

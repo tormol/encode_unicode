@@ -11,6 +11,7 @@ use error::{InvalidUtf8Slice,InvalidUtf8Array};
 use Utf8Iterator;
 use CharExt;
 use U8UtfExt;
+use Utf16Char;
 extern crate core;
 use self::core::{hash, fmt, str};
 use self::core::borrow::Borrow;
@@ -59,6 +60,35 @@ impl str::FromStr for Utf8Char {
             let mut bytes = [0; 4];
             bytes[..s.len()].copy_from_slice(s.as_bytes());
             Ok(Utf8Char{bytes: bytes})
+        }
+    }
+}
+impl From<Utf16Char> for Utf8Char {
+    fn from(utf16: Utf16Char) -> Utf8Char {
+        match utf16.to_tuple() {
+            (a @ 0...0x00_7f, _) => {
+                Utf8Char{ bytes: [a as u8, 0, 0, 0] }
+            },
+            (u @ 0...0x07_ff, _) => {
+                let b = 0x80 |  (u & 0x00_3f) as u8;
+                let a = 0xc0 | ((u & 0x07_c0) >> 6) as u8;
+                Utf8Char{ bytes: [a, b, 0, 0] }
+            },
+            (u, None) => {
+                let c = 0x80 |  (u & 0x00_3f) as u8;
+                let b = 0x80 | ((u & 0x0f_c0) >> 6) as u8;
+                let a = 0xe0 | ((u & 0xf0_00) >> 12) as u8;
+                Utf8Char{ bytes: [a, b, c, 0] }
+            },
+            (f, Some(s)) => {
+                let f = f + (0x01_00_00u32 >> 10) as u16;
+                let d = 0x80 |  (s & 0x00_3f) as u8;
+                let c = 0x80 | ((s & 0x03_c0) >> 6) as u8
+                             | ((f & 0x00_03) << 4) as u8;
+                let b = 0x80 | ((f & 0x00_fc) >> 2) as u8;
+                let a = 0xf0 | ((f & 0x07_00) >> 8) as u8;
+                Utf8Char{ bytes: [a, b, c, d] }
+            }
         }
     }
 }
