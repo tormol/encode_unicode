@@ -278,28 +278,33 @@ impl CharExt for char {
 
     fn from_utf16_slice(src: &[u16]) -> Result<(Self,usize), InvalidUtf16Slice> {
         use errors::InvalidUtf16Slice::*;
-        let first = *try!(src.first().ok_or(EmptySlice));
-        match (first.utf16_needs_extra_unit(), src.get(1).cloned()) {
-            (Some(false),              _            )  =>  Ok((1, None)),
-            (Some(true) ,  Some(0x_dc_00...0x_df_ff))  =>  Ok((2, Some(src[1]))),
-            (Some(true) ,  Some(         _         ))  =>  Err(SecondNotLowSurrogate),
-            (Some(true) ,  None                     )  =>  Err(MissingSecond),
-            (None       ,              _            )  =>  Err(FirstLowSurrogate),
-        }.map(|(len,second)| (unsafe{ char::from_utf16_tuple_unchecked((first,second)) }, len) )
+        unsafe {match (src.get(0), src.get(1)) {
+            (Some(&u @ 0x00_00...0xd7_ff), _) |
+            (Some(&u @ 0xde_00...0xff_ff), _)
+                => Ok((char::from_u32_unchecked(u as u32), 1)),
+            (Some(&0xdc_00...0xdf_ff), _) => Err(FirstLowSurrogate),
+            (None, _) => Err(EmptySlice),
+            (Some(&f @ 0xd8_00...0xdb_ff), Some(&s @ 0xdc_00...0xdf_ff))
+                => Ok((char::from_utf16_tuple_unchecked((f, Some(s))), 2)),
+            (Some(&0xd8_00...0xdb_ff), Some(_)) => Err(SecondNotLowSurrogate),
+            (Some(&0xd8_00...0xdb_ff), None) => Err(MissingSecond),
+            (Some(_), _) => unreachable!()
+        }}
     }
 
     fn from_utf16_tuple(utf16: (u16, Option<u16>)) -> Result<Self, InvalidUtf16Tuple> {
         use errors::InvalidUtf16Tuple::*;
-        match utf16 {
-            (0x_00_00...0x_d7_ff, None) => Ok(()),// single
-            (0x_e0_00...0x_ff_ff, None) => Ok(()),// single
-            (0x_d8_00...0x_db_ff, Some(0x_dc_00...0x_df_ff)) => Ok(()),// correct surrogate pair
-            (0x_d8_00...0x_db_ff, Some(_)) => Err(InvalidSecond),
-            (0x_d8_00...0x_db_ff, None) => Err(MissingSecond),
-            (0x_dc_00...0x_df_ff, _) => Err(FirstIsTrailingSurrogate),
-            (_, Some(_)) => Err(SuperfluousSecond),// should be no second
-            (_, _) => unreachable!()
-        }.map(|_| unsafe{ char::from_utf16_tuple_unchecked(utf16) } )
+        unsafe{ match utf16 {
+            (0x00_00...0xd7_ff, None) | // single
+            (0xe0_00...0xff_ff, None) | // single
+            (0xd8_00...0xdb_ff, Some(0xdc_00...0xdf_ff)) // correct surrogate
+                => Ok(char::from_utf16_tuple_unchecked(utf16)),
+            (0xd8_00...0xdb_ff, Some(_)) => Err(InvalidSecond),
+            (0xd8_00...0xdb_ff, None   ) => Err(MissingSecond),
+            (0xdc_00...0xdf_ff,    _   ) => Err(FirstIsTrailingSurrogate),
+            (        _        , Some(_)) => Err(SuperfluousSecond),
+            (        _        , None   ) => unreachable!()
+        }}
     }
 
     unsafe fn from_utf16_tuple_unchecked(utf16: (u16, Option<u16>)) -> Self {
@@ -310,19 +315,19 @@ impl CharExt for char {
             c = high | low;
             c += 0x_01_00_00;
         }
-        unsafe{ char::from_u32_unchecked(c) }
+        char::from_u32_unchecked(c)
     }
 
 
     fn from_u32_detailed(c: u32) -> Result<Self,InvalidCodepoint> {
         use errors::InvalidCodepoint::*;
-        match c {
-            // reserved for UTF-16 surrogate pairs
-            0xd8_00...0xdf_ff => Err(Utf16Reserved),
-            // too big
-            0x11_00_00...u32::MAX => Err(TooHigh),
-            _ => Ok(unsafe{ char::from_u32_unchecked(c) }),
-        }
+        unsafe{ match c {
+            0x00_00_00...0x00_d7_ff => Ok(char::from_u32_unchecked(c)),
+            0x00_d8_00...0x00_df_ff => Err(Utf16Reserved),
+            0x00_e0_00...0x10_ff_ff => Ok(char::from_u32_unchecked(c)),
+            0x11_00_00...u32::MAX   => Err(TooHigh),
+                       _            => unreachable!()
+        }}
     }
 }
 

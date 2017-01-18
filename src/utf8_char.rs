@@ -195,11 +195,13 @@ impl Utf8Char {
     }
     /// Validate the array and store it.
     pub fn from_array(utf8: [u8;4]) -> Result<Self,InvalidUtf8Array> {
-        try!(char::from_utf8_array(utf8));
-        let extra = utf8[0].extra_utf8_bytes_unchecked() as u32;
-        let mask = u32::from_le(0xff_ff_ff_ff >> 8*(3-extra));
-        let unused_zeroed = mask  &  unsafe{ transmute::<_,u32>(utf8) };
-        Ok(unsafe{ transmute(unused_zeroed) })
+        unsafe {
+            try!(char::from_utf8_array(utf8));
+            let extra = utf8[0].extra_utf8_bytes_unchecked() as u32;
+            let mask = u32::from_le(0xff_ff_ff_ff >> 8*(3-extra));
+            let unused_zeroed = mask  &  transmute::<_,u32>(utf8);
+            Ok(transmute(unused_zeroed))
+        }
     }
 
     /// Result is 1...4 and identical to `.as_ref().len()` or `.as_char().len_utf8()`.
