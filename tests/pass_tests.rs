@@ -151,7 +151,7 @@ fn test(c: u32) {
     let mut buf = [0; 2];
     let reference = c.encode_utf16(&mut buf[..]);
     let len = reference.len();
-    assert_eq!(reference[0].utf16_needs_extra_unit(), Some(len==2));
+    assert_eq!(reference[0].utf16_needs_extra_unit(), Ok(len==2));
     assert_eq!(reference[0].utf16_is_leading_surrogate(), len==2);
     assert_eq!(u16c.as_ref(), reference);
     assert_eq!(char::from_utf16_slice(&reference[..len]), Ok((c,len)));

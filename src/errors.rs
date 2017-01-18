@@ -14,6 +14,34 @@ use self::core::fmt::{self,Display,Formatter};
 #[cfg(feature="std")]
 use std::error::Error;
 
+macro_rules! description {($err:ty, $desc:expr) => {
+    #[cfg(not(feature="std"))]
+    impl $err {
+        #[allow(missing_docs)]
+        pub fn description(&self) -> &'static str {
+            ($desc)(self)
+        }
+    }
+    #[cfg(feature="std")]
+    impl Error for $err {
+        fn description(&self) -> &'static str {
+            ($desc)(self)
+        }
+    }
+    impl Display for $err {
+        fn fmt(&self,  fmtr: &mut Formatter) -> fmt::Result {
+            write!(fmtr, "{}", self.description())
+        }
+    }
+}}
+
+
+/// Cannot tell wether an `u16` needs an extra unit,
+/// because it's a trailing surrogate itself.
+#[derive(Clone,Copy, Debug, PartialEq,Eq)]
+pub struct InvalidUtf16FirstUnit;
+description!{InvalidUtf16FirstUnit, |_| "Is a trailing surrogate" }
+
 
 macro_rules! simple {(#[$tydoc:meta] $err:ident  {
                           $($(#[$vardoc:meta])* ::$variant:ident => $string:expr),+,
@@ -23,24 +51,7 @@ macro_rules! simple {(#[$tydoc:meta] $err:ident  {
     pub enum $err {
         $($(#[$vardoc])* $variant),*
     }
-    #[cfg(not(feature="std"))]
-    impl $err {
-        #[allow(missing_docs)]
-        pub fn description(&self) -> &'static str {
-            match *self {$($err::$variant=>$string),*}
-        }
-    }
-    #[cfg(feature="std")]
-    impl Error for $err {
-        fn description(&self) -> &'static str {
-            match *self {$($err::$variant=>$string),*}
-        }
-    }
-    impl Display for $err {
-        fn fmt(&self,  fmtr: &mut Formatter) -> fmt::Result {
-            write!(fmtr, "{}", self.description())
-        }
-    }
+    description!{$err, |e: &$err| match *e {$($err::$variant=>$string),*} }
 }}
 
 

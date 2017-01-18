@@ -57,21 +57,24 @@ impl U8UtfExt for u8 {
 pub trait U16UtfExt {
     /// Will you need an extra unit to complete this codepoint?
     ///
-    /// # Failures:
-    ///
-    /// 0xdc00..0xe000
-    fn utf16_needs_extra_unit(self) -> Option<bool>;
+    /// Returns `Err` for trailing surrogates, `Ok(true)` for leading surrogates,
+    /// and `Ok(false)` for others.
+    fn utf16_needs_extra_unit(self) -> Result<bool,InvalidUtf16FirstUnit>;
 
     /// Does this `u16` need another `u16` to complete a codepoint?
     /// Returns `(self & 0xfc00) == 0xd800`
+    ///
+    /// Is basically an unchecked variant of `utf16_needs_extra_unit()`.
     fn utf16_is_leading_surrogate(self) -> bool;
 }
 impl U16UtfExt for u16 {
-    fn utf16_needs_extra_unit(self) -> Option<bool> {match self {
+    fn utf16_needs_extra_unit(self) -> Result<bool,InvalidUtf16FirstUnit> {match self {
         // https://en.wikipedia.org/wiki/UTF-16#U.2B10000_to_U.2B10FFFF
-        0x_dc_00...0x_df_ff => None,
-        0x_d8_00...0x_db_ff => Some(true),
-        _                   => Some(false),
+        0x00_00...0xd7_ff => Ok(false),
+        0xe0_00...0xff_ff => Ok(false),
+        0xd8_00...0xdb_ff => Ok(true),
+        0xdc_00...0xdf_ff => Err(InvalidUtf16FirstUnit),
+                _         => unreachable!()
     }}
 
     fn utf16_is_leading_surrogate(self) -> bool {
