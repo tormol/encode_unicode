@@ -36,10 +36,9 @@ use self::ascii::{AsciiChar,ToAsciiChar,ToAsciiCharError};
 #[derive(Clone,Copy)]
 
 
-/// Store a `char` as UTF-8 so it can be borrowed as a `str`
+/// An unicode codepoint stored as UTF-8.
 ///
-/// Has the same size as `char`, and is a `[u8;4]`
-/// with the invariant that the first nth bytes are valid UTF-8, and the remaining are zero.
+/// It can be borrowed as a `str`, and has the same size as `char`.
 pub struct Utf8Char {
     bytes: [u8; 4],
 }
@@ -175,14 +174,14 @@ impl AsciiExt for Utf8Char {
 }
 
 #[cfg(feature="ascii")]
-/// Requires feature "ascii".
+/// Requires the feature "ascii".
 impl From<AsciiChar> for Utf8Char {
     fn from(ac: AsciiChar) -> Self {
         Utf8Char{ bytes: [ac.as_byte(),0,0,0] }
     }
 }
 #[cfg(feature="ascii")]
-/// Requires feature "asciiChar".
+/// Requires the feature "ascii".
 impl ToAsciiChar for Utf8Char {
     fn to_ascii_char(self) -> Result<AsciiChar, ToAsciiCharError> {
         self.bytes[0].to_ascii_char()
@@ -235,8 +234,9 @@ impl Utf8Char {
         }
     }
 
-    /// Result is 1...4 and identical to `.as_ref().len()` or `.as_char().len_utf8()`.
-    /// There is no .is_emty() because it would always return false.
+    /// Result is 1...4 and identical to `.as_ref().len()` or
+    /// `.as_char().len_utf8()`.
+    /// There is no .is_emty() because this type is never empty.
     pub fn len(self) -> usize {
         self.bytes[0].extra_utf8_bytes_unchecked() + 1
     }

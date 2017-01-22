@@ -11,11 +11,11 @@ use Utf16Char;
 extern crate core;
 use self::core::fmt;
 
-// Invalid values that says the field consumed or empty.
+// Invalid values that says the field is consumed or empty.
 const FIRST_USED: u16 = 0x_dc_00;
 const SECOND_USED: u16 = 0;
 
-/// Iterate over the units in an UTF-16 representation of a codepoint.
+/// Iterate over the units of the UTF-16 representation of a codepoint.
 #[derive(Clone)]
 pub struct Utf16Iterator {
     first: u16,

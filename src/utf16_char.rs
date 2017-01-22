@@ -33,10 +33,9 @@ use self::ascii::{AsciiChar,ToAsciiChar,ToAsciiCharError};
 #[derive(Clone,Copy)]
 
 
-/// Store a `char` as UTF-16 so it can be borrowed as a slice
+/// An unicode codepoint stored as UTF-16.
 ///
-/// Size is identical to `char`.
-/// Cannot represent all 2^32-1 possible values, but can do all valid ones.
+/// It can be borrowed as an `u16` slice, and has the same size as `char`.
 pub struct Utf16Char {
     units: [u16; 2],
 }
@@ -144,14 +143,14 @@ impl AsciiExt for Utf16Char {
 }
 
 #[cfg(feature="ascii")]
-/// Requires feature "ascii".
+/// Requires the feature "ascii".
 impl From<AsciiChar> for Utf16Char {
     fn from(ac: AsciiChar) -> Self {
         Utf16Char{ units: [ac.as_byte() as u16, 0] }
     }
 }
 #[cfg(feature="ascii")]
-/// Requires feature "ascii".
+/// Requires the feature "ascii".
 impl ToAsciiChar for Utf16Char {
     fn to_ascii_char(self) -> Result<AsciiChar, ToAsciiCharError> {
         unsafe{ AsciiChar::from(char::from_u32_unchecked(self.units[0] as u32)) }

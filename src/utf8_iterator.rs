@@ -16,7 +16,7 @@ use std::io::{Read, Error as ioError};
 
 
 
-/// Read or iterate over the bytes in the UTF-8 representation of a codepoint.
+/// Read or iterate over the bytes of the UTF-8 representation of a codepoint.
 #[derive(Clone)]
 pub struct Utf8Iterator (u32);
 
