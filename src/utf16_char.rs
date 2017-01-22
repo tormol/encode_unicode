@@ -177,12 +177,21 @@ impl fmt::Debug for Utf16Char {
 }
 impl cmp::PartialOrd for Utf16Char {
     fn partial_cmp(&self,  rhs: &Self) -> Option<cmp::Ordering> {
-        self.to_char().partial_cmp(&rhs.to_char())
+        Some(self.cmp(rhs))
     }
 }
 impl cmp::Ord for Utf16Char {
     fn cmp(&self,  rhs: &Self) -> cmp::Ordering {
-        self.to_char().cmp(&rhs.to_char())
+        // Shift the first unit by 0xd if surrogate, and 0 otherwise.
+        // This ensures surrogates are always greater than 0xffff, and
+        // that the second unit only affect the result when the first are equal.
+        // Multiplying by a constant factor isn't enough because that factor
+        // would have to be greater than 1023 and smaller than 5.5.
+        let lhs = (self.units[0] as u32, self.units[1] as u32);
+        let rhs = (rhs.units[0] as u32, rhs.units[1] as u32);
+        let lhs = (lhs.0 << (lhs.1 >> 12)) + lhs.1;
+        let rhs = (rhs.0 << (rhs.1 >> 12)) + rhs.1;
+        lhs.cmp(&rhs)
     }
 }
 
