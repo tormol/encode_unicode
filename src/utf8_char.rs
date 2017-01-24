@@ -268,4 +268,9 @@ impl Utf8Char {
     pub fn to_array(self) -> ([u8;4],usize) {
         (self.bytes, self.len())
     }
+    /// Return a `str` view of the array the codepoint is stored as.
+    /// Ns an unambiguous version of `.as_ref()`.
+    pub fn as_str(&self) -> &str {
+        self.deref()
+    }
 }
