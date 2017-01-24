@@ -19,7 +19,7 @@ use self::core::ops::Not;
 
 // TODO better docs and tests
 
-/// Methods for working with `u8`s UTF-8.
+/// Methods for working with `u8`s as UTF-8 bytes.
 pub trait U8UtfExt {
     /// How many more bytes will you need to complete this codepoint?
     ///
@@ -123,10 +123,12 @@ pub trait CharExt: Sized {
 
 
 
-    /// Create a `char` from the start of a slice intepreted as UTF-8, and return how many bytes were needed.
+    /// Create a `char` from the start of a UTF-8 slice,
+    /// and also return how many bytes were used.
     fn from_utf8_slice(src: &[u8]) -> Result<(Self,usize),InvalidUtf8Slice>;
 
-    /// Read one or two UTF-16 units into a `char`, and also return how many units were needed.
+    /// Create a `char` from the start of a UTF-16 slice,
+    /// and also return how many units were used.
     fn from_utf16_slice(src: &[u16]) -> Result<(Self,usize), InvalidUtf16Slice>;
 
 
@@ -199,23 +201,27 @@ impl CharExt for char {
     fn from_utf8_slice(src: &[u8]) -> Result<(Self,usize),InvalidUtf8Slice> {
         use errors::InvalidUtf8::*;
         use errors::InvalidUtf8Slice::*;
-        let first = *try!(src.first().ok_or(TooShort(1)));
-        let src = match first.extra_utf8_bytes() {
+        let first = match src.first() {
+            Some(first) => *first,
+            None => return Err(TooShort(1)),
+        };
+        let bytes = match first.extra_utf8_bytes() {
             Err(e)    => return Err(Utf8(FirstByte(e))),
             Ok(0)     => return Ok((first as char, 1)),
             Ok(extra) if extra >= src.len()
                       => return Err(TooShort(extra+1)),
             Ok(extra) => &src[..extra+1],
         };
-        if let Some(i) = src.iter().skip(1).position(|&b| (b >> 6) != 0b10 ) {
+        if let Some(i) = bytes.iter().skip(1).position(|&b| (b >> 6) != 0b10 ) {
             Err(Utf8(NotAContinuationByte(i+1)))
-        } else if overlong(src[0], src[1]) {
+        } else if overlong(bytes[0], bytes[1]) {
             Err(Utf8(OverLong))
         } else {
-            let c = unsafe{ char::from_utf8_exact_slice_unchecked(src) };
-            char::from_u32_detailed(c as u32)
-                .map(|c| (c,src.len()) )
-                .map_err(|e| Codepoint(e) )
+            let c = unsafe{ char::from_utf8_exact_slice_unchecked(bytes) };
+            match char::from_u32_detailed(c as u32) {
+                Ok(c) => Ok((c, bytes.len())),
+                Err(e) => Err(Codepoint(e)),
+            }
         }
     }
 
@@ -308,14 +314,10 @@ impl CharExt for char {
     }
 
     unsafe fn from_utf16_tuple_unchecked(utf16: (u16, Option<u16>)) -> Self {
-        let mut c = utf16.0 as u32;
-        if let Some(second) = utf16.1 {
-            let high = (c-0x_d8_00) << 10;
-            let low = second as u32 - 0x_dc_00;
-            c = high | low;
-            c += 0x_01_00_00;
+        match utf16.1 {
+            Some(second) => combine_surrogates(utf16.0, second),
+            None         => char::from_u32_unchecked(utf16.0 as u32)
         }
-        char::from_u32_unchecked(c)
     }
 
 
@@ -340,4 +342,12 @@ fn overlong(first: u8,  second: u8) -> bool {
     let both = ((first as u16) << 8)  |  (second << 2) as u16;
     let both = both << 1+both.not().leading_zeros();
     both.leading_zeros() >= 5
+}
+
+// Create a `char` from a leading and a trailing surrogate.
+unsafe fn combine_surrogates(first: u16, second: u16) -> char {
+    let high = (first & 0x_03_ff) as u32;
+    let low = (second & 0x_03_ff) as u32;
+    let c = ((high << 10) | low) + 0x_01_00_00; // no, the constant can't be or'd in
+    char::from_u32_unchecked(c)
 }

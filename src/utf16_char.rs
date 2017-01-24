@@ -164,7 +164,7 @@ impl cmp::Ord for Utf16Char {
 impl Utf16Char {
     /// Validate and store the first UTF-16 codepoint in the slice.
     /// Also return how many units were needed.
-    pub fn from_slice(src: &[u16]) -> Result<(Self,usize),InvalidUtf16Slice> {
+    pub fn from_slice(src: &[u16]) -> Result<(Self,usize), InvalidUtf16Slice> {
         char::from_utf16_slice(src).map(|(_,len)| {
             let second = if len==2 {src[1]} else {0};
             (Utf16Char{ units: [src[0], second] }, len)
@@ -180,7 +180,12 @@ impl Utf16Char {
     /// Returns 1 or 2.
     /// There is no `.is_emty()` because it would always return false.
     pub fn len(self) -> usize {
-        if self.units[1] == 0 {1} else {2}
+        1 + (self.units[1] as usize >> 15)
+    }
+    /// Is this codepoint an ASCII character?
+    #[cfg(not(feature="std"))]
+    pub fn is_ascii(&self) -> bool {
+        self.units[0] <= 127
     }
 
     /// Convert from UTF-16 to UTF-32
@@ -207,9 +212,5 @@ impl Utf16Char {
     /// The second `u16` is used for surrogate pairs.
     pub fn to_tuple(self) -> (u16,Option<u16>) {
         (self.units[0],  if self.len()==2 {Some(self.units[1])} else {None})
-    }
-    #[cfg(not(feature="std"))]
-    pub fn is_ascii(&self) -> bool {
-        self.units[0] <= 127
     }
 }

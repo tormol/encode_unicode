@@ -187,11 +187,11 @@ impl Utf8Char {
     /// If it's a str and you know it contains only one codepoint,
     /// use `.from_str()` to skip the validation.
     pub fn from_slice_start(src: &[u8]) -> Result<(Self,usize),InvalidUtf8Slice> {
-        // Converts to char to check codepoint, but we don't need the char.
-        let len = try!(char::from_utf8_slice(src)).1;
-        let mut bytes = [0; 4];
-        bytes[..len].copy_from_slice(&src[..len]);
-        Ok((Utf8Char{bytes: bytes}, len))
+        char::from_utf8_slice(src).map(|(_,len)| {
+            let mut bytes = [0; 4];
+            bytes[..len].copy_from_slice(&src[..len]);
+            (Utf8Char{bytes: bytes}, len)
+        })
     }
     /// Validate the array and store it.
     pub fn from_array(utf8: [u8;4]) -> Result<Self,InvalidUtf8Array> {
@@ -208,6 +208,11 @@ impl Utf8Char {
     /// There is no .is_emty() because it would always return false.
     pub fn len(self) -> usize {
         self.bytes[0].extra_utf8_bytes_unchecked() + 1
+    }
+    /// Is this codepoint an ASCII character?
+    #[cfg(not(feature="std"))]
+    pub fn is_ascii(&self) -> bool {
+        self.bytes[0] <= 127
     }
 
     /// Convert from UTF-8 to UTF-32
@@ -231,9 +236,5 @@ impl Utf8Char {
     /// Expose the internal array and the number of used bytes.
     pub fn to_array(self) -> ([u8;4],usize) {
         (self.bytes, self.len())
-    }
-    #[cfg(not(feature="std"))]
-    pub fn is_ascii(&self) -> bool {
-        self.bytes[0] <= 127
     }
 }
