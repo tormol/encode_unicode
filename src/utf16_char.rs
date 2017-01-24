@@ -238,7 +238,7 @@ impl Utf16Char {
     /// The length of the slice is never checked.
     pub unsafe fn from_slice_start_unchecked(src: &[u16]) -> (Self,usize) {
         let first = *src.get_unchecked(0);
-        if first.utf16_is_leading_surrogate() {
+        if first.is_utf16_leading_surrogate() {
             (Utf16Char{ units: [first, *src.get_unchecked(1)] }, 2)
         } else {
             (Utf16Char{ units: [first, 0] }, 1)

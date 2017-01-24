@@ -65,7 +65,7 @@ pub trait U16UtfExt {
     /// Returns `(self & 0xfc00) == 0xd800`
     ///
     /// Is basically an unchecked variant of `utf16_needs_extra_unit()`.
-    fn utf16_is_leading_surrogate(self) -> bool;
+    fn is_utf16_leading_surrogate(self) -> bool;
 }
 impl U16UtfExt for u16 {
     fn utf16_needs_extra_unit(self) -> Result<bool,InvalidUtf16FirstUnit> {match self {
@@ -77,7 +77,7 @@ impl U16UtfExt for u16 {
                 _         => unreachable!()
     }}
 
-    fn utf16_is_leading_surrogate(self) -> bool {
+    fn is_utf16_leading_surrogate(self) -> bool {
         (self & 0xfc00) == 0xd800// Clear the ten content bytes of a surrogate,
                                  // and see if it's a leading surrogate.
     }
