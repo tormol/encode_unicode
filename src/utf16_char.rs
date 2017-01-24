@@ -8,6 +8,7 @@
 
 use Utf16Iterator;
 use CharExt;
+use U16UtfExt;
 use Utf8Char;
 use errors::{InvalidUtf16Slice,InvalidUtf16Tuple};
 extern crate core;
@@ -230,11 +231,31 @@ impl Utf16Char {
             (Utf16Char{ units: [src[0], second] }, len)
         })
     }
+    /// Store the first UTF-16 codepoint of the slice.
+    ///
+    /// # Safety
+    /// The slice must be non-empty and start with a valid UTF-16 codepoint.  
+    /// The length of the slice is never checked.
+    pub unsafe fn from_slice_start_unchecked(src: &[u16]) -> (Self,usize) {
+        let first = *src.get_unchecked(0);
+        if first.utf16_is_leading_surrogate() {
+            (Utf16Char{ units: [first, *src.get_unchecked(1)] }, 2)
+        } else {
+            (Utf16Char{ units: [first, 0] }, 1)
+        }
+    }
     /// Validate and store a UTF-16 pair as returned from `char.to_utf16_tuple()`.
     pub fn from_tuple(utf16: (u16,Option<u16>)) -> Result<Self,InvalidUtf16Tuple> {
-        char::from_utf16_tuple(utf16).map(|_|
-            Utf16Char{ units: [utf16.0, utf16.1.unwrap_or(0)] }
-        )
+        unsafe {char::from_utf16_tuple(utf16).map(|_|
+            Self::from_tuple_unchecked(utf16)
+        )}
+    }
+    /// Create an `Utf16Char` from a tuple as returned from `char.to_utf16_tuple()`.
+    ///
+    /// # Safety
+    /// The units must represent a single valid codepoint.
+    pub unsafe fn from_tuple_unchecked(utf16: (u16,Option<u16>)) -> Self {
+        Utf16Char{ units: [utf16.0, utf16.1.unwrap_or(0)] }
     }
 
     /// Returns 1 or 2.

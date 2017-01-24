@@ -13,7 +13,7 @@ use CharExt;
 use U8UtfExt;
 use Utf16Char;
 extern crate core;
-use self::core::{hash, fmt, str};
+use self::core::{hash, fmt, str, ptr};
 use self::core::borrow::Borrow;
 use self::core::ops::Deref;
 use self::core::mem::transmute;
@@ -257,6 +257,17 @@ impl Utf8Char {
             (Utf8Char{bytes: bytes}, len)
         })
     }
+    /// A `from_slice_start()` that doesn't validate the codepoint.
+    ///
+    /// # Safety
+    /// The slice must be non-empty and start with a valid UTF-8 codepoint.  
+    /// Invalid or incomplete values might cause buffer overflows and overreads.
+    pub unsafe fn from_slice_start_unchecked(src: &[u8]) -> (Self,usize) {
+        let len = 1+src.get_unchecked(0).extra_utf8_bytes_unchecked();
+        let mut bytes = [0; 4];
+        ptr::copy_nonoverlapping(src.as_ptr(), &mut bytes[0] as *mut u8, len);
+        (Utf8Char{ bytes: bytes }, len)
+    }
     /// Validate the array and store it.
     pub fn from_array(utf8: [u8;4]) -> Result<Self,InvalidUtf8Array> {
         unsafe {
@@ -266,6 +277,10 @@ impl Utf8Char {
             let unused_zeroed = mask  &  transmute::<_,u32>(utf8);
             Ok(transmute(unused_zeroed))
         }
+    }
+    /// Unused bytes must be zero
+    pub unsafe fn from_array_unchecked(utf8: [u8;4]) -> Self {
+        Utf8Char{ bytes: utf8 }
     }
 
     /// Result is 1...4 and identical to `.as_ref().len()` or

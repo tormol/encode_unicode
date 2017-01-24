@@ -149,6 +149,16 @@ fn test(c: u32) {
     }
     assert_eq!(Utf8Char::from_slice_start(&arr), Ok((u8c,len)));// Test that it doesn't read too much
     assert_eq!(Utf8Char::from_slice_start(reference), Ok((u8c,len)));
+    unsafe {
+        // Hopefully make bugs easier to catch by making reads into unallocated memory by filling
+        // a jemalloc bin. See table on http://jemalloc.net/jemalloc.3.html for bin sizes.
+        // I have no idea whether this works.
+        let mut boxed = Box::new([0xffu8; 16]);
+        let start = boxed.len()-len; // reach the end
+        boxed[start..].copy_from_slice(reference);
+        let slice = &boxed[start..start]; // length of slice should be ignored.
+        assert_eq!(Utf8Char::from_slice_start_unchecked(slice), (u8c,len));
+    }
     assert_eq!(&Vec::<u8>::from_iter(Some(u8c))[..], reference);
     assert_eq!(&String::from_iter(Some(u8c))[..], str_);
 
@@ -160,6 +170,16 @@ fn test(c: u32) {
     assert_eq!(reference[0].utf16_is_leading_surrogate(), len==2);
     assert_eq!(u16c.as_ref(), reference);
     assert_eq!(char::from_utf16_slice(&reference[..len]), Ok((c,len)));
+    unsafe {
+        // Hopefully make bugs easier to catch by making reads into unallocated memory by filling
+        // a jemalloc bin. See table on http://jemalloc.net/jemalloc.3.html for bin sizes.
+        // I have no idea whether this works.
+        let mut boxed = Box::new([0u16; 8]);
+        let start = boxed.len()-len; // reach the end
+        boxed[start..].copy_from_slice(reference);
+        let slice = &boxed[start..start]; // length of slice should be ignored.
+        assert_eq!(Utf16Char::from_slice_start_unchecked(slice), (u16c,len));
+    }
     let tuple = c.to_utf16_tuple();
     assert_eq!(tuple, (reference[0],reference.get(1).cloned()));
     assert_eq!(char::from_utf16_tuple(tuple), Ok(c));
