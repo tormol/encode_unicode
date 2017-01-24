@@ -13,6 +13,7 @@ use std::char;
 use std::str::{self,FromStr};
 use std::hash::Hash;
 use std::collections::hash_map::DefaultHasher;
+use std::iter::FromIterator;
 extern crate encode_unicode;
 use encode_unicode::*;
 
@@ -148,6 +149,8 @@ fn test(c: u32) {
     }
     assert_eq!(Utf8Char::from_slice_start(&arr), Ok((u8c,len)));// Test that it doesn't read too much
     assert_eq!(Utf8Char::from_slice_start(reference), Ok((u8c,len)));
+    assert_eq!(&Vec::<u8>::from_iter(Some(u8c))[..], reference);
+    assert_eq!(&String::from_iter(Some(u8c))[..], str_);
 
     // UTF-16
     let mut buf = [0; 2];
@@ -161,6 +164,7 @@ fn test(c: u32) {
     assert_eq!(tuple, (reference[0],reference.get(1).cloned()));
     assert_eq!(char::from_utf16_tuple(tuple), Ok(c));
     assert_eq!(c.to_utf16().to_char(), c);
+    assert_eq!(&Vec::<u16>::from_iter(Some(u16c))[..], reference);
 }
 
 

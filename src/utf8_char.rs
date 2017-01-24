@@ -18,6 +18,8 @@ use self::core::borrow::Borrow;
 use self::core::ops::Deref;
 use self::core::mem::transmute;
 #[cfg(feature="std")]
+use self::core::iter::FromIterator;
+#[cfg(feature="std")]
 use std::ascii::AsciiExt;
 #[cfg(feature="ascii")]
 extern crate ascii;
@@ -107,6 +109,38 @@ impl IntoIterator for Utf8Char {
     /// Iterate over the byte values.
     fn into_iter(self) -> Utf8Iterator {
         Utf8Iterator::from(self)
+    }
+}
+#[cfg(feature="std")]
+impl Extend<Utf8Char> for Vec<u8> {
+    fn extend<I:IntoIterator<Item=Utf8Char>>(&mut self, iter: I) {
+        let iter = iter.into_iter();
+        self.reserve(iter.size_hint().0);
+        for u8c in iter {
+            self.extend_from_slice(u8c.as_bytes());
+        }
+    }
+}
+#[cfg(feature="std")]
+impl Extend<Utf8Char> for String {
+    fn extend<I:IntoIterator<Item=Utf8Char>>(&mut self, iter: I) {
+        unsafe { self.as_mut_vec().extend(iter) }
+    }
+}
+#[cfg(feature="std")]
+impl FromIterator<Utf8Char> for Vec<u8> {
+    fn from_iter<I:IntoIterator<Item=Utf8Char>>(iter: I) -> Self {
+        let mut vec = Vec::new();
+        vec.extend(iter);
+        return vec;
+    }
+}
+#[cfg(feature="std")]
+impl FromIterator<Utf8Char> for String {
+    fn from_iter<I:IntoIterator<Item=Utf8Char>>(iter: I) -> Self {
+        let mut string = String::new();
+        string.extend(iter);
+        return string;
     }
 }
 

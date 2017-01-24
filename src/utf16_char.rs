@@ -15,6 +15,8 @@ use self::core::{hash,fmt,cmp};
 use self::core::borrow::Borrow;
 use self::core::ops::Deref;
 #[cfg(feature="std")]
+use self::core::iter::FromIterator;
+#[cfg(feature="std")]
 use std::ascii::AsciiExt;
 #[cfg(feature="ascii")]
 use self::core::char;
@@ -87,6 +89,27 @@ impl IntoIterator for Utf16Char {
     /// Iterate over the units.
     fn into_iter(self) -> Utf16Iterator {
         Utf16Iterator::from(self)
+    }
+}
+#[cfg(feature="std")]
+impl Extend<Utf16Char> for Vec<u16> {
+    fn extend<I:IntoIterator<Item=Utf16Char>>(&mut self, iter: I) {
+        let iter = iter.into_iter();
+        self.reserve(iter.size_hint().0);
+        for u16c in iter {
+            self.push(u16c.units[0]);
+            if u16c.units[1] != 0 {
+                self.push(u16c.units[1]);
+            }
+        }
+    }
+}
+#[cfg(feature="std")]
+impl FromIterator<Utf16Char> for Vec<u16> {
+    fn from_iter<I:IntoIterator<Item=Utf16Char>>(iter: I) -> Self {
+        let mut vec = Vec::new();
+        vec.extend(iter);
+        return vec;
     }
 }
 
