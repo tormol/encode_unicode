@@ -68,15 +68,14 @@ fn from_utf16_tuple() {
     for u in 0xdc00..0xe000 {
         let close = if u%3==0 {u-100} else {u+100};
         let doesnt_matter = if u%2==0 {Some(close)} else {None};
-	    assert_eq!(char::from_utf16_tuple((u,doesnt_matter)), Err(FirstIsTrailingSurrogate));
+        assert_eq!(char::from_utf16_tuple((u,doesnt_matter)), Err(FirstIsTrailingSurrogate));
     }
     for u in (0..0xd800).chain(0xe000..0x10000) {
         assert_eq!(char::from_utf16_tuple((u as u16,Some((0x100+u) as u16))), Err(SuperfluousSecond));
-	}
+    }
     for u in 0xd800..0xdc00 {
         assert_eq!(char::from_utf16_tuple((u,None)), Err(MissingSecond));
-
-	    assert_eq!(char::from_utf16_tuple((u,Some(u - 0x2ff))), Err(InvalidSecond));
+        assert_eq!(char::from_utf16_tuple((u,Some(u - 0x2ff))), Err(InvalidSecond));
     }
 }
 
