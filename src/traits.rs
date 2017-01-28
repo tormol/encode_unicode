@@ -289,7 +289,7 @@ impl CharExt for char {
         use errors::InvalidUtf16Slice::*;
         unsafe {match (src.get(0), src.get(1)) {
             (Some(&u @ 0x00_00...0xd7_ff), _) |
-            (Some(&u @ 0xde_00...0xff_ff), _)
+            (Some(&u @ 0xe0_00...0xff_ff), _)
                 => Ok((char::from_u32_unchecked(u as u32), 1)),
             (Some(&0xdc_00...0xdf_ff), _) => Err(FirstLowSurrogate),
             (None, _) => Err(EmptySlice),
