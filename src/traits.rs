@@ -189,7 +189,8 @@ impl CharExt for char {
             parts<<=8;  parts |= c & 0x3f;
             parts |= 0x80_80_80_80;// set the most significant bit
             parts >>= 8*(4-len);// right-align bytes
-            // Now, unused bytes are zero, (which matters for Utf8Char.eq()) and the rest are 0b10xx_xxxx
+            // Now, unused bytes are zero, (which matters for Utf8Char.eq())
+            // and the rest are 0b10xx_xxxx
 
             // set header on first byte
             parts |= (0xff_00u32 >> len)  &  0xff;// store length
