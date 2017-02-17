@@ -31,9 +31,11 @@ Alternatives and extensions to the unstable `char.encode_utf8()` and `char.encod
 // either `cargo clippy` doesn't see theese, or I get a warning when I build.
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
-#![cfg_attr(feature="clippy", allow(len_without_is_empty))]// UtfxChar is never empty
-#![cfg_attr(feature="clippy", allow(match_same_arms))]
 #![cfg_attr(feature="clippy", allow(derive_hash_xor_eq))]// tested
+#![cfg_attr(feature="clippy", allow(len_without_is_empty))]// UtfxChar is never empty
+#![cfg_attr(feature="clippy", allow(match_same_arms))]// looks better IMO
+#![cfg_attr(feature="clippy", allow(needless_return))]// `foo.bar(); foo` looks unfinished
+#![cfg_attr(feature="clippy", allow(redundant_closure))]// keep it explicit
 // precedence: I prefer spaces to parentheses, but it's nice to recheck.
 
 mod errors;
