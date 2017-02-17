@@ -134,7 +134,7 @@ fn test(c: u32) {
     assert_eq!(reference[0].extra_utf8_bytes_unchecked(), len-1);
     assert_eq!(AsRef::<[u8]>::as_ref(&u8c), reference);
 
-    let (mut arr,arrlen) = u8c.to_array();
+    let (arr,arrlen) = u8c.to_array();
     assert_eq!(arrlen, len);
     assert_eq!(Utf8Char::from_array(arr), Ok(u8c));
     assert_eq!(c.to_utf8_array(),  (arr, len));
@@ -143,12 +143,12 @@ fn test(c: u32) {
     let ustr = Utf8Char::from_str(str_).unwrap();
     assert_eq!(ustr.to_array().0, arr);// bitwise equality
     assert_eq!(char::from_utf8_array(arr), Ok(c));
+    let mut longer = [0xff; 5]; // 0xff is never valid
+    longer[..len].copy_from_slice(reference);
     assert_eq!(char::from_utf8_slice_start(reference), Ok((c,len)));
-    for b in arr.iter_mut().skip(arrlen) {
-        *b = b'F';// from_slice_start must not read these.
-    }
-    assert_eq!(Utf8Char::from_slice_start(&arr), Ok((u8c,len)));// Test that it doesn't read too much
+    assert_eq!(char::from_utf8_slice_start(&longer), Ok((c,len)));
     assert_eq!(Utf8Char::from_slice_start(reference), Ok((u8c,len)));
+    assert_eq!(Utf8Char::from_slice_start(&longer), Ok((u8c,len)));
     unsafe {
         // Hopefully make bugs easier to catch by making reads into unallocated memory by filling
         // a jemalloc bin. See table on http://jemalloc.net/jemalloc.3.html for bin sizes.
@@ -169,7 +169,12 @@ fn test(c: u32) {
     assert_eq!(reference[0].utf16_needs_extra_unit(), Ok(len==2));
     assert_eq!(reference[0].is_utf16_leading_surrogate(), len==2);
     assert_eq!(u16c.as_ref(), reference);
-    assert_eq!(char::from_utf16_slice_start(&reference[..len]), Ok((c,len)));
+    let mut longer = [0; 3];
+    longer[..len].copy_from_slice(reference);
+    assert_eq!(char::from_utf16_slice_start(reference), Ok((c,len)));
+    assert_eq!(char::from_utf16_slice_start(&longer), Ok((c,len)));
+    assert_eq!(Utf16Char::from_slice_start(reference), Ok((u16c,len)));
+    assert_eq!(Utf16Char::from_slice_start(&longer), Ok((u16c,len)));
     unsafe {
         // Hopefully make bugs easier to catch by making reads into unallocated memory by filling
         // a jemalloc bin. See table on http://jemalloc.net/jemalloc.3.html for bin sizes.
