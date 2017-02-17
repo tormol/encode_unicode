@@ -80,23 +80,23 @@ fn from_utf16_tuple() {
 }
 
 #[test]
-fn from_utf16_slice() {
+fn from_utf16_slice_start() {
     use encode_unicode::error::InvalidUtf16Slice::*;
-    assert_eq!(char::from_utf16_slice(&[]), Err(EmptySlice));
+    assert_eq!(char::from_utf16_slice_start(&[]), Err(EmptySlice));
     let mut buf = [0; 6];
     for u in 0xd800..0xdc00 {
         buf[0] = u;
-        assert_eq!(char::from_utf16_slice(&buf[..1]), Err(MissingSecond));
+        assert_eq!(char::from_utf16_slice_start(&buf[..1]), Err(MissingSecond));
         buf[1] = u;
         let pass = 2 + (u as usize % (buf.len()-2));
-        assert_eq!(char::from_utf16_slice(&buf[..pass]), Err(SecondNotLowSurrogate));
+        assert_eq!(char::from_utf16_slice_start(&buf[..pass]), Err(SecondNotLowSurrogate));
     }
     for u in 0xdc00..0xe000 {
         buf[0] = u;
         let close = if u%3==0 {u-100} else {u+100};
         let pass = 1 + (u as usize % (buf.len()-1));
         buf[pass] = close;
-        assert_eq!(char::from_utf16_slice(&buf[..pass]), Err(FirstLowSurrogate));
+        assert_eq!(char::from_utf16_slice_start(&buf[..pass]), Err(FirstLowSurrogate));
     }
 }
 
@@ -107,7 +107,7 @@ fn overlong_utf8() {
                      [0xc0,0x9f], [0xe0,0x8f], [0xf0,0x87]];
     for o in overlongs.iter() {
         let arr = [o[0],o[1], 0x80, 0x80];
-        assert_eq!(char::from_utf8_slice(&arr), Err(InvalidUtf8Slice::Utf8(OverLong)));
+        assert_eq!(char::from_utf8_slice_start(&arr), Err(InvalidUtf8Slice::Utf8(OverLong)));
         assert_eq!(char::from_utf8_array(arr), Err(InvalidUtf8Array::Utf8(OverLong)));
     }
 }

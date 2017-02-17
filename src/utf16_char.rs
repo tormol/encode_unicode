@@ -225,8 +225,8 @@ impl cmp::Ord for Utf16Char {
 impl Utf16Char {
     /// Validate and store the first UTF-16 codepoint in the slice.
     /// Also return how many units were needed.
-    pub fn from_slice(src: &[u16]) -> Result<(Self,usize), InvalidUtf16Slice> {
-        char::from_utf16_slice(src).map(|(_,len)| {
+    pub fn from_slice_start(src: &[u16]) -> Result<(Self,usize), InvalidUtf16Slice> {
+        char::from_utf16_slice_start(src).map(|(_,len)| {
             let second = if len==2 {src[1]} else {0};
             (Utf16Char{ units: [src[0], second] }, len)
         })

@@ -128,11 +128,11 @@ pub trait CharExt: Sized {
 
     /// Create a `char` from the start of a UTF-8 slice,
     /// and also return how many bytes were used.
-    fn from_utf8_slice(src: &[u8]) -> Result<(Self,usize),InvalidUtf8Slice>;
+    fn from_utf8_slice_start(src: &[u8]) -> Result<(Self,usize),InvalidUtf8Slice>;
 
     /// Create a `char` from the start of a UTF-16 slice,
     /// and also return how many units were used.
-    fn from_utf16_slice(src: &[u16]) -> Result<(Self,usize), InvalidUtf16Slice>;
+    fn from_utf16_slice_start(src: &[u16]) -> Result<(Self,usize), InvalidUtf16Slice>;
 
 
     /// Convert an UTF-8 sequence as returned from `.to_utf8_array()` into a `char`
@@ -201,7 +201,7 @@ impl CharExt for char {
     }
 
 
-    fn from_utf8_slice(src: &[u8]) -> Result<(Self,usize),InvalidUtf8Slice> {
+    fn from_utf8_slice_start(src: &[u8]) -> Result<(Self,usize),InvalidUtf8Slice> {
         use errors::InvalidUtf8::*;
         use errors::InvalidUtf8Slice::*;
         let first = match src.first() {
@@ -285,7 +285,7 @@ impl CharExt for char {
     }
 
 
-    fn from_utf16_slice(src: &[u16]) -> Result<(Self,usize), InvalidUtf16Slice> {
+    fn from_utf16_slice_start(src: &[u16]) -> Result<(Self,usize), InvalidUtf16Slice> {
         use errors::InvalidUtf16Slice::*;
         unsafe {match (src.get(0), src.get(1)) {
             (Some(&u @ 0x00_00...0xd7_ff), _) |

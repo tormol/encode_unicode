@@ -143,7 +143,7 @@ fn test(c: u32) {
     let ustr = Utf8Char::from_str(str_).unwrap();
     assert_eq!(ustr.to_array().0, arr);// bitwise equality
     assert_eq!(char::from_utf8_array(arr), Ok(c));
-    assert_eq!(char::from_utf8_slice(reference), Ok((c,len)));
+    assert_eq!(char::from_utf8_slice_start(reference), Ok((c,len)));
     for b in arr.iter_mut().skip(arrlen) {
         *b = b'F';// from_slice_start must not read these.
     }
@@ -169,7 +169,7 @@ fn test(c: u32) {
     assert_eq!(reference[0].utf16_needs_extra_unit(), Ok(len==2));
     assert_eq!(reference[0].is_utf16_leading_surrogate(), len==2);
     assert_eq!(u16c.as_ref(), reference);
-    assert_eq!(char::from_utf16_slice(&reference[..len]), Ok((c,len)));
+    assert_eq!(char::from_utf16_slice_start(&reference[..len]), Ok((c,len)));
     unsafe {
         // Hopefully make bugs easier to catch by making reads into unallocated memory by filling
         // a jemalloc bin. See table on http://jemalloc.net/jemalloc.3.html for bin sizes.

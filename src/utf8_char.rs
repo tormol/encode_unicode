@@ -251,7 +251,7 @@ impl Utf8Char {
     /// If it's a str and you know it contains only one codepoint,
     /// use `.from_str()` to skip the validation.
     pub fn from_slice_start(src: &[u8]) -> Result<(Self,usize),InvalidUtf8Slice> {
-        char::from_utf8_slice(src).map(|(_,len)| {
+        char::from_utf8_slice_start(src).map(|(_,len)| {
             let mut bytes = [0; 4];
             bytes[..len].copy_from_slice(&src[..len]);
             (Utf8Char{bytes: bytes}, len)
