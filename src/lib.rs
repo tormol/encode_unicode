@@ -8,20 +8,27 @@
 
 
 /*!
-Alternatives and extensions to the unstable `char.encode_utf8()` and `char.encode_utf16()`.
-
-[crates.io page](https://crates.io/crates/encode_unicode)
-[github repository](https://github.com/tormol/encode_unicode)
+Miscellaneous UTF-8 and UTF-16 types and methods.
 
 # Optional features:
-* **no_std**: Use `#[no_std]`; There are some differences:
+* `#![no_std]`-mode: There are a few differences:
   * `AsciiExt` doesn't exist, but `is_ascii()` is made available as an inherent impl.
   * `Error` doesn't exist, but `description()` is made available as an inherent impl.
+  * `Extend`/`FromIterator`-implementations for `String`/`Vec<u8>`/`Vec<u16>`.
   * There is no `io`, so `Utf8Iterator` doesn't implement `Read`.
-  * The iterators doesn't implement `Debug`.
-* **ascii**: Convert `Utf8Char` and `Utf16Char` to and from [ascii](https://tomprogrammer.github.io/rust-ascii/ascii/index.html)::[`AsciiChar`](https://tomprogrammer.github.io/rust-ascii/ascii/enum.AsciiChar.html).
-* **ascii_no_std**: You need to use this feature instead of both ascii and no_std.
-  This is because the ascii crate needs to know about `#[no_std]`, but the features are otherwize independent.
+
+  This feature is enabled by setting `default-features=false` in `Cargo.toml`:
+  `encode_unicode = {version="0.3", default-features=false}`
+* Integration with the [ascii](https://tomprogrammer.github.io/rust-ascii/ascii/index.html) crate:  
+  Convert `Utf8Char` and `Utf16Char` to and from
+  [ascii::`AsciiChar`](https://tomprogrammer.github.io/rust-ascii/ascii/enum.AsciiChar.html).
+
+The minimum supported version of Rust is 1.15,
+older versions might work, but also break in a minor update.
+
+[crates.io page](https://crates.io/crates/encode_unicode)  
+[githab repository](https://github.com/tormol/encode_unicode)
+
 */
 
 

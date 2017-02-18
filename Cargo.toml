@@ -2,8 +2,7 @@
 name = "encode_unicode"
 keywords = ["unicode","UTF-8","UTF-16"]
 description = """
-Alternative and extension to the unstable `char.encode_utf8()` and char.encode_utf16()` methods.
-Also has UTF-8- and UTF-16-encoded character types.
+UTF-8 and UTF-16 iterators, character types and related methods for char, u8 and u16.
 """
 readme = "README.md"
 version = "0.2.0"

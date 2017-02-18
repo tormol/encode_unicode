@@ -1,30 +1,35 @@
 # encode_unicode
-Alternatives and extensions to to the unstable `char.encode_utf{8,16}()` methods.
+UTF-8 and UTF-16 iterators, character types and related methods for `char`, `u8` and `u16`.
+
+[![crates.io page](https://img.shields.io/crates/v/encode_unicode.svg)](https://crates.io/crates/encode_unicode/)
 
 ## Features:
-* **[Utf8Char](http://tormol.github.io/rustdoc/encode_unicode/struct.Utf8Char.html)**: A `char` stored as UTF-8. Can be borrowed as a `str`.
-* **[Utf16Char](http://tormol.github.io/rustdoc/encode_unicode/struct.Utf16Char.html)**: A `char` stored as UTF-16. Can be borrowed as a `u16` slice.
-* **[Conversion methods on `char`](http://tormol.github.io/rustdoc/encode_unicode/trait.CharExt.html)**:
-  * to UTF-8 as `[u8; 4]` or into `&mut[u8]`. and vice versa.
-  * to UTF-16 as `(u16, Option<u16>)` or into `&mut[u16]`. and vice versa.
-* [Precise errors when decoding a char fro9m UTF-8, UTF-16 or `u32` fails](http://tormol.github.io/rustdoc/encode_unicode/error/index.html).
+* **[`Utf8Char`](http://tormol.github.io/rustdoc/encode_unicode/struct.Utf8Char.html)**:
+  A `char` stored as UTF-8. Can be borrowed as a `str` or `u8` slice.
+* **[`Utf16Char`](http://tormol.github.io/rustdoc/encode_unicode/struct.Utf16Char.html)**:
+  A `char` stored as UTF-16. Can be borrowed as an `u16` slice.
+* [Conversion methods on `char`](http://tormol.github.io/rustdoc/encode_unicode/trait.CharExt.html):
+  * to and from UTF-8 as `[u8; 4]` or slice.
+  * to and from UTF-16 as `(u16, Option<u16>)` or slice.
+* Iterators over the [UTF-8 bytes](http://tormol.github.io/rustdoc/encode_unicode/struct.Utf8Iterator.html)
+  or [UTF-16 units](http://tormol.github.io/rustdoc/encode_unicode/struct.Utf16Iterator.html).
+* [Precise errors when decoding a char from UTF-8, UTF-16 or `u32` fails](http://tormol.github.io/rustdoc/encode_unicode/error/index.html).
+* Utility methods on [`u8`](http://tormol.github.io/rustdoc/encode_unicode/trait.U8UtfExt.html)
+  and [`u16`](http://tormol.github.io/rustdoc/encode_unicode/trait.U16UtfExt.html).
 
-[See the [documentation for the remaining](http://tormol.github.io/rustdoc/encode_unicode/index.html).
+The minimum supported version of Rust is 1.15,
+older versions might work, but also break in a minor update.
 
-The goal was to fill in those methods for stable via a trait,
-but that didn't work since the methods already exist; they're just un-callable.
-
-## Optional Features:
-* **no_std**: Use `#[no_std]`; There are some differences:
+## Optional features:
+* `#![no_std]`-mode: There are a few differences:
   * `AsciiExt` doesn't exist, but `is_ascii()` is made available as an inherent impl.
   * `Error` doesn't exist, but `description()` is made available as an inherent impl.
+  * `Extend`/`FromIterator`-implementations for `String`/`Vec<u8>`/`Vec<u16>`.
   * There is no `io`, so `Utf8Iterator` doesn't implement `Read`.
-  * The iterators doesn't implement `Debug`.
-* **ascii**: Convert `Utf8Char` and `Utf16Char` to and from [ascii](https://tomprogrammer.github.io/rust-ascii/ascii/index.html)::[`AsciiChar`](https://tomprogrammer.github.io/rust-ascii/ascii/enum.AsciiChar.html).
-* **ascii_no_std**: You need to use this feature instead of both ascii and no_std.  
-  This is because the ascii crate needs to know about `#[no_std]`, but the features are otherwize independent.
-
-The tests require nightly because they use compare against `encode_utf{8,16}()`,
+  This feature is enabled by setting `default-features=false` in `Cargo.toml`:
+  `encode_unicode = {version="0.3", default-features=false}`.
+* Integration with the [ascii](https://tomprogrammer.github.io/rust-ascii/ascii/index.html) crate:
+  Convert `Utf8Char` and `Utf16Char` to and from [ascii::`AsciiChar`](https://tomprogrammer.github.io/rust-ascii/ascii/enum.AsciiChar.html).
 
 ## License
 
@@ -41,3 +46,11 @@ Unless you explicitly state otherwise, any contribution intentionally
 submitted for inclusion in the work by you, as defined in the Apache-2.0
 license, shall be dual licensed as above, without any additional terms or
 conditions.
+
+## History
+
+The original purpose of this crate was to provide standins for the then
+unstable `encode_utf8()` and `encode_utf16()`.  
+The standins were removed in 0.3 when Rust 1.15 stabilized the `encode_`
+methods, but the other stuff I added, such as iterators like
+those `encode_utf{8,16}() returned for a while, might still be of use.
