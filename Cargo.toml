@@ -5,7 +5,7 @@ description = """
 UTF-8 and UTF-16 iterators, character types and related methods for char, u8 and u16.
 """
 readme = "README.md"
-version = "0.2.0"
+version = "0.3.0"
 license = "MIT/Apache-2.0"
 repository = "https://github.com/tormol/encode_unicode"
 documentation = "http://tormol.github.io/rustdoc/encode_unicode"
