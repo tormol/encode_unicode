@@ -198,6 +198,11 @@ impl fmt::Debug for Utf16Char {
         fmt::Debug::fmt(&self.to_char(), fmtr)
     }
 }
+impl fmt::Display for Utf16Char {
+    fn fmt(&self,  fmtr: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&Utf8Char::from(*self), fmtr)
+    }
+}
 impl cmp::PartialOrd for Utf16Char {
     fn partial_cmp(&self,  rhs: &Self) -> Option<cmp::Ordering> {
         Some(self.cmp(rhs))

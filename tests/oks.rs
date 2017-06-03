@@ -161,6 +161,8 @@ fn test(c: u32) {
     }
     assert_eq!(&Vec::<u8>::from_iter(Some(u8c))[..], reference);
     assert_eq!(&String::from_iter(Some(u8c))[..], str_);
+    assert_eq!(format!("{:?}", u8c), format!("{:?}", c));
+    assert_eq!(format!("{}", u8c), format!("{}", c));
 
     // UTF-16
     let mut buf = [0; 2];
@@ -190,6 +192,8 @@ fn test(c: u32) {
     assert_eq!(char::from_utf16_tuple(tuple), Ok(c));
     assert_eq!(c.to_utf16().to_char(), c);
     assert_eq!(&Vec::<u16>::from_iter(Some(u16c))[..], reference);
+    assert_eq!(format!("{:?}", u16c), format!("{:?}", c));
+    assert_eq!(format!("{}", u16c), format!("{}", c));
 }
 
 

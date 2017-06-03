@@ -239,6 +239,11 @@ impl fmt::Debug for Utf8Char {
         fmt::Debug::fmt(&self.to_char(), fmtr)
     }
 }
+impl fmt::Display for Utf8Char {
+    fn fmt(&self,  fmtr: &mut fmt::Formatter) -> fmt::Result {
+        fmtr.write_str(self.as_str())
+    }
+}
 
 
   ///////////////////////////////////////////////////////
