@@ -1,4 +1,8 @@
-Version 0.3.0 (Unreleased)
+Version 0.3.1 (2017-06-16)
+==========================
+* Implement `Display` for `Utf*Char` and `Utf16Char`.
+
+Version 0.3.0 (2017-03-29)
 ==========================
 * Replace the "no_std" feature with opt-out "std".
   * Upgrade ascii to v0.8.
