@@ -36,7 +36,7 @@ macro_rules! description {($err:ty, $desc:expr) => {
 }}
 
 
-/// Cannot tell wether an `u16` needs an extra unit,
+/// Cannot tell whether an `u16` needs an extra unit,
 /// because it's a trailing surrogate itself.
 #[derive(Clone,Copy, Debug, PartialEq,Eq)]
 pub struct InvalidUtf16FirstUnit;
@@ -93,11 +93,11 @@ simple!{/// Reasons why a slice of `u16`s doesn't start with valid UTF-16.
         /// The slice is empty.
         ::EmptySlice => "the slice is empty",
         /// The first unit is a low surrogate.
-        ::FirstLowSurrogate => "the first unit is a low surrogate",
+        ::FirstLowSurrogate => "the first unit is a trailing surrogate",
         /// The first and only unit requires a second unit.
         ::MissingSecond => "the first and only unit requires a second one",
-        /// The first unit requires a second one, but it's not a low surrogate.
-        ::SecondNotLowSurrogate => "the required second unit is not a low surrogate",
+        /// The first unit requires a second one, but it's not a trailing surrogate.
+        ::SecondNotLowSurrogate => "the required second unit is not a trailing surrogate",
     }}
 
 
@@ -112,8 +112,8 @@ simple!{/// Reasons why `Utf8Char::from_str()` failed.
 simple!{/// Reasons why a byte is not the start of a UTF-8 codepoint.
     InvalidUtf8FirstByte {
         /// Sequences cannot be longer than 4 bytes. Is given for values >= 240.
-        ::TooLongSeqence => "is greater than 239 (UTF-8 seqences cannot be longer than four bytes)",
-        /// This byte belongs to a previous seqence. Is given for values between 128 and 192 (exclusive).
+        ::TooLongSeqence => "is greater than 247 (UTF-8 sequences cannot be longer than four bytes)",
+        /// This byte belongs to a previous sequence. Is given for values between 128 and 192 (exclusive).
         ::ContinuationByte => "is a continuation of a previous sequence",
     }}
 use self::InvalidUtf8FirstByte::*;
@@ -181,9 +181,9 @@ use self::InvalidUtf8::*;
 complex!{InvalidUtf8 {
         InvalidUtf8FirstByte => FirstByte,
     } {
-        FirstByte(TooLongSeqence) => "the first byte is greater than 239 (UTF-8 seqences cannot be longer than four bytes)",
+        FirstByte(TooLongSeqence) => "the first byte is greater than 239 (UTF-8 sequences cannot be longer than four bytes)",
         FirstByte(ContinuationByte) => "the first byte is a continuation of a previous sequence",
-        OverLong => "the seqence contains too many zeros and could be shorter",
+        OverLong => "the sequence contains too many zeros and could be shorter",
         NotAContinuationByte(_) => "the sequence is too short",
     } => false => {
         FirstByte(ref cause) => Some(cause),
@@ -204,7 +204,7 @@ complex!{InvalidUtf8Array {
         InvalidUtf8 => InvalidUtf8Array::Utf8,
         InvalidCodepoint => InvalidUtf8Array::Codepoint,
     } {
-        InvalidUtf8Array::Utf8(_) => "the seqence is invalid UTF-8",
+        InvalidUtf8Array::Utf8(_) => "the sequence is invalid UTF-8",
         InvalidUtf8Array::Codepoint(_) => "the encoded codepoint is invalid",
     } => true => {
         InvalidUtf8Array::Utf8(ref u) => Some(u),
@@ -227,10 +227,10 @@ complex!{InvalidUtf8Slice {
         InvalidUtf8 => InvalidUtf8Slice::Utf8,
         InvalidCodepoint => InvalidUtf8Slice::Codepoint,
     } {
-        InvalidUtf8Slice::Utf8(_) => "the seqence is invalid UTF-8",
+        InvalidUtf8Slice::Utf8(_) => "the sequence is invalid UTF-8",
         InvalidUtf8Slice::Codepoint(_) => "the encoded codepoint is invalid",
         InvalidUtf8Slice::TooShort(0) => "the slice is empty",
-        InvalidUtf8Slice::TooShort(_) => "the slice is shorter than the seqence",
+        InvalidUtf8Slice::TooShort(_) => "the slice is shorter than the sequence",
     } => true => {
         InvalidUtf8Slice::Utf8(ref u) => Some(u),
         InvalidUtf8Slice::Codepoint(ref c) => Some(c),

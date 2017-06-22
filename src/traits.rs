@@ -26,7 +26,8 @@ pub trait U8UtfExt {
     /// # Errors
     /// An error is returned if this is not a valid start of an UTF-8 codepoint:
     /// * `128..192`: ContinuationByte
-    /// * `240..`: TooLongSequence
+    /// * `248..`: TooLongSequence
+    /// Values in 244..248 represent a too high codepoint, but do not cause an error.
     fn extra_utf8_bytes(self) -> Result<usize,InvalidUtf8FirstByte>;
 
     /// How many more bytes will you need to complete this codepoint?
@@ -48,7 +49,7 @@ impl U8UtfExt for u8 {
         }
     }
     fn extra_utf8_bytes_unchecked(self) -> usize {
-        (self.not().leading_zeros()as usize).saturating_sub(1)
+        (self.not().leading_zeros() as usize).saturating_sub(1)
     }
 }
 
@@ -132,6 +133,8 @@ pub trait CharExt: Sized {
 
     /// Create a `char` from the start of a UTF-16 slice,
     /// and also return how many units were used.
+    ///
+    /// If you want to continue after an error, continue with the next `u16`.
     fn from_utf16_slice_start(src: &[u16]) -> Result<(Self,usize), InvalidUtf16Slice>;
 
 
@@ -254,7 +257,7 @@ impl CharExt for char {
         } else {
             let mut c = src[0] as u32 & (0xff >> 2+src.len()-1);
             for b in &src[1..] {
-                c = (c << 6)  |  (b & 0b00111111) as u32;
+                c = (c << 6)  |  (b & 0b0011_1111) as u32;
             }
             unsafe{ char::from_u32_unchecked(c) }
         }

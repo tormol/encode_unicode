@@ -14,7 +14,7 @@ Miscellaneous UTF-8 and UTF-16 types and methods.
 * `#![no_std]`-mode: There are a few differences:
   * `AsciiExt` doesn't exist, but `is_ascii()` is made available as an inherent impl.
   * `Error` doesn't exist, but `description()` is made available as an inherent impl.
-  * `Extend`/`FromIterator`-implementations for `String`/`Vec<u8>`/`Vec<u16>`.
+  * `Extend`/`FromIterator`-implementations for `String`/`Vec<u8>`/`Vec<u16>` are missing.
   * There is no `io`, so `Utf8Iterator` doesn't implement `Read`.
 
   This feature is enabled by setting `default-features=false` in `Cargo.toml`:
@@ -24,10 +24,10 @@ Miscellaneous UTF-8 and UTF-16 types and methods.
   [ascii::`AsciiChar`](https://tomprogrammer.github.io/rust-ascii/ascii/enum.AsciiChar.html).
 
 The minimum supported version of Rust is 1.15,
-older versions might work, but also break in a minor update.
+older versions might work now but can break with a minor update.
 
 [crates.io page](https://crates.io/crates/encode_unicode)  
-[githab repository](https://github.com/tormol/encode_unicode)
+[github repository](https://github.com/tormol/encode_unicode)
 
 */
 

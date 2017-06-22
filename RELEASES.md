@@ -1,6 +1,6 @@
 Version 0.3.1 (2017-06-16)
 ==========================
-* Implement `Display` for `Utf*Char` and `Utf16Char`.
+* Implement `Display` for `Utf8Char` and `Utf16Char`.
 
 Version 0.3.0 (2017-03-29)
 ==========================
@@ -12,14 +12,14 @@ Version 0.3.0 (2017-03-29)
 * Rename `U16UtfExt::utf_is_leading_surrogate()` to `is_utf16_leading_surrogate()`.
 * Rename `Utf16Char::from_slice()` to `from_slice_start()`  and `CharExt::from_utf{8,16}_slice()`
   to `from_utf{8,16}_slice_start()` to be consistent with `Utf8Char`.
-* Fix a bug where `CharExt::from_slice()` would accept some trailing surrogatte
+* Fix a bug where `CharExt::from_slice()` would accept some trailing surrogates
   as standalone codepoints.
 
 Version 0.2.0 (2016-07-24)
 ==========================
 * Change `CharExt::write_utf{8,16}()` to panic instead of returning `None`
   if the slice is too short.
-* Fix bug where `CharExt::write_utf8()` and `Utf8Char::to_slice()` could change bytes it should'nt.
+* Fix bug where `CharExt::write_utf8()` and `Utf8Char::to_slice()` could change bytes it shouldn't.
 * Rename lots of errors with search and replace:
   * CodePoint -> Codepoint
   * Several -> Multiple

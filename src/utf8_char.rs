@@ -252,11 +252,11 @@ impl fmt::Display for Utf8Char {
  //pub impls that should be together for nicer rustdoc//
 ///////////////////////////////////////////////////////
 impl Utf8Char {
-    /// Validate the start of a UTF-8 slice and store it.
+    /// Validate the first codepoint in an UTF-8 slice and return it as an `Utf8Char`.
     /// Also returns how many bytes were needed.
     ///
-    /// If it's a str and you know it contains only one codepoint,
-    /// use `.from_str()` to skip the validation.
+    /// If it's a `str` and you know it contains only one codepoint,
+    /// use `.from_str()` to skip UTF-8 validation.
     pub fn from_slice_start(src: &[u8]) -> Result<(Self,usize),InvalidUtf8Slice> {
         char::from_utf8_slice_start(src).map(|(_,len)| {
             let mut bytes = [0; 4];
