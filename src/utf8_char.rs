@@ -282,7 +282,7 @@ impl Utf8Char {
             let extra = utf8[0].extra_utf8_bytes_unchecked() as u32;
             let mask = u32::from_le(0xff_ff_ff_ff >> 8*(3-extra));
             let unused_zeroed = mask  &  transmute::<_,u32>(utf8);
-            Ok(transmute(unused_zeroed))
+            Ok(Utf8Char{ bytes: transmute(unused_zeroed) })
         }
     }
     /// Unused bytes must be zero
