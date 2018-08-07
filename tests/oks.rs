@@ -59,26 +59,26 @@ fn read_iterator() {
 }
 
 
-const EDGES_AND_BETWEEN: [u32;19] = [
-    0x0,// min
-    0x3b,// middle ASCII
-    b'A' as u32,
-    b'N' as u32,
-    b'Z' as u32,
-    b'a' as u32,
-    b'm' as u32,
-    b'z' as u32,
-    0x7f,// max 1-byte UTF-8
-    0x80,// min 2-byte UTF-8
-    0x111,// between
-    0x7ff,// max 2-byte UTF-8
-    0x800,// min 3-byte UTF-8
-    0xd7ff,// before reserved
-    0xe000,// after reserved
-    0xffff,// max UTF-16 single and 3-byte UTF-8
-    0x10000,// min UTF-16 surrogate and 4-byte UTF-8
-    0xabcde,// between
-    0x10ffff,// max
+const EDGES_AND_BETWEEN: [char;19] = [
+    '\u{0}',// min
+    '\u{3b}',// middle ASCII
+    'A',// min ASCII uppercase
+    'N',// middle ASCII uppercase
+    'Z',// max ASCII uppercase
+    'a',// min ASCII lowercase
+    'm',// middle ASCII lowercase
+    'z',// max ASCII lowercase
+    '\u{7f}',// max ASCII and 1-byte UTF-8
+    '\u{80}',// min 2-byte UTF-8
+    '\u{111}',// middle
+    '\u{7ff}',// max 2-byte UTF-8
+    '\u{800}',// min 3-byte UTF-8
+    '\u{d7ff}',// before reserved
+    '\u{e000}',// after reserved
+    '\u{ffff}',// max UTF-16 single and 3-byte UTF-8
+    '\u{10000}',// min UTF-16 surrogate and 4-byte UTF-8
+    '\u{abcde}',// middle
+    '\u{10ffff}',// max
 ];
 
 fn eq_cmp_hash(c: char) -> (Utf8Char, Utf16Char) {
@@ -101,9 +101,7 @@ fn eq_cmp_hash(c: char) -> (Utf8Char, Utf16Char) {
     assert_eq!(u16c.cmp(&u16c), Ordering::Equal);
     assert!(u16c.eq_ignore_ascii_case(&u16c));
 
-    for other in &EDGES_AND_BETWEEN {
-        let other = unsafe{ char::from_u32_unchecked(*other) };
-
+    for &other in &EDGES_AND_BETWEEN {
         let u8other = other.to_utf8();
         assert_eq!(u8c == u8other,  c == other);
         assert_eq!(hash(u8c)==hash(u8other),  hash(c)==hash(other));
@@ -139,9 +137,10 @@ fn iterators(c: char) {
     }
 }
 
-fn test(c: u32) {
-    let c = char::from_u32(c).expect(&format!("{:x} is not a valid char", c));
+fn test(c: char) {
+    assert_eq!(char::from_u32(c as u32), Some(c));
     assert_eq!(char::from_u32_detailed(c as u32), Ok(c));
+    assert_eq!(unsafe{ char::from_u32_unchecked(c as u32) }, c);
     let (u8c, u16c) = eq_cmp_hash(c);
     iterators(c);
     assert_eq!(Utf16Char::from(u8c), u16c);
@@ -226,8 +225,8 @@ fn test(c: u32) {
 
 #[test]
 fn edges_middle() {
-    for c in &EDGES_AND_BETWEEN {
-        test(*c);
+    for &c in &EDGES_AND_BETWEEN {
+        test(c);
     }
 }
 
@@ -235,7 +234,8 @@ fn edges_middle() {
 #[test]
 #[ignore]
 fn all() {
-    for c in std::iter::Iterator::chain(0..0xd800, 0xe000..0x110000) {
+    for cp in std::iter::Iterator::chain(0..0xd800, 0xe000..0x110000) {
+        let c = char::from_u32(cp).expect("not a valid char");
         test(c);
     }
 }

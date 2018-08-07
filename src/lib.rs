@@ -31,7 +31,6 @@ older versions might work, but also break in a minor update.
 
 */
 
-
 #![cfg_attr(feature="std", warn(missing_docs))] // Don't bother documenting std standins.
 
 #![cfg_attr(not(feature="std"), no_std)]
