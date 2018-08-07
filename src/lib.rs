@@ -31,7 +31,7 @@ older versions might work, but also break in a minor update.
 
 */
 
-#![cfg_attr(feature="std", warn(missing_docs))] // Don't bother documenting std standins.
+#![warn(missing_docs)]
 
 #![cfg_attr(not(feature="std"), no_std)]
 // either `cargo clippy` doesn't see theese, or I get a warning when I build.
@@ -42,6 +42,8 @@ older versions might work, but also break in a minor update.
 #![cfg_attr(feature="clippy", allow(match_same_arms))]// looks better IMO
 #![cfg_attr(feature="clippy", allow(needless_return))]// `foo.bar(); foo` looks unfinished
 #![cfg_attr(feature="clippy", allow(redundant_closure))]// keep it explicit
+#![cfg_attr(feature="clippy", allow(redundant_closure_call))]// not redundant in macros
+#![cfg_attr(feature="clippy", allow(cast_lossless))]// too much noise (and too verbose)
 // precedence: I prefer spaces to parentheses, but it's nice to recheck.
 
 mod errors;
