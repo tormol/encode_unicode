@@ -12,7 +12,7 @@
 use std::char;
 use std::str::{self,FromStr};
 use std::cmp::Ordering;
-use std::hash::Hash;
+use std::hash::{Hash,Hasher};
 use std::collections::hash_map::DefaultHasher;
 #[allow(deprecated,unused)]
 use std::ascii::AsciiExt;
@@ -82,17 +82,22 @@ const EDGES_AND_BETWEEN: [u32;19] = [
 ];
 
 fn eq_cmp_hash(c: char) -> (Utf8Char, Utf16Char) {
-    let sh = &mut DefaultHasher::new();
+    fn hash<T:Hash>(v: T) -> u64 {
+        #[allow(deprecated)]
+        let mut hasher = DefaultHasher::new();
+        v.hash(&mut hasher);
+        hasher.finish()
+    }
     let u8c = c.to_utf8();
     assert_eq!(u8c.to_char(), c);
     assert_eq!(u8c, u8c);
-    assert_eq!(u8c.hash(sh), c.hash(sh));
+    assert_eq!(hash(u8c), hash(u8c));
     assert_eq!(u8c.cmp(&u8c), Ordering::Equal);
     assert!(u8c.eq_ignore_ascii_case(&u8c));
     let u16c = c.to_utf16();
     assert_eq!(u16c.to_char(), c);
     assert_eq!(u16c, u16c);
-    assert_eq!(u16c.hash(sh), c.hash(sh));
+    assert_eq!(hash(u16c), hash(c));
     assert_eq!(u16c.cmp(&u16c), Ordering::Equal);
     assert!(u16c.eq_ignore_ascii_case(&u16c));
 
@@ -101,13 +106,13 @@ fn eq_cmp_hash(c: char) -> (Utf8Char, Utf16Char) {
 
         let u8other = other.to_utf8();
         assert_eq!(u8c == u8other,  c == other);
-        assert_eq!(u8c.hash(sh)==other.hash(sh),  c.hash(sh)==u8other.hash(sh));
+        assert_eq!(hash(u8c)==hash(u8other),  hash(c)==hash(other));
         assert_eq!(u8c.cmp(&u8other), c.cmp(&other));
         assert_eq!(u8c.eq_ignore_ascii_case(&u8other), c.eq_ignore_ascii_case(&other));
 
         let u16other = other.to_utf16();
         assert_eq!(u16c == u16other,  c == other);
-        assert_eq!(u16c.hash(sh)==other.hash(sh),  c.hash(sh)==u16other.hash(sh));
+        assert_eq!(hash(u16c)==hash(u16other),  hash(c)==hash(other));
         assert_eq!(u16c.cmp(&u16other), c.cmp(&other));
         assert_eq!(u16c.eq_ignore_ascii_case(&u16other), c.eq_ignore_ascii_case(&other));
     }
