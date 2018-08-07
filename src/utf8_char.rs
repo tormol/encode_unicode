@@ -20,6 +20,7 @@ use self::core::mem::transmute;
 #[cfg(feature="std")]
 use self::core::iter::FromIterator;
 #[cfg(feature="std")]
+#[allow(deprecated)]
 use std::ascii::AsciiExt;
 #[cfg(feature="ascii")]
 extern crate ascii;
@@ -180,6 +181,7 @@ impl Deref for Utf8Char {
  //ascii traits//
 ////////////////
 #[cfg(feature="std")]
+#[allow(deprecated)]
 impl AsciiExt for Utf8Char {
     type Owned = Utf8Char;
     fn is_ascii(&self) -> bool {
@@ -294,10 +296,56 @@ impl Utf8Char {
     pub fn len(self) -> usize {
         self.bytes[0].extra_utf8_bytes_unchecked() + 1
     }
-    /// Is this codepoint an ASCII character?
-    #[cfg(not(feature="std"))]
+
+    /// Checks that the codepoint is an ASCII character.
     pub fn is_ascii(&self) -> bool {
         self.bytes[0] <= 127
+    }
+    /// Checks that two characters are an ASCII case-insensitive match.
+    ///
+    /// Is equivalent to `a.to_ascii_lowercase() == b.to_ascii_lowercase()`.
+    #[cfg(feature="std")]
+    pub fn eq_ignore_ascii_case(&self,  other: &Self) -> bool {
+        if self.is_ascii() {self.bytes[0].eq_ignore_ascii_case(&other.bytes[0])}
+        else               {self == other}
+    }
+    /// Converts the character to its ASCII upper case equivalent.
+    ///
+    /// ASCII letters 'a' to 'z' are mapped to 'A' to 'Z',
+    /// but non-ASCII letters are unchanged.
+    #[cfg(feature="std")]
+    pub fn to_ascii_uppercase(&self) -> Self {
+        let mut uc = *self;
+        uc.make_ascii_uppercase();
+        uc
+    }
+    /// Converts the character to its ASCII lower case equivalent.
+    ///
+    /// ASCII letters 'A' to 'Z' are mapped to 'a' to 'z',
+    /// but non-ASCII letters are unchanged.
+    #[cfg(feature="std")]
+    pub fn to_ascii_lowercase(&self) -> Self {
+        let mut uc = *self;
+        uc.make_ascii_lowercase();
+        uc
+    }
+    /// Converts the character to its ASCII upper case equivalent in-place.
+    ///
+    /// ASCII letters 'a' to 'z' are mapped to 'A' to 'Z',
+    /// but non-ASCII letters are unchanged.
+    #[inline]
+    #[cfg(feature="std")]
+    pub fn make_ascii_uppercase(&mut self) {
+        self.bytes[0].make_ascii_uppercase()
+    }
+    /// Converts the character to its ASCII lower case equivalent in-place.
+    ///
+    /// ASCII letters 'A' to 'Z' are mapped to 'a' to 'z',
+    /// but non-ASCII letters are unchanged.
+    #[inline]
+    #[cfg(feature="std")]
+    pub fn make_ascii_lowercase(&mut self) {
+        self.bytes[0].make_ascii_lowercase();
     }
 
     /// Convert from UTF-8 to UTF-32
