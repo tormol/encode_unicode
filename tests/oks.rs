@@ -11,8 +11,10 @@
 
 use std::char;
 use std::str::{self,FromStr};
+use std::cmp::Ordering;
 use std::hash::Hash;
 use std::collections::hash_map::DefaultHasher;
+use std::ascii::AsciiExt;
 use std::iter::FromIterator;
 extern crate encode_unicode;
 use encode_unicode::*;
@@ -56,10 +58,15 @@ fn read_iterator() {
 }
 
 
-
-const EDGES_AND_BETWEEN: [u32;13] = [
+const EDGES_AND_BETWEEN: [u32;19] = [
     0x0,// min
-    0x3b,// between
+    0x3b,// middle ASCII
+    b'A' as u32,
+    b'N' as u32,
+    b'Z' as u32,
+    b'a' as u32,
+    b'm' as u32,
+    b'z' as u32,
     0x7f,// max 1-byte UTF-8
     0x80,// min 2-byte UTF-8
     0x111,// between
@@ -77,10 +84,16 @@ fn eq_cmp_hash(c: char) -> (Utf8Char, Utf16Char) {
     let sh = &mut DefaultHasher::new();
     let u8c = c.to_utf8();
     assert_eq!(u8c.to_char(), c);
+    assert_eq!(u8c, u8c);
     assert_eq!(u8c.hash(sh), c.hash(sh));
+    assert_eq!(u8c.cmp(&u8c), Ordering::Equal);
+    assert!(u8c.eq_ignore_ascii_case(&u8c));
     let u16c = c.to_utf16();
     assert_eq!(u16c.to_char(), c);
+    assert_eq!(u16c, u16c);
     assert_eq!(u16c.hash(sh), c.hash(sh));
+    assert_eq!(u16c.cmp(&u16c), Ordering::Equal);
+    assert!(u16c.eq_ignore_ascii_case(&u16c));
 
     for other in &EDGES_AND_BETWEEN {
         let other = unsafe{ char::from_u32_unchecked(*other) };
@@ -89,11 +102,13 @@ fn eq_cmp_hash(c: char) -> (Utf8Char, Utf16Char) {
         assert_eq!(u8c == u8other,  c == other);
         assert_eq!(u8c.hash(sh)==other.hash(sh),  c.hash(sh)==u8other.hash(sh));
         assert_eq!(u8c.cmp(&u8other), c.cmp(&other));
+        assert_eq!(u8c.eq_ignore_ascii_case(&u8other), c.eq_ignore_ascii_case(&other));
 
         let u16other = other.to_utf16();
         assert_eq!(u16c == u16other,  c == other);
         assert_eq!(u16c.hash(sh)==other.hash(sh),  c.hash(sh)==u16other.hash(sh));
         assert_eq!(u16c.cmp(&u16other), c.cmp(&other));
+        assert_eq!(u16c.eq_ignore_ascii_case(&u16other), c.eq_ignore_ascii_case(&other));
     }
     (u8c, u16c)
 }
@@ -163,6 +178,9 @@ fn test(c: u32) {
     assert_eq!(&String::from_iter(Some(u8c))[..], str_);
     assert_eq!(format!("{:?}", u8c), format!("{:?}", c));
     assert_eq!(format!("{}", u8c), format!("{}", c));
+    assert_eq!(u8c.is_ascii(), c.is_ascii());
+    assert_eq!(u8c.to_ascii_lowercase().to_char(), c.to_ascii_lowercase());
+    assert_eq!(u8c.to_ascii_uppercase().to_char(), c.to_ascii_uppercase());
 
     // UTF-16
     let mut buf = [0; 2];
@@ -194,6 +212,9 @@ fn test(c: u32) {
     assert_eq!(&Vec::<u16>::from_iter(Some(u16c))[..], reference);
     assert_eq!(format!("{:?}", u16c), format!("{:?}", c));
     assert_eq!(format!("{}", u16c), format!("{}", c));
+    assert_eq!(u16c.is_ascii(), c.is_ascii());
+    assert_eq!(u16c.to_ascii_lowercase().to_char(), c.to_ascii_lowercase());
+    assert_eq!(u16c.to_ascii_uppercase().to_char(), c.to_ascii_uppercase());
 }
 
 
