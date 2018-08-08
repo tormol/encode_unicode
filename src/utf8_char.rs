@@ -6,8 +6,8 @@
  * copied, modified, or distributed except according to those terms.
  */
 
-pub use errors::FromStrError;
-use error::{InvalidUtf8Slice,InvalidUtf8Array};
+pub use errors::{FromStrError, EmptyStrError};
+use error::{InvalidUtf8Slice, InvalidUtf8Array};
 use Utf8Iterator;
 use CharExt;
 use U8UtfExt;
@@ -252,11 +252,22 @@ impl fmt::Display for Utf8Char {
  //pub impls that should be together for nicer rustdoc//
 ///////////////////////////////////////////////////////
 impl Utf8Char {
+    /// Create an `Utf8Char` from the first codepoint in a `str`.
+    ///
+    /// Returns an error if the `str` is empty.
+    pub fn from_str_start(src: &str) -> Result<(Self,usize),EmptyStrError> {
+        unsafe {
+            if src.is_empty() {
+                Err(EmptyStrError)
+            } else {
+                Ok(Utf8Char::from_slice_start_unchecked(src.as_bytes()))
+            }
+        }
+    }
     /// Validate the first codepoint in an UTF-8 slice and return it as an `Utf8Char`.
     /// Also returns how many bytes were needed.
     ///
-    /// If it's a `str` and you know it contains only one codepoint,
-    /// use `.from_str()` to skip UTF-8 validation.
+    /// If it's a `str`, use `::from_str_start()` to skip UTF-8 validation.
     pub fn from_slice_start(src: &[u8]) -> Result<(Self,usize),InvalidUtf8Slice> {
         char::from_utf8_slice_start(src).map(|(_,len)| {
             let mut bytes = [0; 4];

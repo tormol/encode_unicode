@@ -124,3 +124,9 @@ fn utf8_char_from_str() {
     assert_eq!(Utf8Char::from_str("ab"), Err(MultipleCodepoints));
     assert_eq!(Utf8Char::from_str("́e"), Err(MultipleCodepoints));// 'e'+u301 combining mark
 }
+
+#[test]
+fn utf8_char_from_str_start() {
+    use encode_unicode::error::EmptyStrError;
+    assert_eq!(Utf8Char::from_str_start(""), Err(EmptyStrError));
+}

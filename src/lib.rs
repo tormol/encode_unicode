@@ -63,9 +63,8 @@ pub use traits::U16UtfExt;
 
 pub mod error {// keeping the public interface in one file
     //! Errors returned by various conversion methods in this crate.
-    pub use utf8_char::FromStrError;
-    pub use errors::{InvalidCodepoint};
-    pub use errors::{InvalidUtf8};
+    pub use utf8_char::{FromStrError, EmptyStrError};
+    pub use errors::{InvalidCodepoint, InvalidUtf8};
     pub use errors::{InvalidUtf8FirstByte,InvalidUtf16FirstUnit};
     pub use errors::{InvalidUtf8Slice,InvalidUtf16Slice};
     pub use errors::{InvalidUtf8Array,InvalidUtf16Tuple};

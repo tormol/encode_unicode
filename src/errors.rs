@@ -101,6 +101,12 @@ simple!{/// Reasons why a slice of `u16`s doesn't start with valid UTF-16.
     }}
 
 
+/// Cannot create an `Utf8Char` for the first codepoint of a str,
+/// because there are none.
+#[derive(Clone,Copy, Debug, PartialEq,Eq)]
+pub struct EmptyStrError;
+description!{EmptyStrError, |_| "Is empty" }
+
 simple!{/// Reasons why `Utf8Char::from_str()` failed.
     FromStrError {
         /// `Utf8Char` cannot store more than a single codepoint.
