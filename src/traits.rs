@@ -52,15 +52,15 @@ pub trait U8UtfExt {
 impl U8UtfExt for u8 {
     #[inline]
     fn extra_utf8_bytes(self) -> Result<usize,InvalidUtf8FirstByte> {
-        use error::InvalidUtf8FirstByte::{ContinuationByte,TooLongSeqence};
+        use error::InvalidUtf8FirstByte::{ContinuationByte, TooLongSequence};
         // the bit twiddling is explained in extra_utf8_bytes_unchecked()
         if self < 128 {
-            return Ok(0);
+            return Ok(0);// ASCII
         }
         match ((self as u32)<<25).not().leading_zeros() {
-            n @ 1...3 => Ok(n as usize),
-            0 => Err(ContinuationByte),
-            _ => Err(TooLongSeqence),
+            n @ 1...3 => Ok(n as usize),// start of multibyte
+            0 => Err(ContinuationByte),// following byte
+            _ => Err(TooLongSequence),// too big
         }
     }
     #[inline]
@@ -251,7 +251,7 @@ pub trait CharExt: Sized {
     /// assert_eq!(char::from_utf8_array([0, 0, 0xcc, 0xbb]), Ok('\0'));
     ///
     /// assert_eq!(char::from_utf8_array([0xef, b'F', 0x80, 0x80]), Err(Utf8(NotAContinuationByte(1))));
-    /// assert_eq!(char::from_utf8_array([0xc1, 0x80, 0, 0]), Err(Utf8(OverLong)));
+    /// assert_eq!(char::from_utf8_array([0xc1, 0x80, 0, 0]), Err(Utf8(Overlong)));
     /// assert_eq!(char::from_utf8_array([0xf7, 0xaa, 0x99, 0x88]), Err(Codepoint(TooHigh)));
     /// ```
     fn from_utf8_array(utf8: [u8; 4]) -> Result<Self,InvalidUtf8Array>;
@@ -350,7 +350,7 @@ impl CharExt for char {
         if let Some(i) = bytes.iter().skip(1).position(|&b| (b >> 6) != 0b10 ) {
             Err(Utf8(NotAContinuationByte(i+1)))
         } else if overlong(bytes[0], bytes[1]) {
-            Err(Utf8(OverLong))
+            Err(Utf8(Overlong))
         } else {
             match char::from_u32_detailed(merge_nonascii_unchecked_utf8(bytes)) {
                 Ok(c) => Ok((c, bytes.len())),
@@ -370,7 +370,7 @@ impl CharExt for char {
         if let Some(i) = src[1..].iter().position(|&b| (b >> 6) != 0b10 ) {
             Err(Utf8(NotAContinuationByte(i+1)))
         } else if overlong(utf8[0], utf8[1]) {
-            Err(Utf8(OverLong))
+            Err(Utf8(Overlong))
         } else {
             char::from_u32_detailed(merge_nonascii_unchecked_utf8(src))
                  .map_err(|e| Codepoint(e) )
@@ -417,11 +417,11 @@ impl CharExt for char {
             (Some(&u @ 0x00_00...0xd7_ff), _) |
             (Some(&u @ 0xe0_00...0xff_ff), _)
                 => Ok((char::from_u32_unchecked(u as u32), 1)),
-            (Some(&0xdc_00...0xdf_ff), _) => Err(FirstLowSurrogate),
+            (Some(&0xdc_00...0xdf_ff), _) => Err(FirstIsTrailingSurrogate),
             (None, _) => Err(EmptySlice),
             (Some(&f @ 0xd8_00...0xdb_ff), Some(&s @ 0xdc_00...0xdf_ff))
                 => Ok((char::from_utf16_tuple_unchecked((f, Some(s))), 2)),
-            (Some(&0xd8_00...0xdb_ff), Some(_)) => Err(SecondNotLowSurrogate),
+            (Some(&0xd8_00...0xdb_ff), Some(_)) => Err(SecondIsNotTrailingSurrogate),
             (Some(&0xd8_00...0xdb_ff), None) => Err(MissingSecond),
             (Some(_), _) => unreachable!()
         }}
@@ -434,7 +434,7 @@ impl CharExt for char {
             (0xe0_00...0xff_ff, None) | // single
             (0xd8_00...0xdb_ff, Some(0xdc_00...0xdf_ff)) // correct surrogate
                 => Ok(char::from_utf16_tuple_unchecked(utf16)),
-            (0xd8_00...0xdb_ff, Some(_)) => Err(InvalidSecond),
+            (0xd8_00...0xdb_ff, Some(_)) => Err(SecondIsNotTrailingSurrogate),
             (0xd8_00...0xdb_ff, None   ) => Err(MissingSecond),
             (0xdc_00...0xdf_ff,    _   ) => Err(FirstIsTrailingSurrogate),
             (        _        , Some(_)) => Err(SuperfluousSecond),
@@ -824,7 +824,7 @@ pub trait SliceExt: Index<RangeFull> {
     /// assert_eq!(lengths, [(0,1), (1,1), (2,1), (3,1), (4,3), (7,1),
     ///                      (8,1), (9,1), (10,1), (11,1), (12,2)]);
     /// assert_eq!(errors, [
-    ///     ( 0, Utf8(InvalidUtf8::FirstByte(InvalidUtf8FirstByte::TooLongSeqence))),
+    ///     ( 0, Utf8(InvalidUtf8::FirstByte(InvalidUtf8FirstByte::TooLongSequence))),
     ///     ( 2, Utf8(InvalidUtf8::NotAContinuationByte(2))),
     ///     ( 3, Utf8(InvalidUtf8::FirstByte(InvalidUtf8FirstByte::ContinuationByte))),
     ///     ( 8, Codepoint(InvalidCodepoint::Utf16Reserved)),

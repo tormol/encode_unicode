@@ -42,7 +42,7 @@ fn utf8_extra_bytes() {
     for c in 0..256 {
         assert_eq!( (c as u8).extra_utf8_bytes(), match c {
             0b_1000_0000...0b_1011_1111 => Err(ContinuationByte),
-            0b_1111_1000...0b_1111_1111 => Err(TooLongSeqence),
+            0b_1111_1000...0b_1111_1111 => Err(TooLongSequence),
             0b_0000_0000...0b_0111_1111 => Ok(0),
             0b_1100_0000...0b_1101_1111 => Ok(1),
             0b_1110_0000...0b_1110_1111 => Ok(2),
@@ -82,7 +82,7 @@ fn from_utf16_tuple() {
     }
     for u in 0xd800..0xdc00 {
         assert_eq!(char::from_utf16_tuple((u,None)), Err(MissingSecond));
-        assert_eq!(char::from_utf16_tuple((u,Some(u - 0x2ff))), Err(InvalidSecond));
+        assert_eq!(char::from_utf16_tuple((u,Some(u - 0x2ff))), Err(SecondIsNotTrailingSurrogate));
     }
 }
 
@@ -96,14 +96,14 @@ fn from_utf16_slice_start() {
         assert_eq!(char::from_utf16_slice_start(&buf[..1]), Err(MissingSecond));
         buf[1] = u;
         let pass = 2 + (u as usize % (buf.len()-2));
-        assert_eq!(char::from_utf16_slice_start(&buf[..pass]), Err(SecondNotLowSurrogate));
+        assert_eq!(char::from_utf16_slice_start(&buf[..pass]), Err(SecondIsNotTrailingSurrogate));
     }
     for u in 0xdc00..0xe000 {
         buf[0] = u;
         let close = if u%3==0 {u-100} else {u+100};
         let pass = 1 + (u as usize % (buf.len()-1));
         buf[pass] = close;
-        assert_eq!(char::from_utf16_slice_start(&buf[..pass]), Err(FirstLowSurrogate));
+        assert_eq!(char::from_utf16_slice_start(&buf[..pass]), Err(FirstIsTrailingSurrogate));
     }
 }
 
@@ -118,10 +118,10 @@ fn utf8_overlong() {
     for o in overlongs.iter() {
         for &last in &[0x80, 0xbf] {
             let arr = [o[0], o[1], last, last];
-            assert_eq!(char::from_utf8_slice_start(&arr), Err(InvalidUtf8Slice::Utf8(OverLong)));
-            assert_eq!(char::from_utf8_array(arr), Err(InvalidUtf8Array::Utf8(OverLong)));
-            assert_eq!(Utf8Char::from_slice_start(&arr), Err(InvalidUtf8Slice::Utf8(OverLong)));
-            assert_eq!(Utf8Char::from_array(arr), Err(InvalidUtf8Array::Utf8(OverLong)));
+            assert_eq!(char::from_utf8_slice_start(&arr), Err(InvalidUtf8Slice::Utf8(Overlong)));
+            assert_eq!(char::from_utf8_array(arr), Err(InvalidUtf8Array::Utf8(Overlong)));
+            assert_eq!(Utf8Char::from_slice_start(&arr), Err(InvalidUtf8Slice::Utf8(Overlong)));
+            assert_eq!(Utf8Char::from_array(arr), Err(InvalidUtf8Array::Utf8(Overlong)));
         }
     }
 }
@@ -169,12 +169,12 @@ fn from_str_start() {
 #[test] fn utf8_too_long() {
     for first in 0xf8..0x100 {
         let arr = [first as u8, 0x88, 0x80, 0x80];
-        assert_eq!(Utf8Char::from_array(arr), Err(a::Utf8(FirstByte(TooLongSeqence))));
-        assert_eq!(char::from_utf8_array(arr), Err(a::Utf8(FirstByte(TooLongSeqence))));
+        assert_eq!(Utf8Char::from_array(arr), Err(a::Utf8(FirstByte(TooLongSequence))));
+        assert_eq!(char::from_utf8_array(arr), Err(a::Utf8(FirstByte(TooLongSequence))));
         let arr = [first as u8, 0x88, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80];
         let slice = &arr[..if first&1 == 0 {1} else {8}];
-        assert_eq!(Utf8Char::from_slice_start(slice), Err(s::Utf8(FirstByte(TooLongSeqence))));
-        assert_eq!(char::from_utf8_slice_start(slice), Err(s::Utf8(FirstByte(TooLongSeqence))));
+        assert_eq!(Utf8Char::from_slice_start(slice), Err(s::Utf8(FirstByte(TooLongSequence))));
+        assert_eq!(char::from_utf8_slice_start(slice), Err(s::Utf8(FirstByte(TooLongSequence))));
     }
 }
 

@@ -152,7 +152,7 @@ impl<B:Borrow<u8>, I:Iterator<Item=B>> Iterator for Utf8CharMerger<B,I> {
                         Err(e)
                     } else if bytes[0] == 0b1110_0000  &&  bytes[1] <= 0b10_011111 {
                         self.save(&bytes, 3);
-                        Err(Utf8(OverLong))
+                        Err(Utf8(Overlong))
                     } else if bytes[0] == 0b1110_1101  &&  bytes[1] & 0b11_100000 == 0b10_100000 {
                         self.save(&bytes, 3);
                         Err(Codepoint(Utf16Reserved))
@@ -165,7 +165,7 @@ impl<B:Borrow<u8>, I:Iterator<Item=B>> Iterator for Utf8CharMerger<B,I> {
                         Err(e)
                     } else if bytes[0] == 0b11110_000  &&  bytes[1] <= 0b10_001111 {
                         self.save(&bytes, 4);
-                        Err(InvalidUtf8Slice::Utf8(OverLong))
+                        Err(InvalidUtf8Slice::Utf8(Overlong))
                     } else if bytes[0] == 0b11110_100  &&  bytes[1] > 0b10_001111 {
                         self.save(&bytes, 4);
                         Err(InvalidUtf8Slice::Codepoint(TooHigh))
@@ -177,13 +177,13 @@ impl<B:Borrow<u8>, I:Iterator<Item=B>> Iterator for Utf8CharMerger<B,I> {
                     Err(Utf8(FirstByte(ContinuationByte)))
                 },
                 0b1100_0000...0b1100_0001 => {// 2 and overlong
-                    Err(Utf8(OverLong))
+                    Err(Utf8(Overlong))
                 },
                 0b1111_0101...0b1111_0111 => {// 4 and too high codepoint
                     Err(Codepoint(TooHigh))
                 },
                 0b1111_1000...0b1111_1111 => {
-                    Err(Utf8(FirstByte(TooLongSeqence)))
+                    Err(Utf8(FirstByte(TooLongSequence)))
                 },
                 _ => unreachable!("all possible byte values should be covered")
             };
@@ -464,11 +464,11 @@ impl<'a> Iterator for Utf16CharDecoder<'a> {
                 Some((start, Ok(u16c), len))
             },
             Err(EmptySlice) => None,
-            Err(FirstLowSurrogate) => {
+            Err(FirstIsTrailingSurrogate) => {
                 self.index += 1;
                 Some((start, Err(UnexpectedTrailingSurrogate), 1))
             },
-            Err(SecondNotLowSurrogate) => {
+            Err(SecondIsNotTrailingSurrogate) => {
                 self.index += 1;
                 Some((start, Err(UnmatchedLeadingSurrogate), 1))
             },

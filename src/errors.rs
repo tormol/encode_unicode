@@ -104,18 +104,14 @@ impl InvalidCodepoint {
 
 simple!{/// Reasons why one or two `u16`s are not valid UTF-16, in sinking precedence.
     InvalidUtf16Tuple {
-        /// The first unit is a trailing/low surrogate, which is never valid.
-        ///
-        /// Note that the value of a low surrogate is actually higher than a high surrogate.
-        ::FirstIsTrailingSurrogate => "the first unit is a trailing / low surrogate, which is never valid",
+        /// The first unit is a trailing surrogate, which is never valid.
+        ::FirstIsTrailingSurrogate => "the first unit is a trailing surrogate, which is never valid",
         /// You provided a second unit, but the first one stands on its own.
         ::SuperfluousSecond => "the second unit is superfluous",
         /// The first and only unit requires a second unit.
         ::MissingSecond => "the first unit requires a second unit",
-        /// The first unit requires a second unit, but it's not a trailing/low surrogate.
-        ///
-        /// Note that the value of a low surrogate is actually higher than a high surrogate.
-        ::InvalidSecond => "the required second unit is not a trailing / low surrogate",
+        /// The second unit is needed and was provided, but is not a trailing surrogate.
+        ::SecondIsNotTrailingSurrogate => "the required second unit is not a trailing surrogate",
     }}
 
 
@@ -123,12 +119,12 @@ simple!{/// Reasons why a slice of `u16`s doesn't start with valid UTF-16.
     InvalidUtf16Slice {
         /// The slice is empty.
         ::EmptySlice => "the slice is empty",
-        /// The first unit is a low surrogate.
-        ::FirstLowSurrogate => "the first unit is a trailing surrogate",
+        /// The first unit is a trailing surrogate.
+        ::FirstIsTrailingSurrogate => "the first unit is a trailing surrogate",
         /// The first and only unit requires a second unit.
         ::MissingSecond => "the first and only unit requires a second one",
         /// The first unit requires a second one, but it's not a trailing surrogate.
-        ::SecondNotLowSurrogate => "the required second unit is not a trailing surrogate",
+        ::SecondIsNotTrailingSurrogate => "the required second unit is not a trailing surrogate",
     }}
 
 simple!{/// Types of invalid sequences encountered by `Utf16CharParser`.
@@ -154,7 +150,7 @@ simple!{/// Reasons why `Utf8Char::from_str()` or `Utf16Char::from_str()` failed
 simple!{/// Reasons why a byte is not the start of a UTF-8 codepoint.
     InvalidUtf8FirstByte {
         /// Sequences cannot be longer than 4 bytes. Is given for values >= 240.
-        ::TooLongSeqence => "is greater than 247 (UTF-8 sequences cannot be longer than four bytes)",
+        ::TooLongSequence => "is greater than 247 (UTF-8 sequences cannot be longer than four bytes)",
         /// This byte belongs to a previous sequence. Is given for values between 128 and 192 (exclusive).
         ::ContinuationByte => "is a continuation of a previous sequence",
     }}
@@ -217,15 +213,15 @@ pub enum InvalidUtf8 {
     ///
     /// [Decoding this could allow someone to input otherwise prohibited
     /// characters and sequences, such as "../"](https://tools.ietf.org/html/rfc3629#section-10).
-    OverLong,
+    Overlong,
 }
 use self::InvalidUtf8::*;
 complex!{InvalidUtf8 {
         InvalidUtf8FirstByte => FirstByte,
     } {
-        FirstByte(TooLongSeqence) => "the first byte is greater than 239 (UTF-8 sequences cannot be longer than four bytes)",
+        FirstByte(TooLongSequence) => "the first byte is greater than 239 (UTF-8 sequences cannot be longer than four bytes)",
         FirstByte(ContinuationByte) => "the first byte is a continuation of a previous sequence",
-        OverLong => "the sequence contains too many zeros and could be shorter",
+        Overlong => "the sequence contains too many zeros and could be shorter",
         NotAContinuationByte(_) => "the sequence is too short",
     } => false => {
         FirstByte(ref cause) => Some(cause),
