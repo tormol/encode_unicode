@@ -1,3 +1,10 @@
+Version 0.3.2 (2018-08-08)
+==========================
+* Hide `AsciiExt` deprecation warning and add replacement methods.
+* Correct documentation for `U8UtfExt::extra_utf8_bytes()`.
+* Fix misspellings in some error descriptions.
+* Avoid potentionally bad transmutes.
+
 Version 0.3.1 (2017-06-16)
 ==========================
 * Implement `Display` for `Utf8Char` and `Utf16Char`.
