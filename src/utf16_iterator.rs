@@ -10,6 +10,7 @@ use CharExt;
 use Utf16Char;
 extern crate core;
 use self::core::fmt;
+use self::core::borrow::Borrow;
 
 // Invalid values that says the field is consumed or empty.
 const FIRST_USED: u16 = 0x_dc_00;
@@ -60,5 +61,91 @@ impl fmt::Debug for Utf16Iterator {
             (Some(a), Some(b)) => write!(fmtr, "[{}, {}]", a, b),
             (None,  _)         => write!(fmtr, "[]"),
         }
+    }
+}
+
+
+
+/// Converts an iterator of `Utf16Char` (or `&Utf16Char`)
+/// to an iterator of `u16`s.  
+/// Is equivalent to calling `.flat_map()` on the original iterator,
+/// but the returned iterator is about twice as fast.
+///
+/// The exact number of units cannot be known in advance, but `size_hint()`
+/// gives the possible range.
+///
+/// # Examples
+///
+/// From iterator of values:
+///
+/// ```
+/// use encode_unicode::{iter_units, CharExt};
+///
+/// let iterator = "foo".chars().map(|c| c.to_utf16() );
+/// let mut units = [0; 4];
+/// for (u,dst) in iter_units(iterator).zip(&mut units) {*dst=u;}
+/// assert_eq!(units, ['f' as u16, 'o' as u16, 'o' as u16, 0]);
+/// ```
+///
+/// From iterator of references:
+///
+#[cfg_attr(feature="std", doc=" ```")]
+#[cfg_attr(not(feature="std"), doc=" ```no_compile")]
+/// use encode_unicode::{iter_units, CharExt, Utf16Char};
+///
+/// // (💣 takes two units)
+/// let chars: Vec<Utf16Char> = "💣 bomb 💣".chars().map(|c| c.to_utf16() ).collect();
+/// let units: Vec<u16> = iter_units(&chars).collect();
+/// let flat_map: Vec<u16> = chars.iter().flat_map(|u16c| *u16c ).collect();
+/// assert_eq!(units, flat_map);
+/// ```
+pub fn iter_units<U:Borrow<Utf16Char>, I:IntoIterator<Item=U>>
+(iterable: I) -> Utf16CharSplitter<U, I::IntoIter> {
+    Utf16CharSplitter{ inner: iterable.into_iter(),  prev_second: 0 }
+}
+
+/// The iterator type returned by `iter_units()`
+#[derive(Clone)]
+pub struct Utf16CharSplitter<U:Borrow<Utf16Char>, I:Iterator<Item=U>> {
+    inner: I,
+    prev_second: u16,
+}
+impl<I:Iterator<Item=Utf16Char>> From<I> for Utf16CharSplitter<Utf16Char,I> {
+    /// A less generic constructor than `iter_units()`
+    fn from(iter: I) -> Self {
+        iter_units(iter)
+    }
+}
+impl<U:Borrow<Utf16Char>, I:Iterator<Item=U>> Utf16CharSplitter<U,I> {
+    /// Extracts the source iterator.
+    ///
+    /// Note that `iter_units(iter.into_inner())` is not a no-op:  
+    /// If the last returned unit from `next()` was a leading surrogate,
+    /// the trailing surrogate is lost.
+    pub fn into_inner(self) -> I {
+        self.inner
+    }
+}
+impl<U:Borrow<Utf16Char>, I:Iterator<Item=U>> Iterator for Utf16CharSplitter<U,I> {
+    type Item = u16;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.prev_second == 0 {
+            self.inner.next().map(|u16c| {
+                let (first, second) = u16c.borrow().to_tuple();
+                self.prev_second = second.unwrap_or(0);
+                first
+            })
+        } else {
+            let prev_second = self.prev_second;
+            self.prev_second = 0;
+            Some(prev_second)
+        }
+    }
+    fn size_hint(&self) -> (usize,Option<usize>) {
+        // Doesn't need to handle unlikely overflows correctly because
+        // size_hint() cannot be relied upon anyway. (the trait isn't unsafe)
+        let (min, max) = self.inner.size_hint();
+        let add = if self.prev_second == 0 {0} else {1};
+        (min.wrapping_add(add), max.map(|max| max.wrapping_mul(2).wrapping_add(add) ))
     }
 }

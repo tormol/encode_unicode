@@ -56,8 +56,8 @@ mod utf16_iterator;
 pub use traits::CharExt;
 pub use utf8_char::Utf8Char;
 pub use utf16_char::Utf16Char;
-pub use utf8_iterator::Utf8Iterator;
-pub use utf16_iterator::Utf16Iterator;
+pub use utf8_iterator::{Utf8Iterator, iter_bytes, Utf8CharSplitter};
+pub use utf16_iterator::{Utf16Iterator, iter_units, Utf16CharSplitter};
 pub use traits::U8UtfExt;
 pub use traits::U16UtfExt;
 

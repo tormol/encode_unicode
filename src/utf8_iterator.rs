@@ -11,6 +11,7 @@ extern crate core;
 use self::core::{mem, u32, u64};
 use self::core::ops::Not;
 use self::core::fmt;
+use self::core::borrow::Borrow;
 #[cfg(feature="std")]
 use std::io::{Read, Error as ioError};
 
@@ -77,5 +78,152 @@ impl fmt::Debug for Utf8Iterator {
             i += 1;
         }
         write!(fmtr, "{:?}", &content[..i])
+    }
+}
+
+
+
+/// Converts an iterator of `Utf8Char` (or `&Utf8Char`)
+/// to an iterator of `u8`s.  
+/// Is equivalent to calling `.flat_map()` on the original iterator,
+/// but the returned iterator is ~40% faster.
+///
+/// The iterator also implements `Read` (if the `std` feature isn't disabled).
+/// Reading will never produce an error, and calls to `.read()` and `.next()`
+/// can be mixed.
+///
+/// The exact number of bytes cannot be known in advance, but `size_hint()`
+/// gives the possible range.
+/// (min: all remaining characters are ASCII, max: all require four bytes)
+///
+/// # Examples
+///
+/// From iterator of values:
+///
+/// ```
+/// use encode_unicode::{iter_bytes, CharExt};
+///
+/// let iterator = "foo".chars().map(|c| c.to_utf8() );
+/// let mut bytes = [0; 4];
+/// for (u,dst) in iter_bytes(iterator).zip(&mut bytes) {*dst=u;}
+/// assert_eq!(&bytes, b"foo\0");
+/// ```
+///
+/// From iterator of references:
+///
+#[cfg_attr(feature="std", doc=" ```")]
+#[cfg_attr(not(feature="std"), doc=" ```no_compile")]
+/// use encode_unicode::{iter_bytes, CharExt, Utf8Char};
+///
+/// let chars: Vec<Utf8Char> = "💣 bomb 💣".chars().map(|c| c.to_utf8() ).collect();
+/// let bytes: Vec<u8> = iter_bytes(&chars).collect();
+/// let flat_map: Vec<u8> = chars.iter().flat_map(|u8c| *u8c ).collect();
+/// assert_eq!(bytes, flat_map);
+/// ```
+///
+/// `Read`ing from it:
+///
+#[cfg_attr(feature="std", doc=" ```")]
+#[cfg_attr(not(feature="std"), doc=" ```no_compile")]
+/// use encode_unicode::{iter_bytes, CharExt};
+/// use std::io::Read;
+///
+/// let s = "Ååh‽";
+/// assert_eq!(s.len(), 8);
+/// let mut buf = [b'E'; 9];
+/// let mut reader = iter_bytes(s.chars().map(|c| c.to_utf8() ));
+/// assert_eq!(reader.read(&mut buf[..]).unwrap(), 8);
+/// assert_eq!(reader.read(&mut buf[..]).unwrap(), 0);
+/// assert_eq!(&buf[..8], s.as_bytes());
+/// assert_eq!(buf[8], b'E');
+/// ```
+pub fn iter_bytes<U:Borrow<Utf8Char>, I:IntoIterator<Item=U>>
+(iterable: I) -> Utf8CharSplitter<U, I::IntoIter> {
+    Utf8CharSplitter{ inner: iterable.into_iter(),  prev: 0 }
+}
+
+/// The iterator type returned by `iter_bytes()`
+///
+/// See its documentation for details.
+#[derive(Clone)]
+pub struct Utf8CharSplitter<U:Borrow<Utf8Char>, I:Iterator<Item=U>> {
+    inner: I,
+    prev: u32,
+}
+impl<I:Iterator<Item=Utf8Char>> From<I> for Utf8CharSplitter<Utf8Char,I> {
+    /// A less generic constructor than `iter_bytes()`
+    fn from(iter: I) -> Self {
+        iter_bytes(iter)
+    }
+}
+impl<U:Borrow<Utf8Char>, I:Iterator<Item=U>> Utf8CharSplitter<U,I> {
+    /// Extracts the source iterator.
+    ///
+    /// Note that `iter_bytes(iter.into_inner())` is not a no-op:  
+    /// If the last returned byte from `next()` was not an ASCII by,
+    /// the remaining bytes of that codepoint is lost.
+    pub fn into_inner(self) -> I {
+        self.inner
+    }
+}
+impl<U:Borrow<Utf8Char>, I:Iterator<Item=U>> Iterator for Utf8CharSplitter<U,I> {
+    type Item = u8;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.prev == 0 {
+            self.inner.next().map(|u8c| {
+                let array = u8c.borrow().to_array().0;
+                self.prev = unsafe{ u32::from_le(mem::transmute(array)) } >> 8;
+                array[0]
+            })
+        } else {
+            let next = self.prev as u8;
+            self.prev >>= 8;
+            Some(next)
+        }
+    }
+    fn size_hint(&self) -> (usize,Option<usize>) {
+        // Doesn't need to handle unlikely overflows correctly because
+        // size_hint() cannot be relied upon anyway. (the trait isn't unsafe)
+        let (min, max) = self.inner.size_hint();
+        let add = 4 - (self.prev.leading_zeros() / 8) as usize;
+        (min.wrapping_add(add), max.map(|max| max.wrapping_mul(4).wrapping_add(add) ))
+    }
+}
+#[cfg(feature="std")]
+impl<U:Borrow<Utf8Char>, I:Iterator<Item=U>> Read for Utf8CharSplitter<U,I> {
+    /// Always returns `Ok`
+    fn read(&mut self,  buf: &mut[u8]) -> Result<usize, ioError> {
+        let mut i = 0;
+        // write remaining bytes of previous codepoint
+        while self.prev != 0  &&  i < buf.len() {
+            buf[i] = self.prev as u8;
+            self.prev >>= 8;
+            i += 1;
+        }
+        // write whole characters
+        while i < buf.len() {
+            let bytes = match self.inner.next() {
+                Some(u8c) => u8c.borrow().to_array().0,
+                None => break
+            };
+            buf[i] = bytes[0];
+            i += 1;
+            if bytes[1] != 0 {
+                let len = bytes[0].not().leading_zeros() as usize;
+                let mut written = 1;
+                while written < len {
+                    if i < buf.len() {
+                        buf[i] = bytes[written];
+                        i += 1;
+                        written += 1;
+                    } else {
+                        let bytes_as_u32 = unsafe{ u32::from_le(mem::transmute(bytes)) };
+                        self.prev = bytes_as_u32 >> (8*written);
+                        return Ok(i);
+                    }
+                }
+            }
+        }
+        Ok(i)
     }
 }
