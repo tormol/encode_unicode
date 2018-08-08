@@ -18,9 +18,6 @@ use self::core::ops::Deref;
 use self::core::str::FromStr;
 #[cfg(feature="std")]
 use self::core::iter::FromIterator;
-#[cfg(feature="std")]
-#[allow(deprecated)]
-use std::ascii::AsciiExt;
 #[cfg(feature="ascii")]
 use self::core::char;
 #[cfg(feature="ascii")]
@@ -209,34 +206,6 @@ impl Deref for Utf16Char {
   ////////////////
  //ascii traits//
 ////////////////
-#[cfg(feature="std")]
-#[allow(deprecated)]
-impl AsciiExt for Utf16Char {
-    type Owned = Self;
-    fn is_ascii(&self) -> bool {
-        self.units[0] < 128
-    }
-    fn eq_ignore_ascii_case(&self,  other: &Self) -> bool {
-        self.to_ascii_lowercase() == other.to_ascii_lowercase()
-    }
-    fn to_ascii_uppercase(&self) -> Self {
-        let n = self.units[0].wrapping_sub(b'a' as u16);
-        if n < 26 {Utf16Char{ units: [n+b'A' as u16, 0] }}
-        else      {*self}
-    }
-    fn to_ascii_lowercase(&self) -> Self {
-        let n = self.units[0].wrapping_sub(b'A' as u16);
-        if n < 26 {Utf16Char{ units: [n+b'a' as u16, 0] }}
-        else      {*self}
-    }
-    fn make_ascii_uppercase(&mut self) {
-        *self = self.to_ascii_uppercase()
-    }
-    fn make_ascii_lowercase(&mut self) {
-        *self = self.to_ascii_lowercase();
-    }
-}
-
 #[cfg(feature="ascii")]
 /// Requires the feature "ascii".
 impl From<AsciiChar> for Utf16Char {
@@ -553,7 +522,6 @@ impl Utf16Char {
     /// Checks that two characters are an ASCII case-insensitive match.
     ///
     /// Is equivalent to `a.to_ascii_lowercase() == b.to_ascii_lowercase()`.
-    #[cfg(feature="std")]
     pub fn eq_ignore_ascii_case(&self,  other: &Self) -> bool {
         self.to_ascii_lowercase() == other.to_ascii_lowercase()
     }
@@ -561,7 +529,6 @@ impl Utf16Char {
     ///
     /// ASCII letters 'a' to 'z' are mapped to 'A' to 'Z',
     /// but non-ASCII letters are unchanged.
-    #[cfg(feature="std")]
     pub fn to_ascii_uppercase(&self) -> Self {
         let n = self.units[0].wrapping_sub(b'a' as u16);
         if n < 26 {Utf16Char{ units: [n+b'A' as u16, 0] }}
@@ -571,7 +538,6 @@ impl Utf16Char {
     ///
     /// ASCII letters 'A' to 'Z' are mapped to 'a' to 'z',
     /// but non-ASCII letters are unchanged.
-    #[cfg(feature="std")]
     pub fn to_ascii_lowercase(&self) -> Self {
         let n = self.units[0].wrapping_sub(b'A' as u16);
         if n < 26 {Utf16Char{ units: [n+b'a' as u16, 0] }}
@@ -581,7 +547,6 @@ impl Utf16Char {
     ///
     /// ASCII letters 'a' to 'z' are mapped to 'A' to 'Z',
     /// but non-ASCII letters are unchanged.
-    #[cfg(feature="std")]
     pub fn make_ascii_uppercase(&mut self) {
         *self = self.to_ascii_uppercase()
     }
@@ -589,7 +554,6 @@ impl Utf16Char {
     ///
     /// ASCII letters 'A' to 'Z' are mapped to 'a' to 'z',
     /// but non-ASCII letters are unchanged.
-    #[cfg(feature="std")]
     pub fn make_ascii_lowercase(&mut self) {
         *self = self.to_ascii_lowercase();
     }

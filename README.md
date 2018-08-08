@@ -28,7 +28,6 @@ older versions might work now but can break with a minor update.
 ## Optional features
 
 * `#![no_std]`-mode: There are a few differences:
-  * `AsciiExt` doesn't exist, but `is_ascii()` is made available as an inherent impl.
   * `Error` doesn't exist, but `description()` is made available as an inherent impl.
   * `Extend`/`FromIterator`-implementations for `String`/`Vec<u8>`/`Vec<u16>` are missing.
   * There is no `io`, so `Utf8Iterator` doesn't implement `Read`.

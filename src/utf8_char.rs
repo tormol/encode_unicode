@@ -18,9 +18,6 @@ use self::core::ops::Deref;
 use self::core::mem::transmute;
 #[cfg(feature="std")]
 use self::core::iter::FromIterator;
-#[cfg(feature="std")]
-#[allow(deprecated)]
-use std::ascii::AsciiExt;
 #[cfg(feature="ascii")]
 extern crate ascii;
 #[cfg(feature="ascii")]
@@ -223,35 +220,6 @@ impl Deref for Utf8Char {
   ////////////////
  //ascii traits//
 ////////////////
-#[cfg(feature="std")]
-#[allow(deprecated)]
-impl AsciiExt for Utf8Char {
-    type Owned = Utf8Char;
-    fn is_ascii(&self) -> bool {
-        self.bytes[0].is_ascii()
-    }
-    fn eq_ignore_ascii_case(&self,  other: &Self) -> bool {
-        if self.is_ascii() {self.bytes[0].eq_ignore_ascii_case(&other.bytes[0])}
-        else               {self == other}
-    }
-    fn to_ascii_uppercase(&self) -> Self::Owned {
-        let mut uc = *self;
-        uc.make_ascii_uppercase();
-        uc
-    }
-    fn to_ascii_lowercase(&self) -> Self::Owned {
-        let mut uc = *self;
-        uc.make_ascii_lowercase();
-        uc
-    }
-    fn make_ascii_uppercase(&mut self) {
-        self.bytes[0].make_ascii_uppercase()
-    }
-    fn make_ascii_lowercase(&mut self) {
-        self.bytes[0].make_ascii_lowercase();
-    }
-}
-
 #[cfg(feature="ascii")]
 /// Requires the feature "ascii".
 impl From<AsciiChar> for Utf8Char {
@@ -570,7 +538,6 @@ impl Utf8Char {
     /// Checks that two characters are an ASCII case-insensitive match.
     ///
     /// Is equivalent to `a.to_ascii_lowercase() == b.to_ascii_lowercase()`.
-    #[cfg(feature="std")]
     pub fn eq_ignore_ascii_case(&self,  other: &Self) -> bool {
         if self.is_ascii() {self.bytes[0].eq_ignore_ascii_case(&other.bytes[0])}
         else               {self == other}
@@ -579,7 +546,6 @@ impl Utf8Char {
     ///
     /// ASCII letters 'a' to 'z' are mapped to 'A' to 'Z',
     /// but non-ASCII letters are unchanged.
-    #[cfg(feature="std")]
     pub fn to_ascii_uppercase(&self) -> Self {
         let mut uc = *self;
         uc.make_ascii_uppercase();
@@ -589,7 +555,6 @@ impl Utf8Char {
     ///
     /// ASCII letters 'A' to 'Z' are mapped to 'a' to 'z',
     /// but non-ASCII letters are unchanged.
-    #[cfg(feature="std")]
     pub fn to_ascii_lowercase(&self) -> Self {
         let mut uc = *self;
         uc.make_ascii_lowercase();
@@ -600,7 +565,6 @@ impl Utf8Char {
     /// ASCII letters 'a' to 'z' are mapped to 'A' to 'Z',
     /// but non-ASCII letters are unchanged.
     #[inline]
-    #[cfg(feature="std")]
     pub fn make_ascii_uppercase(&mut self) {
         self.bytes[0].make_ascii_uppercase()
     }
@@ -609,7 +573,6 @@ impl Utf8Char {
     /// ASCII letters 'A' to 'Z' are mapped to 'a' to 'z',
     /// but non-ASCII letters are unchanged.
     #[inline]
-    #[cfg(feature="std")]
     pub fn make_ascii_lowercase(&mut self) {
         self.bytes[0].make_ascii_lowercase();
     }

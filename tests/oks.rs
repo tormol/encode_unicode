@@ -14,8 +14,6 @@ use std::str::{self,FromStr};
 use std::cmp::Ordering;
 use std::hash::{Hash,Hasher};
 use std::collections::hash_map::DefaultHasher;
-#[allow(deprecated,unused)]
-use std::ascii::AsciiExt;
 use std::iter::FromIterator;
 extern crate encode_unicode;
 use encode_unicode::*;
