@@ -12,9 +12,10 @@ repository = "https://github.com/tormol/encode_unicode"
 documentation = "https://docs.rs/encode_unicode/"
 authors = ["Torbjørn Birch Moltu <t.b.moltu@lyse.net>"]
 
-[dependencies]
-ascii = {optional=true, version=">=0.8, <=0.10", default-features=false}# disable std
-clippy = {optional=true, version="0.*"}# wildest wildcard crates.io will allow.
+[dependencies.ascii]
+optional = true
+version = ">=0.8, <=0.10"
+default-features = false # don't ned std for the parts we use
 
 [target.'cfg(unix)'.dev-dependencies]
 # 1.1 doesn't compile on Rust 1.15, and tests doesn't compile if unused dev-dependencies doesn't

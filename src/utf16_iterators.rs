@@ -25,14 +25,14 @@ pub struct Utf16Iterator {
 }
 impl From<char> for Utf16Iterator {
     fn from(c: char) -> Self {
-        let (first, second) = c.to_utf16_tuple();
-        Utf16Iterator{ first: first,  second: second.unwrap_or(SECOND_USED) }
+        Self::from(c.to_utf16())
     }
 }
 impl From<Utf16Char> for Utf16Iterator {
     fn from(uc: Utf16Char) -> Self {
         let (first, second) = uc.to_tuple();
-        Utf16Iterator{ first: first,  second: second.unwrap_or(SECOND_USED) }
+        let second = second.unwrap_or(SECOND_USED);
+        Utf16Iterator{first, second}
     }
 }
 impl Iterator for Utf16Iterator {

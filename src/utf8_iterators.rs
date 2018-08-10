@@ -26,7 +26,7 @@ impl From<Utf8Char> for Utf8Iterator {
     fn from(uc: Utf8Char) -> Self {
         let used = u32::from_le(unsafe{ mem::transmute(uc.to_array().0) });
         // uses u64 because shifting an u32 by 32 bits is a no-op.
-        let unused_set = (u64::MAX  <<  uc.len() as u64*8) as u32;
+        let unused_set = (u64::MAX  <<  (uc.len() as u64*8)) as u32;
         Utf8Iterator(used | unused_set)
     }
 }
@@ -233,7 +233,8 @@ impl<U:Borrow<Utf8Char>, I:Iterator<Item=U>> Read for Utf8CharSplitter<U,I> {
 
 /// An iterator over the `Utf8Char` of a string slice, and their positions.
 ///
-/// This struct is created by the `utf8char_indices() method from [`StrExt`] trait. See its documentation for more.
+/// This struct is created by the `utf8char_indices()` method from [`StrExt`](../trait.StrExt.html)
+/// trait. See its documentation for more.
 #[derive(Clone)]
 pub struct Utf8CharIndices<'a>{
     str: &'a str,

@@ -325,7 +325,7 @@ impl CharExt for char {
 
             // set header on first byte
             parts |= (0xff_00u32 >> len)  &  0xff;// store length
-            parts &= Not::not(1u32 << 7-len);// clear the next bit after it
+            parts &= Not::not(1u32 << (7-len));// clear the next bit after it
 
             let bytes: [u8; 4] = unsafe{ mem::transmute(u32::from_le(parts)) };
             (bytes, len)

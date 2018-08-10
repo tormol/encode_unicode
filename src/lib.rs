@@ -30,20 +30,26 @@ older versions might work now but can break with a minor update.
 
 */
 
-#![warn(missing_docs)]
-
 #![cfg_attr(not(feature="std"), no_std)]
-// either `cargo clippy` doesn't see theese, or I get a warning when I build.
-#![cfg_attr(feature="clippy", feature(plugin))]
-#![cfg_attr(feature="clippy", plugin(clippy))]
-#![cfg_attr(feature="clippy", allow(derive_hash_xor_eq))]// tested
-#![cfg_attr(feature="clippy", allow(len_without_is_empty))]// UtfxChar is never empty
-#![cfg_attr(feature="clippy", allow(match_same_arms))]// looks better IMO
-#![cfg_attr(feature="clippy", allow(needless_return))]// `foo.bar(); foo` looks unfinished
-#![cfg_attr(feature="clippy", allow(redundant_closure))]// keep it explicit
-#![cfg_attr(feature="clippy", allow(redundant_closure_call))]// not redundant in macros
-#![cfg_attr(feature="clippy", allow(cast_lossless))]// too much noise (and too verbose)
-// precedence: I prefer spaces to parentheses, but it's nice to recheck.
+
+#![warn(missing_docs)]
+#![cfg_attr(feature="cargo-clippy", allow(
+    inconsistent_digit_grouping,
+    large_digit_groups,// I sometimes group into UTF-8 control part and codepoint part
+    derive_hash_xor_eq,// tested
+    len_without_is_empty,// tha character types are never empty
+    needless_return,// `foo.bar();\n foo` looks unfinished
+    redundant_closure,// looks weird just passing the name of an enum variant
+    redundant_closure_call,// not redundant in macros
+    cast_lossless,// the sizes are part of the struct name and so won't change
+    many_single_char_names,// the variables are in different scopes
+    needless_range_loop,// the suggested iterator chains are less intuitive
+    trivially_copy_pass_by_ref,// compatibility with char methods originally from AsciiExt
+    identity_op,// applying a set of opereations with varying arguments to many elements looks nice
+))]
+#![cfg_attr(feature="cargo-clippy", warn(doc_markdown, filter_map))]
+// opt-in lints that might be interesting to recheck once in a while:
+//#![cfg_attr(feature="cargo-clippy", warn(result_unwrap_used, option_unwrap_used))]
 
 mod errors;
 mod traits;

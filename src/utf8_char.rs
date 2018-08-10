@@ -72,7 +72,7 @@ impl str::FromStr for Utf8Char {
         } else {
             let mut bytes = [0; 4];
             bytes[..s.len()].copy_from_slice(s.as_bytes());
-            Ok(Utf8Char{bytes: bytes})
+            Ok(Utf8Char{bytes})
         }
     }
 }
@@ -405,7 +405,7 @@ impl Utf8Char {
         char::from_utf8_slice_start(src).map(|(_,len)| {
             let mut bytes = [0; 4];
             bytes[..len].copy_from_slice(&src[..len]);
-            (Utf8Char{ bytes: bytes }, len)
+            (Utf8Char{bytes}, len)
         })
     }
     /// A `from_slice_start()` that doesn't validate the codepoint.
@@ -418,7 +418,7 @@ impl Utf8Char {
         let len = 1+src.get_unchecked(0).extra_utf8_bytes_unchecked();
         let mut bytes = [0; 4];
         ptr::copy_nonoverlapping(src.as_ptr(), &mut bytes[0] as *mut u8, len);
-        (Utf8Char{ bytes: bytes }, len)
+        (Utf8Char{bytes}, len)
     }
     /// Create an `Utf8Char` from a byte array after validating it.
     ///
@@ -453,7 +453,7 @@ impl Utf8Char {
             let extra = utf8[0].extra_utf8_bytes_unchecked() as u32;
             // zero unused bytes in one operation by transmuting the arrary to
             // u32, apply an endian-corrected mask and transmute back
-            let mask = u32::from_le(0xff_ff_ff_ff >> 8*(3-extra));
+            let mask = u32::from_le(0xff_ff_ff_ff >> (8*(3-extra)));
             let unused_zeroed = mask  &  transmute::<_,u32>(utf8);
             Ok(Utf8Char{ bytes: transmute(unused_zeroed) })
         }
