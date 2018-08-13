@@ -49,15 +49,15 @@ older versions might work now but can break with a minor update.
 mod errors;
 mod traits;
 mod utf8_char;
-mod utf8_iterator;
+mod utf8_iterators;
 mod utf16_char;
-mod utf16_iterator;
+mod utf16_iterators;
 
 pub use traits::CharExt;
 pub use utf8_char::Utf8Char;
 pub use utf16_char::Utf16Char;
-pub use utf8_iterator::{Utf8Iterator, iter_bytes, Utf8CharSplitter};
-pub use utf16_iterator::{Utf16Iterator, iter_units, Utf16CharSplitter};
+pub use utf8_iterators::{Utf8Iterator, iter_bytes, Utf8CharSplitter};
+pub use utf16_iterators::{Utf16Iterator, iter_units, Utf16CharSplitter};
 pub use traits::U8UtfExt;
 pub use traits::U16UtfExt;
 
