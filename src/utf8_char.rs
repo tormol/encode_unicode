@@ -6,8 +6,7 @@
  * copied, modified, or distributed except according to those terms.
  */
 
-pub use errors::{FromStrError, EmptyStrError};
-use error::{InvalidUtf8Slice, InvalidUtf8Array};
+use errors::{FromStrError, EmptyStrError, InvalidUtf8Slice, InvalidUtf8Array};
 use Utf8Iterator;
 use CharExt;
 use U8UtfExt;
@@ -52,7 +51,22 @@ pub struct Utf8Char {
 /////////////////////
 impl str::FromStr for Utf8Char {
     type Err = FromStrError;
-    /// The string must contain exactly one codepoint
+    /// Create an `Utf8Char` from a string slice.
+    /// The string must contain exactly one codepoint.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use encode_unicode::error::FromStrError::*;
+    /// use encode_unicode::Utf8Char;
+    /// use std::str::FromStr;
+    ///
+    /// assert_eq!(Utf8Char::from_str("a"), Ok(Utf8Char::from('a')));
+    /// assert_eq!(Utf8Char::from_str("🂠"), Ok(Utf8Char::from('🂠')));
+    /// assert_eq!(Utf8Char::from_str(""), Err(Empty));
+    /// assert_eq!(Utf8Char::from_str("ab"), Err(MultipleCodepoints));
+    /// assert_eq!(Utf8Char::from_str("é"), Err(MultipleCodepoints));// 'e'+u301 combining mark
+    /// ```
     fn from_str(s: &str) -> Result<Self, FromStrError> {
         if s.is_empty() {
             Err(FromStrError::Empty)
@@ -255,6 +269,18 @@ impl Utf8Char {
     /// Create an `Utf8Char` from the first codepoint in a `str`.
     ///
     /// Returns an error if the `str` is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use encode_unicode::Utf8Char;
+    ///
+    /// assert_eq!(Utf8Char::from_str_start("a"), Ok((Utf8Char::from('a'),1)));
+    /// assert_eq!(Utf8Char::from_str_start("ab"), Ok((Utf8Char::from('a'),1)));
+    /// assert_eq!(Utf8Char::from_str_start("🂠 "), Ok((Utf8Char::from('🂠'),4)));
+    /// assert_eq!(Utf8Char::from_str_start("é"), Ok((Utf8Char::from('e'),1)));// 'e'+u301 combining mark
+    /// assert!(Utf8Char::from_str_start("").is_err());
+    /// ```
     pub fn from_str_start(src: &str) -> Result<(Self,usize),EmptyStrError> {
         unsafe {
             if src.is_empty() {

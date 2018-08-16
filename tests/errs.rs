@@ -9,7 +9,8 @@
 //! Test that methods gives the correct error.
 //! Some also test a bit more because it's easy.
 
-use std::char;
+extern crate core;
+use core::char;
 extern crate encode_unicode;
 use encode_unicode::*;
 use encode_unicode::error::*;
@@ -117,16 +118,7 @@ fn overlong_utf8() {
 }
 
 #[test]
-fn utf8_char_from_str() {
-    use std::str::FromStr;
-    use encode_unicode::error::FromStrError::*;
-    assert_eq!(Utf8Char::from_str(""), Err(Empty));
-    assert_eq!(Utf8Char::from_str("ab"), Err(MultipleCodepoints));
-    assert_eq!(Utf8Char::from_str("́e"), Err(MultipleCodepoints));// 'e'+u301 combining mark
-}
-
-#[test]
-fn utf8_char_from_str_start() {
-    use encode_unicode::error::EmptyStrError;
+fn from_str_start() {
     assert_eq!(Utf8Char::from_str_start(""), Err(EmptyStrError));
+    assert_eq!(Utf16Char::from_str_start(""), Err(EmptyStrError));
 }

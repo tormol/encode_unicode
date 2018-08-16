@@ -10,11 +10,12 @@ use Utf16Iterator;
 use CharExt;
 use U16UtfExt;
 use Utf8Char;
-use errors::{InvalidUtf16Slice,InvalidUtf16Tuple};
+use errors::{InvalidUtf16Slice, InvalidUtf16Tuple, EmptyStrError, FromStrError};
 extern crate core;
 use self::core::{hash,fmt,cmp};
 use self::core::borrow::Borrow;
 use self::core::ops::Deref;
+use self::core::str::FromStr;
 #[cfg(feature="std")]
 use self::core::iter::FromIterator;
 #[cfg(feature="std")]
@@ -48,7 +49,32 @@ pub struct Utf16Char {
   /////////////////////
  //conversion traits//
 /////////////////////
-
+impl FromStr for Utf16Char {
+    type Err = FromStrError;
+    /// Create an `Utf16Char` from a string slice.
+    /// The string must contain exactly one codepoint.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use encode_unicode::error::FromStrError::*;
+    /// use encode_unicode::Utf16Char;
+    /// use std::str::FromStr;
+    ///
+    /// assert_eq!(Utf16Char::from_str("a"), Ok(Utf16Char::from('a')));
+    /// assert_eq!(Utf16Char::from_str("🂠"), Ok(Utf16Char::from('🂠')));
+    /// assert_eq!(Utf16Char::from_str(""), Err(Empty));
+    /// assert_eq!(Utf16Char::from_str("ab"), Err(MultipleCodepoints));
+    /// assert_eq!(Utf16Char::from_str("é"), Err(MultipleCodepoints));// 'e'+u301 combining mark
+    /// ```
+    fn from_str(s: &str) -> Result<Self, FromStrError> {
+        match Utf16Char::from_str_start(s) {
+            Ok((u16c,bytes)) if bytes == s.len() => Ok(u16c),
+            Ok((_,_)) => Err(FromStrError::MultipleCodepoints),
+            Err(EmptyStrError) => Err(FromStrError::Empty),
+        }
+    }
+}
 impl From<char> for Utf16Char {
     fn from(c: char) -> Self {
         let (first, second) = c.to_utf16_tuple();
@@ -230,6 +256,58 @@ impl cmp::Ord for Utf16Char {
  //pub impls that should be together for nicer rustdoc//
 ///////////////////////////////////////////////////////
 impl Utf16Char {
+    /// Create an `Utf16Char` from the first codepoint in a string slice,
+    /// converting from UTF-8 to UTF-16.
+    ///
+    /// The returned `usize` is the number of UTF-8 bytes used from the str,
+    /// and not the number of UTF-16 units.
+    ///
+    /// Returns an error if the `str` is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use encode_unicode::Utf16Char;
+    ///
+    /// assert_eq!(Utf16Char::from_str_start("a"), Ok((Utf16Char::from('a'),1)));
+    /// assert_eq!(Utf16Char::from_str_start("ab"), Ok((Utf16Char::from('a'),1)));
+    /// assert_eq!(Utf16Char::from_str_start("🂠 "), Ok((Utf16Char::from('🂠'),4)));
+    /// assert_eq!(Utf16Char::from_str_start("é"), Ok((Utf16Char::from('e'),1)));// 'e'+u301 combining mark
+    /// assert!(Utf16Char::from_str_start("").is_err());
+    /// ```
+    pub fn from_str_start(s: &str) -> Result<(Self,usize), EmptyStrError> {
+        if s.is_empty() {
+            return Err(EmptyStrError);
+        }
+        let b = s.as_bytes();
+        match b[0] {
+            0...127 => {// 1 byte => 1 unit
+                let unit = b[0] as u16;// 0b0000_0000_0xxx_xxxx
+                Ok((Utf16Char{ units: [unit, 0] }, 1))
+            },
+            0b1000_0000...0b1101_1111 => {// 2 bytes => 1 unit
+                let unit = (((b[0] & 0x1f) as u16) << 6) // 0b0000_0xxx_xx00_0000
+                         | (((b[1] & 0x3f) as u16) << 0);// 0b0000_0000_00xx_xxxx
+                Ok((Utf16Char{ units: [unit, 0] }, 2))
+            },
+            0b1110_0000...0b1110_1111 => {// 3 bytes => 1 unit
+                let unit = (((b[0] & 0x0f) as u16) << 12) // 0bxxxx_0000_0000_0000
+                         | (((b[1] & 0x3f) as u16) <<  6) // 0b0000_xxxx_xx00_0000
+                         | (((b[2] & 0x3f) as u16) <<  0);// 0b0000_0000_00xx_xxxx
+                Ok((Utf16Char{ units: [unit, 0] }, 3))
+            },
+            _ => {// 4 bytes => 2 units
+                let first = 0xd800-(0x01_00_00u32>>10) as u16// 0b1101_0111_1100_0000
+                          + (((b[0] & 0x07) as u16) << 8)    // 0b0000_0xxx_0000_0000
+                          + (((b[1] & 0x3f) as u16) << 2)    // 0b0000_0000_xxxx_xx00
+                          + (((b[2] & 0x30) as u16) >> 4);   // 0b0000_0000_0000_00xx
+                let second = 0xdc00                        // 0b1101_1100_0000_0000
+                           | (((b[2] & 0x0f) as u16) << 6)// 0b0000_00xx_xx00_0000
+                           | (((b[3] & 0x3f) as u16) << 0);// 0b0000_0000_00xx_xxxx
+                Ok((Utf16Char{ units: [first, second] }, 4))
+            }
+        }
+    }
     /// Validate and store the first UTF-16 codepoint in the slice.
     /// Also return how many units were needed.
     pub fn from_slice_start(src: &[u16]) -> Result<(Self,usize), InvalidUtf16Slice> {

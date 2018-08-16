@@ -145,11 +145,15 @@ fn test(c: char) {
     iterators(c);
     assert_eq!(Utf16Char::from(u8c), u16c);
     assert_eq!(Utf8Char::from(u16c), u8c);
+    let utf8_len = c.len_utf8();
+    let utf16_len = c.len_utf16();
+    let mut as_str = c.to_string();
 
     // UTF-8
     let mut buf = [0; 4];
     let reference = c.encode_utf8(&mut buf[..]).as_bytes();
     let len = reference.len(); // short name because it is used in many places.
+    assert_eq!(len, utf8_len);
     assert_eq!(reference[0].extra_utf8_bytes(), Ok(len-1));
     assert_eq!(reference[0].extra_utf8_bytes_unchecked(), len-1);
     assert_eq!(AsRef::<[u8]>::as_ref(&u8c), reference);
@@ -163,7 +167,6 @@ fn test(c: char) {
     let ustr = Utf8Char::from_str(str_).unwrap();
     assert_eq!(ustr.to_array().0, arr);// bitwise equality
     assert_eq!(char::from_utf8_array(arr), Ok(c));
-    assert_eq!(Utf8Char::from_str_start(str_), Ok((u8c,len)));
     let mut longer = [0xff; 5]; // 0xff is never valid
     longer[..len].copy_from_slice(reference);
     assert_eq!(char::from_utf8_slice_start(reference), Ok((c,len)));
@@ -171,6 +174,8 @@ fn test(c: char) {
     assert_eq!(Utf8Char::from_slice_start(reference), Ok((u8c,len)));
     assert_eq!(Utf8Char::from_slice_start(&longer), Ok((u8c,len)));
     for other in &mut longer[len..] {*other = b'?'}
+    assert_eq!(Utf8Char::from_str(str_), Ok(u8c));
+    assert_eq!(Utf8Char::from_str_start(str_), Ok((u8c,len)));
     assert_eq!(Utf8Char::from_str_start(str::from_utf8(&longer).unwrap()), Ok((u8c,len)));
     unsafe {
         // Hopefully make bugs easier to catch by making reads into unallocated memory by filling
@@ -194,6 +199,7 @@ fn test(c: char) {
     let mut buf = [0; 2];
     let reference = c.encode_utf16(&mut buf[..]);
     let len = reference.len();
+    assert_eq!(len, utf16_len);
     assert_eq!(reference[0].utf16_needs_extra_unit(), Ok(len==2));
     assert_eq!(reference[0].is_utf16_leading_surrogate(), len==2);
     assert_eq!(u16c.as_ref(), reference);
@@ -203,6 +209,9 @@ fn test(c: char) {
     assert_eq!(char::from_utf16_slice_start(&longer), Ok((c,len)));
     assert_eq!(Utf16Char::from_slice_start(reference), Ok((u16c,len)));
     assert_eq!(Utf16Char::from_slice_start(&longer), Ok((u16c,len)));
+    assert_eq!(Utf16Char::from_str(&as_str), Ok(u16c));
+    as_str.push(c);
+    assert_eq!(Utf16Char::from_str_start(&as_str), Ok((u16c,utf8_len)));
     unsafe {
         // Hopefully make bugs easier to catch by making reads into unallocated memory by filling
         // a jemalloc bin. See table on http://jemalloc.net/jemalloc.3.html for bin sizes.
