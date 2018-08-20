@@ -126,36 +126,65 @@ impl IntoIterator for Utf8Char {
         Utf8Iterator::from(self)
     }
 }
+
 #[cfg(feature="std")]
 impl Extend<Utf8Char> for Vec<u8> {
-    fn extend<I:IntoIterator<Item=Utf8Char>>(&mut self, iter: I) {
+    fn extend<I:IntoIterator<Item=Utf8Char>>(&mut self,  iter: I) {
         let iter = iter.into_iter();
         self.reserve(iter.size_hint().0);
         for u8c in iter {
-            self.extend_from_slice(u8c.as_bytes());
+            // twice as fast as self.extend_from_slice(u8c.as_bytes());
+            self.push(u8c.bytes[0]);
+            for &extra in &u8c.bytes[1..] {
+                if extra != 0 {
+                    self.push(extra);
+                }
+            }
         }
     }
 }
 #[cfg(feature="std")]
+impl<'a> Extend<&'a Utf8Char> for Vec<u8> {
+    fn extend<I:IntoIterator<Item=&'a Utf8Char>>(&mut self,  iter: I) {
+        self.extend(iter.into_iter().cloned())
+    }
+}
+#[cfg(feature="std")]
 impl Extend<Utf8Char> for String {
-    fn extend<I:IntoIterator<Item=Utf8Char>>(&mut self, iter: I) {
+    fn extend<I:IntoIterator<Item=Utf8Char>>(&mut self,  iter: I) {
         unsafe { self.as_mut_vec().extend(iter) }
+    }
+}
+#[cfg(feature="std")]
+impl<'a> Extend<&'a Utf8Char> for String {
+    fn extend<I:IntoIterator<Item=&'a Utf8Char>>(&mut self,  iter: I) {
+        self.extend(iter.into_iter().cloned())
+    }
+}
+#[cfg(feature="std")]
+impl FromIterator<Utf8Char> for String {
+    fn from_iter<I:IntoIterator<Item=Utf8Char>>(iter: I) -> String {
+        let mut string = String::new();
+        string.extend(iter);
+        return string;
+    }
+}
+#[cfg(feature="std")]
+impl<'a> FromIterator<&'a Utf8Char> for String {
+    fn from_iter<I:IntoIterator<Item=&'a Utf8Char>>(iter: I) -> String {
+        iter.into_iter().cloned().collect()
     }
 }
 #[cfg(feature="std")]
 impl FromIterator<Utf8Char> for Vec<u8> {
     fn from_iter<I:IntoIterator<Item=Utf8Char>>(iter: I) -> Self {
-        let mut vec = Vec::new();
-        vec.extend(iter);
-        return vec;
+        iter.into_iter().collect::<String>().into_bytes()
     }
 }
 #[cfg(feature="std")]
-impl FromIterator<Utf8Char> for String {
-    fn from_iter<I:IntoIterator<Item=Utf8Char>>(iter: I) -> Self {
-        let mut string = String::new();
-        string.extend(iter);
-        return string;
+impl<'a> FromIterator<&'a Utf8Char> for Vec<u8> {
+    fn from_iter<I:IntoIterator<Item=&'a Utf8Char>>(iter: I) -> Self {
+        iter.into_iter().cloned().collect::<String>().into_bytes()
     }
 }
 
