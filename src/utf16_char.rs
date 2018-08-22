@@ -6,10 +6,9 @@
  * copied, modified, or distributed except according to those terms.
  */
 
-use Utf16Iterator;
-use CharExt;
-use U16UtfExt;
-use Utf8Char;
+use utf16_iterators::Utf16Iterator;
+use traits::{CharExt, U16UtfExt};
+use utf8_char::Utf8Char;
 use errors::{InvalidUtf16Slice, InvalidUtf16Tuple, EmptyStrError, FromStrError};
 extern crate core;
 use self::core::{hash,fmt,cmp};

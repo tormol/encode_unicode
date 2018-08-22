@@ -15,7 +15,8 @@
 use std::io::Read;
 use std::cmp::min;
 extern crate encode_unicode;
-use encode_unicode::{CharExt, Utf8CharSplitter};
+use encode_unicode::CharExt;
+use encode_unicode::iterator::Utf8CharSplitter;
 
 #[test]
 fn read_single_ascii() {

@@ -7,10 +7,9 @@
  */
 
 use errors::{FromStrError, EmptyStrError, InvalidUtf8Slice, InvalidUtf8Array};
-use Utf8Iterator;
-use CharExt;
-use U8UtfExt;
-use Utf16Char;
+use utf8_iterators::Utf8Iterator;
+use traits::{CharExt, U8UtfExt};
+use utf16_char::Utf16Char;
 extern crate core;
 use self::core::{hash, fmt, str, ptr};
 use self::core::borrow::Borrow;

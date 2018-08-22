@@ -6,7 +6,8 @@
  * copied, modified, or distributed except according to those terms.
  */
 
-use Utf8Char;
+use utf8_char::Utf8Char;
+use errors::EmptyStrError;
 extern crate core;
 use self::core::{mem, u32, u64};
 use self::core::ops::Not;
@@ -225,5 +226,127 @@ impl<U:Borrow<Utf8Char>, I:Iterator<Item=U>> Read for Utf8CharSplitter<U,I> {
             }
         }
         Ok(i)
+    }
+}
+
+
+
+/// An iterator over the `Utf8Char` of a string slice, and their positions.
+///
+/// This struct is created by the `utf8char_indices() method from [`StrExt`] trait. See its documentation for more.
+#[derive(Clone)]
+pub struct Utf8CharIndices<'a>{
+    str: &'a str,
+    index: usize,
+}
+impl<'a> From<&'a str> for Utf8CharIndices<'a> {
+    fn from(s: &str) -> Utf8CharIndices {
+        Utf8CharIndices{str: s, index: 0}
+    }
+}
+impl<'a> Utf8CharIndices<'a> {
+    /// Extract the remainder of the source `str`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use encode_unicode::{StrExt, Utf8Char};
+    /// let mut iter = "abc".utf8char_indices();
+    /// assert_eq!(iter.next_back(), Some((2, Utf8Char::from('c'))));
+    /// assert_eq!(iter.next(), Some((0, Utf8Char::from('a'))));
+    /// assert_eq!(iter.as_str(), "b");
+    /// ```
+    pub fn as_str(&self) -> &'a str {
+        &self.str[self.index..]
+    }
+}
+impl<'a> Iterator for Utf8CharIndices<'a> {
+    type Item = (usize,Utf8Char);
+    fn next(&mut self) -> Option<(usize,Utf8Char)> {
+        match Utf8Char::from_str_start(&self.str[self.index..]) {
+            Ok((u8c, len)) => {
+                let item = (self.index, u8c);
+                self.index += len;
+                Some(item)
+            },
+            Err(EmptyStrError) => None
+        }
+    }
+    fn size_hint(&self) -> (usize,Option<usize>) {
+        let len = self.str.len() - self.index;
+        // For len+3 to overflow, the slice must fill all but two bytes of
+        // addressable memory, and size_hint() doesn't need to be correct.
+        (len.wrapping_add(3)/4, Some(len))
+    }
+}
+impl<'a> DoubleEndedIterator for Utf8CharIndices<'a> {
+    fn next_back(&mut self) -> Option<(usize,Utf8Char)> {
+        // Cannot refactor out the unwrap without switching to ::from_slice()
+        // since slicing the str panics if not on a boundary.
+        if self.index < self.str.len() {
+            let rev = self.str.bytes().rev();
+            let len = 1 + rev.take_while(|b| b & 0b1100_0000 == 0b1000_0000 ).count();
+            let starts = self.str.len() - len;
+            let (u8c,_) = Utf8Char::from_str_start(&self.str[starts..]).unwrap();
+            self.str = &self.str[..starts];
+            Some((starts, u8c))
+        } else {
+            None
+        }
+    }
+}
+impl<'a> fmt::Debug for Utf8CharIndices<'a> {
+    fn fmt(&self,  fmtr: &mut fmt::Formatter) -> fmt::Result {
+        fmtr.debug_tuple("Utf8CharIndices")
+            .field(&self.index)
+            .field(&self.as_str())
+            .finish()
+    }
+}
+
+
+/// An iterator over the codepoints in a `str` represented as `Utf8Char`.
+#[derive(Clone)]
+pub struct Utf8Chars<'a>(Utf8CharIndices<'a>);
+impl<'a> From<&'a str> for Utf8Chars<'a> {
+    fn from(s: &str) -> Utf8Chars {
+        Utf8Chars(Utf8CharIndices::from(s))
+    }
+}
+impl<'a> Utf8Chars<'a> {
+    /// Extract the remainder of the source `str`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use encode_unicode::{StrExt, Utf8Char};
+    /// let mut iter = "abc".utf8chars();
+    /// assert_eq!(iter.next(), Some(Utf8Char::from('a')));
+    /// assert_eq!(iter.next_back(), Some(Utf8Char::from('c')));
+    /// assert_eq!(iter.as_str(), "b");
+    /// ```
+    pub fn as_str(&self) -> &'a str {
+        self.0.as_str()
+    }
+}
+impl<'a> Iterator for Utf8Chars<'a> {
+    type Item = Utf8Char;
+    fn next(&mut self) -> Option<Utf8Char> {
+        self.0.next().map(|(_,u8c)| u8c )
+    }
+    fn size_hint(&self) -> (usize,Option<usize>) {
+        self.0.size_hint()
+    }
+}
+impl<'a> DoubleEndedIterator for Utf8Chars<'a> {
+    fn next_back(&mut self) -> Option<Utf8Char> {
+        self.0.next_back().map(|(_,u8c)| u8c )
+    }
+}
+impl<'a> fmt::Debug for Utf8Chars<'a> {
+    fn fmt(&self,  fmtr: &mut fmt::Formatter) -> fmt::Result {
+        fmtr.debug_tuple("Utf8CharIndices")
+            .field(&self.as_str())
+            .finish()
     }
 }

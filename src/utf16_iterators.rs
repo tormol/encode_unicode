@@ -6,8 +6,9 @@
  * copied, modified, or distributed except according to those terms.
  */
 
-use CharExt;
-use Utf16Char;
+use traits::CharExt;
+use utf16_char::Utf16Char;
+use errors::EmptyStrError;
 extern crate core;
 use self::core::fmt;
 use self::core::borrow::Borrow;
@@ -147,5 +148,123 @@ impl<U:Borrow<Utf16Char>, I:Iterator<Item=U>> Iterator for Utf16CharSplitter<U,I
         let (min, max) = self.inner.size_hint();
         let add = if self.prev_second == 0 {0} else {1};
         (min.wrapping_add(add), max.map(|max| max.wrapping_mul(2).wrapping_add(add) ))
+    }
+}
+
+
+
+/// An iterator over the codepoints in a `str` represented as `Utf16Char`.
+#[derive(Clone)]
+pub struct Utf16CharIndices<'a>{
+    str: &'a str,
+    index: usize,
+}
+impl<'a> From<&'a str> for Utf16CharIndices<'a> {
+    fn from(s: &str) -> Utf16CharIndices {
+        Utf16CharIndices{str: s, index: 0}
+    }
+}
+impl<'a> Utf16CharIndices<'a> {
+    /// Extract the remainder of the source `str`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use encode_unicode::{StrExt, Utf16Char};
+    /// let mut iter = "abc".utf16char_indices();
+    /// assert_eq!(iter.next_back(), Some((2, Utf16Char::from('c'))));
+    /// assert_eq!(iter.next(), Some((0, Utf16Char::from('a'))));
+    /// assert_eq!(iter.as_str(), "b");
+    /// ```
+    pub fn as_str(&self) -> &'a str {
+        &self.str[self.index..]
+    }
+}
+impl<'a> Iterator for Utf16CharIndices<'a> {
+    type Item = (usize,Utf16Char);
+    fn next(&mut self) -> Option<(usize,Utf16Char)> {
+        match Utf16Char::from_str_start(&self.str[self.index..]) {
+            Ok((u16c, bytes)) => {
+                let item = (self.index, u16c);
+                self.index += bytes;
+                Some(item)
+            },
+            Err(EmptyStrError) => None
+        }
+    }
+    fn size_hint(&self) -> (usize,Option<usize>) {
+        let len = self.str.len() - self.index;
+        // For len+3 to overflow, the slice must fill all but two bytes of
+        // addressable memory, and size_hint() doesn't need to be correct.
+        (len.wrapping_add(3)/4, Some(len))
+    }
+}
+impl<'a> DoubleEndedIterator for Utf16CharIndices<'a> {
+    fn next_back(&mut self) -> Option<(usize,Utf16Char)> {
+        if self.index < self.str.len() {
+            let rev = self.str.bytes().rev();
+            let len = 1 + rev.take_while(|b| b & 0b1100_0000 == 0b1000_0000 ).count();
+            let starts = self.str.len() - len;
+            let (u16c,_) = Utf16Char::from_str_start(&self.str[starts..]).unwrap();
+            self.str = &self.str[..starts];
+            Some((starts, u16c))
+        } else {
+            None
+        }
+    }
+}
+impl<'a> fmt::Debug for Utf16CharIndices<'a> {
+    fn fmt(&self,  fmtr: &mut fmt::Formatter) -> fmt::Result {
+        fmtr.debug_tuple("Utf16CharIndices")
+            .field(&self.index)
+            .field(&self.as_str())
+            .finish()
+    }
+}
+
+
+/// An iterator over the codepoints in a `str` represented as `Utf16Char`.
+#[derive(Clone)]
+pub struct Utf16Chars<'a>(Utf16CharIndices<'a>);
+impl<'a> From<&'a str> for Utf16Chars<'a> {
+    fn from(s: &str) -> Utf16Chars {
+        Utf16Chars(Utf16CharIndices::from(s))
+    }
+}
+impl<'a> Utf16Chars<'a> {
+    /// Extract the remainder of the source `str`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use encode_unicode::{StrExt, Utf16Char};
+    /// let mut iter = "abc".utf16chars();
+    /// assert_eq!(iter.next(), Some(Utf16Char::from('a')));
+    /// assert_eq!(iter.next_back(), Some(Utf16Char::from('c')));
+    /// assert_eq!(iter.as_str(), "b");
+    /// ```
+    pub fn as_str(&self) -> &'a str {
+        self.0.as_str()
+    }
+}
+impl<'a> Iterator for Utf16Chars<'a> {
+    type Item = Utf16Char;
+    fn next(&mut self) -> Option<Utf16Char> {
+        self.0.next().map(|(_,u16c)| u16c )
+    }
+    fn size_hint(&self) -> (usize,Option<usize>) {
+        self.0.size_hint()
+    }
+}
+impl<'a> DoubleEndedIterator for Utf16Chars<'a> {
+    fn next_back(&mut self) -> Option<Utf16Char> {
+        self.0.next_back().map(|(_,u16c)| u16c )
+    }
+}
+impl<'a> fmt::Debug for Utf16Chars<'a> {
+    fn fmt(&self,  fmtr: &mut fmt::Formatter) -> fmt::Result {
+        fmtr.debug_tuple("Utf16Chars")
+            .field(&self.as_str())
+            .finish()
     }
 }

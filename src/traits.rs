@@ -8,14 +8,18 @@
 
 #![allow(unused_unsafe)]// explicit unsafe{} blocks in unsafe functions are a good thing.
 
-use Utf8Char;
-use Utf16Char;
-use Utf8Iterator;
-use Utf16Iterator;
+use utf8_char::Utf8Char;
+use utf16_char::Utf16Char;
+use utf8_iterators::{Utf8Iterator, Utf8Chars, Utf8CharIndices};
+use utf16_iterators::{Utf16Iterator, Utf16Chars, Utf16CharIndices};
 use error::*;
 extern crate core;
 use self::core::{char, u32, mem};
 use self::core::ops::Not;
+#[cfg(feature="ascii")]
+extern crate ascii;
+#[cfg(feature="ascii")]
+use self::ascii::AsciiStr;
 
 // TODO better docs and tests
 
@@ -423,4 +427,49 @@ unsafe fn combine_surrogates(first: u16, second: u16) -> char {
     let low = (second & 0x_03_ff) as u32;
     let c = ((high << 10) | low) + 0x_01_00_00; // no, the constant can't be or'd in
     char::from_u32_unchecked(c)
+}
+
+
+
+/// Adds `.utf8chars()` and `.utf16chars()` iterator constructors to `&str`.
+pub trait StrExt: AsRef<str> {
+    /// Equivalent to `.chars()` but produces `Utf8Char`s.
+    fn utf8chars(&self) -> Utf8Chars;
+    /// Equivalent to `.chars()` but produces `Utf16Char`s.
+    fn utf16chars(&self) -> Utf16Chars;
+    /// Equivalent to `.char_indices()` but produces `Utf8Char`s.
+    fn utf8char_indices(&self) -> Utf8CharIndices;
+    /// Equivalent to `.char_indices()` but produces `Utf16Char`s.
+    fn utf16char_indices(&self) -> Utf16CharIndices;
+}
+
+impl StrExt for str {
+    fn utf8chars(&self) -> Utf8Chars {
+        Utf8Chars::from(self)
+    }
+    fn utf16chars(&self) -> Utf16Chars {
+        Utf16Chars::from(self)
+    }
+    fn utf8char_indices(&self) -> Utf8CharIndices {
+        Utf8CharIndices::from(self)
+    }
+    fn utf16char_indices(&self) -> Utf16CharIndices {
+        Utf16CharIndices::from(self)
+    }
+}
+
+#[cfg(feature="ascii")]
+impl StrExt for AsciiStr {
+    fn utf8chars(&self) -> Utf8Chars {
+        Utf8Chars::from(self.as_str())
+    }
+    fn utf16chars(&self) -> Utf16Chars {
+        Utf16Chars::from(self.as_str())
+    }
+    fn utf8char_indices(&self) -> Utf8CharIndices {
+        Utf8CharIndices::from(self.as_str())
+    }
+    fn utf16char_indices(&self) -> Utf16CharIndices {
+        Utf16CharIndices::from(self.as_str())
+    }
 }
