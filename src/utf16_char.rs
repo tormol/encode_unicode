@@ -33,7 +33,7 @@ use self::ascii::{AsciiChar,ToAsciiChar,ToAsciiCharError};
 #[derive(Default)]
 // char doesn't do anything more advanced than u32 for Eq/Ord, so we shouldn't either.
 // When it's a single unit, the second is zero, so Eq works.
-// Ord however, breaks on surrogate pairs.
+// #[derive(Ord)] however, breaks on surrogate pairs.
 #[derive(PartialEq,Eq)]
 #[derive(Clone,Copy)]
 
@@ -250,6 +250,8 @@ impl fmt::Display for Utf16Char {
         fmt::Display::fmt(&Utf8Char::from(*self), fmtr)
     }
 }
+// Cannot derive these impls because two-unit characters must always compare
+// greater than one-unit ones.
 impl cmp::PartialOrd for Utf16Char {
     #[inline]
     fn partial_cmp(&self,  rhs: &Self) -> Option<cmp::Ordering> {
@@ -264,6 +266,7 @@ impl cmp::Ord for Utf16Char {
         // that the second unit only affect the result when the first are equal.
         // Multiplying by a constant factor isn't enough because that factor
         // would have to be greater than 1023 and smaller than 5.5.
+        // This transformation is less complicated than combine_surrogates().
         let lhs = (self.units[0] as u32, self.units[1] as u32);
         let rhs = (rhs.units[0] as u32, rhs.units[1] as u32);
         let lhs = (lhs.0 << (lhs.1 >> 12)) + lhs.1;
@@ -301,30 +304,31 @@ impl Utf16Char {
             return Err(EmptyStrError);
         }
         let b = s.as_bytes();
+        // Read the last byte first to reduce the number of unnecesary length checks.
         match b[0] {
             0...127 => {// 1 byte => 1 unit
                 let unit = b[0] as u16;// 0b0000_0000_0xxx_xxxx
                 Ok((Utf16Char{ units: [unit, 0] }, 1))
             },
             0b1000_0000...0b1101_1111 => {// 2 bytes => 1 unit
-                let unit = (((b[0] & 0x1f) as u16) << 6) // 0b0000_0xxx_xx00_0000
-                         | (((b[1] & 0x3f) as u16) << 0);// 0b0000_0000_00xx_xxxx
+                let unit = (((b[1] & 0x3f) as u16) << 0) // 0b0000_0000_00xx_xxxx
+                         | (((b[0] & 0x1f) as u16) << 6);// 0b0000_0xxx_xx00_0000
                 Ok((Utf16Char{ units: [unit, 0] }, 2))
             },
             0b1110_0000...0b1110_1111 => {// 3 bytes => 1 unit
-                let unit = (((b[0] & 0x0f) as u16) << 12) // 0bxxxx_0000_0000_0000
+                let unit = (((b[2] & 0x3f) as u16) <<  0) // 0b0000_0000_00xx_xxxx
                          | (((b[1] & 0x3f) as u16) <<  6) // 0b0000_xxxx_xx00_0000
-                         | (((b[2] & 0x3f) as u16) <<  0);// 0b0000_0000_00xx_xxxx
+                         | (((b[0] & 0x0f) as u16) << 12);// 0bxxxx_0000_0000_0000
                 Ok((Utf16Char{ units: [unit, 0] }, 3))
             },
             _ => {// 4 bytes => 2 units
-                let first = 0xd800-(0x01_00_00u32>>10) as u16// 0b1101_0111_1100_0000
-                          + (((b[0] & 0x07) as u16) << 8)    // 0b0000_0xxx_0000_0000
-                          + (((b[1] & 0x3f) as u16) << 2)    // 0b0000_0000_xxxx_xx00
-                          + (((b[2] & 0x30) as u16) >> 4);   // 0b0000_0000_0000_00xx
                 let second = 0xdc00                        // 0b1101_1100_0000_0000
-                           | (((b[2] & 0x0f) as u16) << 6)// 0b0000_00xx_xx00_0000
-                           | (((b[3] & 0x3f) as u16) << 0);// 0b0000_0000_00xx_xxxx
+                           | (((b[3] & 0x3f) as u16) << 0) // 0b0000_0000_00xx_xxxx
+                           | (((b[2] & 0x0f) as u16) << 6);// 0b0000_00xx_xx00_0000
+                let first = 0xd800-(0x01_00_00u32>>10) as u16// 0b1101_0111_1100_0000
+                          + (((b[2] & 0x30) as u16) >> 4)    // 0b0000_0000_0000_00xx
+                          + (((b[1] & 0x3f) as u16) << 2)    // 0b0000_0000_xxxx_xx00
+                          + (((b[0] & 0x07) as u16) << 8);   // 0b0000_0xxx_0000_0000
                 Ok((Utf16Char{ units: [first, second] }, 4))
             }
         }
@@ -435,18 +439,18 @@ impl Utf16Char {
     /// You can get the required length from `.len()`,
     /// but a buffer of length two is always large enough.
     pub fn to_slice(self,  dst: &mut[u16]) -> usize {
-        match self.len() {
-            l if l > dst.len() => panic!("The provided buffer is too small."),
-            2 => {dst[1] = self.units[1];
-                  dst[0] = self.units[0];},
-            1 => {dst[0] = self.units[0];},
-            _ => unreachable!()
+        // Write the last unit first to avoid repeated length checks.
+        let extra = self.units[1] as usize >> 15;
+        match dst.get_mut(extra) {
+            Some(first) => *first = self.units[extra],
+            None => panic!("The provided buffer is too small.")
         }
-        self.len()
+        if extra != 0 {dst[0] = self.units[0];}
+        extra+1
     }
     /// The second `u16` is used for surrogate pairs.
     #[inline]
     pub fn to_tuple(self) -> (u16,Option<u16>) {
-        (self.units[0],  if self.len()==2 {Some(self.units[1])} else {None})
+        (self.units[0],  if self.units[1]==0 {None} else {Some(self.units[1])})
     }
 }

@@ -47,16 +47,72 @@ impl U8UtfExt for u8 {
     #[inline]
     fn extra_utf8_bytes(self) -> Result<usize,InvalidUtf8FirstByte> {
         use error::InvalidUtf8FirstByte::{ContinuationByte,TooLongSeqence};
-        match self.not().leading_zeros() {
-            1       =>  Err(ContinuationByte),// following byte
-            5...255 =>  Err(TooLongSeqence),// too big
-            0       =>  Ok(0),// ASCII
-            n       =>  Ok(n as usize-1),// start of multibyte
+        // the bit twiddling is explained in extra_utf8_bytes_unchecked()
+        if self < 128 {
+            return Ok(0);
+        }
+        match ((self as u32)<<25).not().leading_zeros() {
+            n @ 1...3 => Ok(n as usize),
+            0 => Err(ContinuationByte),
+            _ => Err(TooLongSeqence),
         }
     }
     #[inline]
     fn extra_utf8_bytes_unchecked(self) -> usize {
-        (self.not().leading_zeros() as usize).saturating_sub(1)
+        // For fun I've optimized this function (for x86 instruction count):
+        // The most straightforward implementation, that lets the compiler do
+        // the optimizing:
+        //match self {
+        //    0b0000_0000...0b0111_1111 => 0,
+        //    0b1100_0010...0b1101_1111 => 1,
+        //    0b1110_0000...0b1110_1111 => 2,
+        //    0b1111_0000...0b1111_0100 => 3,
+        //                _             => whatever()
+        //}
+        // Using `unsafe{self::core::hint::unreachable_unchecked()}` for the
+        // "don't care" case is a terrible idea: while having the function
+        // non-deterministically return whatever happens to be in a register
+        // MIGHT be acceptable, it permits the function to not `ret`urn at all,
+        // but let execution fall through to whatever comes after it in the
+        // binary! (in other words completely UB).
+        // Currently unreachable_unchecked() might trap too,
+        // which is certainly not what we want.
+        // I also think `unsafe{mem::unitialized()}` is much more likely to
+        // explicitly produce whatever happens to be in a register than tell
+        // the compiler it can ignore this branch but needs to produce a value.
+        //
+        // From the bit patterns we see that for non-ASCII values the result is
+        // (number of leading set bits) - 1
+        // The standard library doesn't have a method for counting leading ones,
+        // but it has leading_zeros(), which can be used after inverting.
+        // This function can therefore be reduced to the one-liner
+        //`self.not().leading_zeros().saturating_sub(1) as usize`, which would
+        // be branchless for architectures with instructions for
+        // leading_zeros() and saturating_sub().
+
+        // Shortest version as long as ASCII-ness can be predicted: (especially
+        // if the BSR instruction which leading_zeros() uses is microcoded or
+        // doesn't exist)
+        // u8.leading_zeros() would cast to a bigger type internally, so that's
+        // free. compensating by shifting left by 24 before inverting lets the
+        // compiler know that the value passed to leading_zeros() is not zero,
+        // for which BSR's output is undefined and leading_zeros() normally has
+        // special case with a branch.
+        // Shifting one bit too many left acts as a saturating_sub(1).
+        if self<128 {0} else {((self as u32)<<25).not().leading_zeros() as usize}
+
+        // Branchless but longer version: (9 instructions)
+        // It's tempting to try (self|0x80).not().leading_zeros().wrapping_sub(1),
+        // but that produces high lengths for ASCII values 0b01xx_xxxx.
+        // If we could somehow (branchlessy) clear that bit for ASCII values...
+        // We can by masking with the value shifted right with sign extension!
+        // (any nonzero number of bits in range works)
+        //let extended = self as i8 as i32;
+        //let ascii_cleared = (extended<<25) & (extended>>25);
+        //ascii_cleared.not().leading_zeros() as usize
+
+        // cmov version: (7 instructions)
+        //(((self as u32)<<24).not().leading_zeros() as usize).saturating_sub(1)
     }
 }
 
@@ -77,14 +133,14 @@ pub trait U16UtfExt {
 }
 impl U16UtfExt for u16 {
     #[inline]
-    fn utf16_needs_extra_unit(self) -> Result<bool,InvalidUtf16FirstUnit> {match self {
-        // https://en.wikipedia.org/wiki/UTF-16#U.2B10000_to_U.2B10FFFF
-        0x00_00...0xd7_ff => Ok(false),
-        0xe0_00...0xff_ff => Ok(false),
-        0xd8_00...0xdb_ff => Ok(true),
-        0xdc_00...0xdf_ff => Err(InvalidUtf16FirstUnit),
-                _         => unreachable!()
-    }}
+    fn utf16_needs_extra_unit(self) -> Result<bool,InvalidUtf16FirstUnit> {
+        match self {
+            // https://en.wikipedia.org/wiki/UTF-16#U.2B10000_to_U.2B10FFFF
+            0x00_00...0xd7_ff | 0xe0_00...0xff_ff => Ok(false),
+            0xd8_00...0xdb_ff => Ok(true),
+                    _         => Err(InvalidUtf16FirstUnit)
+        }
+    }
     #[inline]
     fn is_utf16_leading_surrogate(self) -> bool {
         (self & 0xfc00) == 0xd800// Clear the ten content bytes of a surrogate,

@@ -362,7 +362,27 @@ impl Utf8Char {
     /// `.as_char().len_utf8()`.
     #[inline]
     pub fn len(self) -> usize {
-        self.bytes[0].extra_utf8_bytes_unchecked() + 1
+        // Invariants of the extra bytes enambles algorithms that
+        // `u8.extra_utf8_bytes_unchecked()` cannot use.
+        // Some of them turned out to require fewer x86 instructions:
+
+        // Exploits that unused bytes are zero and calculates the number of
+        // trailing zero bytes.
+        // Setting a bit in the first byte prevents the function from returning
+        // 0 for '\0' (which has 32 leading zeros).
+        // trailing and leading is swapped below to optimize for little-endian
+        // architectures.
+        (4 - (u32::to_le(unsafe{transmute(self.bytes)})|1).leading_zeros()/8) as usize
+
+        // Exploits that the extra bytes have their most significant bit set if
+        // in use.
+        // Takes fewer instructions than the one above if popcnt can be used,
+        // (which it cannot by default,
+        //  set RUSTFLAGS='-C target-cpu=native' to enable)
+        //let all: u32 = unsafe{transmute(self.bytes)};
+        //let msb_mask = u32::from_be(0x00808080);
+        //let add_one = u32::from_be(0x80000000);
+        //((all & msb_mask) | add_one).count_ones() as usize
     }
     // There is no .is_emty() because this type is never empty.
 
