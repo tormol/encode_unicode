@@ -24,17 +24,22 @@ pub trait U8UtfExt {
     /// How many more bytes will you need to complete this codepoint?
     ///
     /// # Errors
-    /// An error is returned if this is not a valid start of an UTF-8 codepoint:
+    ///
+    /// An error is returned if the byte is not a valid start of an UTF-8
+    /// codepoint:
+    ///
     /// * `128..192`: ContinuationByte
     /// * `248..`: TooLongSequence
-    /// Values in 244..248 represent a too high codepoint, but do not cause an error.
+    ///
+    /// Values in 244..248 represent a too high codepoint, but do not cause an
+    /// error.
     fn extra_utf8_bytes(self) -> Result<usize,InvalidUtf8FirstByte>;
 
     /// How many more bytes will you need to complete this codepoint?
     ///
-    /// This function assumes that self is a valid UTF-8 start,
-    /// and will return gibberish otherwize.
-    /// The formula is `self.not().leading_zeros().saturating_sub(1)`.
+    /// This function assumes that the byte is a valid UTF-8 start, and might
+    /// return any value otherwise. (but the function is pure and safe to call
+    /// with any value).
     fn extra_utf8_bytes_unchecked(self) -> usize;
 }
 

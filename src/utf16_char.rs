@@ -356,11 +356,15 @@ impl Utf16Char {
         Utf16Char{ units: [utf16.0, utf16.1.unwrap_or(0)] }
     }
 
-    /// Returns 1 or 2.
-    /// There is no `.is_emty()` because it would always return false.
+    /// The number of units this character is made up of.
+    ///
+    /// Is either 1 or 2 and identical to `.as_char().len_utf16()`
+    /// or `.as_ref().len()`.
+    #[inline]
     pub fn len(self) -> usize {
         1 + (self.units[1] as usize >> 15)
     }
+    // There is no `.is_emty()` because it would always return false.
 
     /// Checks that the codepoint is an ASCII character.
     pub fn is_ascii(&self) -> bool {

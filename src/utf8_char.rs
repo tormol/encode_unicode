@@ -356,12 +356,14 @@ impl Utf8Char {
         Utf8Char{ bytes: utf8 }
     }
 
-    /// Result is 1...4 and identical to `.as_ref().len()` or
+    /// The number of bytes this character needs.
+    ///
+    /// Is between 1 and 4 (inclusive) and identical to `.as_ref().len()` or
     /// `.as_char().len_utf8()`.
-    /// There is no .is_emty() because this type is never empty.
     pub fn len(self) -> usize {
         self.bytes[0].extra_utf8_bytes_unchecked() + 1
     }
+    // There is no .is_emty() because this type is never empty.
 
     /// Checks that the codepoint is an ASCII character.
     pub fn is_ascii(&self) -> bool {
