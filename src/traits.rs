@@ -44,6 +44,7 @@ pub trait U8UtfExt {
 }
 
 impl U8UtfExt for u8 {
+    #[inline]
     fn extra_utf8_bytes(self) -> Result<usize,InvalidUtf8FirstByte> {
         use error::InvalidUtf8FirstByte::{ContinuationByte,TooLongSeqence};
         match self.not().leading_zeros() {
@@ -53,6 +54,7 @@ impl U8UtfExt for u8 {
             n       =>  Ok(n as usize-1),// start of multibyte
         }
     }
+    #[inline]
     fn extra_utf8_bytes_unchecked(self) -> usize {
         (self.not().leading_zeros() as usize).saturating_sub(1)
     }
@@ -74,6 +76,7 @@ pub trait U16UtfExt {
     fn is_utf16_leading_surrogate(self) -> bool;
 }
 impl U16UtfExt for u16 {
+    #[inline]
     fn utf16_needs_extra_unit(self) -> Result<bool,InvalidUtf16FirstUnit> {match self {
         // https://en.wikipedia.org/wiki/UTF-16#U.2B10000_to_U.2B10FFFF
         0x00_00...0xd7_ff => Ok(false),
@@ -82,7 +85,7 @@ impl U16UtfExt for u16 {
         0xdc_00...0xdf_ff => Err(InvalidUtf16FirstUnit),
                 _         => unreachable!()
     }}
-
+    #[inline]
     fn is_utf16_leading_surrogate(self) -> bool {
         (self & 0xfc00) == 0xd800// Clear the ten content bytes of a surrogate,
                                  // and see if it's a leading surrogate.

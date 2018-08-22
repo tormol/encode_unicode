@@ -159,17 +159,20 @@ impl<'a> FromIterator<&'a Utf16Char> for Vec<u16> {
  //getter traits//
 /////////////////
 impl AsRef<[u16]> for Utf16Char {
+    #[inline]
     fn as_ref(&self) -> &[u16] {
         &self.units[..self.len()]
     }
 }
 impl Borrow<[u16]> for Utf16Char {
+    #[inline]
     fn borrow(&self) -> &[u16] {
         self.as_ref()
     }
 }
 impl Deref for Utf16Char {
     type Target = [u16];
+    #[inline]
     fn deref(&self) -> &[u16] {
         self.as_ref()
     }
@@ -210,6 +213,7 @@ impl AsciiExt for Utf16Char {
 #[cfg(feature="ascii")]
 /// Requires the feature "ascii".
 impl From<AsciiChar> for Utf16Char {
+    #[inline]
     fn from(ac: AsciiChar) -> Self {
         Utf16Char{ units: [ac.as_byte() as u16, 0] }
     }
@@ -217,9 +221,11 @@ impl From<AsciiChar> for Utf16Char {
 #[cfg(feature="ascii")]
 /// Requires the feature "ascii".
 impl ToAsciiChar for Utf16Char {
+    #[inline]
     fn to_ascii_char(self) -> Result<AsciiChar, ToAsciiCharError> {
         unsafe{ AsciiChar::from(char::from_u32_unchecked(self.units[0] as u32)) }
     }
+    #[inline]
     unsafe fn to_ascii_char_unchecked(self) -> AsciiChar {
         AsciiChar::from_unchecked(self.units[0] as u8)
     }
@@ -245,11 +251,13 @@ impl fmt::Display for Utf16Char {
     }
 }
 impl cmp::PartialOrd for Utf16Char {
+    #[inline]
     fn partial_cmp(&self,  rhs: &Self) -> Option<cmp::Ordering> {
         Some(self.cmp(rhs))
     }
 }
 impl cmp::Ord for Utf16Char {
+    #[inline]
     fn cmp(&self,  rhs: &Self) -> cmp::Ordering {
         // Shift the first unit by 0xd if surrogate, and 0 otherwise.
         // This ensures surrogates are always greater than 0xffff, and
@@ -367,6 +375,7 @@ impl Utf16Char {
     // There is no `.is_emty()` because it would always return false.
 
     /// Checks that the codepoint is an ASCII character.
+    #[inline]
     pub fn is_ascii(&self) -> bool {
         self.units[0] <= 127
     }
@@ -436,6 +445,7 @@ impl Utf16Char {
         self.len()
     }
     /// The second `u16` is used for surrogate pairs.
+    #[inline]
     pub fn to_tuple(self) -> (u16,Option<u16>) {
         (self.units[0],  if self.len()==2 {Some(self.units[1])} else {None})
     }
