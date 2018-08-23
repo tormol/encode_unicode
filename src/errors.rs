@@ -174,7 +174,7 @@ macro_rules! complex {
 pub enum InvalidUtf8 {
     /// Something is wrong with the first byte.
     FirstByte(InvalidUtf8FirstByte),
-    /// Thee byte at index 1...3 should be a continuation byte,
+    /// The byte at index 1...3 should be a continuation byte,
     /// but dosesn't fit the pattern 0b10xx_xxxx.
     NotAContinuationByte(usize),
     /// There are too many leading zeros: it could be a byte shorter.
