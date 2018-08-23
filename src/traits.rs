@@ -12,10 +12,11 @@ use utf8_char::Utf8Char;
 use utf16_char::Utf16Char;
 use utf8_iterators::*;
 use utf16_iterators::*;
+use decoding_iterators::*;
 use error::*;
 extern crate core;
 use self::core::{char, u32, mem};
-use self::core::ops::Not;
+use self::core::ops::{Not, Index, RangeFull};
 use self::core::borrow::Borrow;
 #[cfg(feature="ascii")]
 extern crate ascii;
@@ -538,11 +539,14 @@ impl StrExt for AsciiStr {
 
 
 
-/// Adds methods for splitting and merging `Utf8Char` and `Utf16Char` to and
-/// from `u8`s or `u16`s.
+/// Iterator methods that convert between `u8`s and `Utf8Char` or `u16`s and `Utf16Char`
+///
+/// All the iterator adapters also accept iterators that produce references of
+/// the type they convert from.
 pub trait IterExt: Iterator+Sized {
-    /// Converts an iterator of `Utf8Char` or `&Utf8Char` to an iterator of 
-    /// `u8`s.  
+    /// Converts an iterator of `Utf8Char`s or `&Utf8Char`s to an iterator of
+    /// `u8`s.
+    ///
     /// Has the same effect as `.flat_map()` or `.flatten()`, but the returned
     /// iterator is ~40% faster.
     ///
@@ -599,7 +603,8 @@ pub trait IterExt: Iterator+Sized {
     fn to_bytes(self) -> Utf8CharSplitter<Self::Item,Self> where Self::Item: Borrow<Utf8Char>;
 
     /// Converts an iterator of `Utf16Char` (or `&Utf16Char`) to an iterator of
-    /// `u16`s.  
+    /// `u16`s.
+    ///
     /// Has the same effect as `.flat_map()` or `.flatten()`, but the returned
     /// iterator is about twice as fast.
     ///
@@ -616,6 +621,7 @@ pub trait IterExt: Iterator+Sized {
     /// let iterator = "foo".utf16chars();
     /// let mut units = [0; 4];
     /// for (u,dst) in iterator.to_units().zip(&mut units) {*dst=u;}
+    ///
     /// assert_eq!(units, ['f' as u16, 'o' as u16, 'o' as u16, 0]);
     /// ```
     ///
@@ -629,9 +635,114 @@ pub trait IterExt: Iterator+Sized {
     /// let chars: Vec<Utf16Char> = "💣 bomb 💣".utf16chars().collect();
     /// let units: Vec<u16> = chars.iter().to_units().collect();
     /// let flat_map: Vec<u16> = chars.iter().flat_map(|u16c| *u16c ).collect();
+    ///
     /// assert_eq!(units, flat_map);
     /// ```
     fn to_units(self) -> Utf16CharSplitter<Self::Item,Self> where Self::Item: Borrow<Utf16Char>;
+
+    /// Decodes bytes as UTF-8 and groups them into `Utf8Char`s
+    ///
+    /// When errors (invalid values or sequences) are encountered,
+    /// it continues with the byte right after the start of the error sequence.  
+    /// This is neither the most intelligent choiche (sometimes it is guaranteed to
+    ///  produce another error), nor the easiest to implement, but I believe it to
+    /// be the most predictable.
+    /// It also means that ASCII characters are never hidden by errors.
+    ///
+    /// # Examples
+    ///
+    /// Replace all errors with u+FFFD REPLACEMENT_CHARACTER:
+    /// ```
+    /// use encode_unicode::{Utf8Char, IterExt};
+    ///
+    /// let mut buf = [b'\0'; 255];
+    /// let len = b"foo\xCFbar".iter()
+    ///     .to_utf8chars()
+    ///     .flat_map(|r| r.unwrap_or(Utf8Char::from('\u{FFFD}')).into_iter() )
+    ///     .zip(&mut buf[..])
+    ///     .map(|(byte, dst)| *dst = byte )
+    ///     .count();
+    ///
+    /// assert_eq!(&buf[..len], "foo\u{FFFD}bar".as_bytes());
+    /// ```
+    ///
+    /// Collect everything up until the first error into a string:
+    #[cfg_attr(feature="std", doc=" ```")]
+    #[cfg_attr(not(feature="std"), doc=" ```no_compile")]
+    /// use encode_unicode::iterator::Utf8CharMerger;
+    /// let mut good = String::new();
+    /// for r in Utf8CharMerger::from(b"foo\xcc\xbbbar\xcc\xddbaz") {
+    ///     if let Ok(uc) = r {
+    ///         good.push_str(uc.as_str());
+    ///     } else {
+    ///         break;
+    ///     }
+    /// }
+    /// assert_eq!(good, "foo̻bar");
+    /// ```
+    ///
+    /// Abort decoding on error:
+    #[cfg_attr(feature="std", doc=" ```")]
+    #[cfg_attr(not(feature="std"), doc=" ```no_compile")]
+    /// use encode_unicode::{IterExt, Utf8Char};
+    /// use encode_unicode::error::{InvalidUtf8Slice, InvalidUtf8};
+    ///
+    /// let result = b"ab\0\xe0\xbc\xa9 \xf3\x80\x77".iter()
+    ///     .to_utf8chars()
+    ///     .collect::<Result<String,InvalidUtf8Slice>>();
+    ///
+    /// assert_eq!(result, Err(InvalidUtf8Slice::Utf8(InvalidUtf8::NotAContinuationByte(2))));
+    /// ```
+    fn to_utf8chars(self) -> Utf8CharMerger<Self::Item,Self> where Self::Item: Borrow<u8>;
+
+    /// Decodes bytes as UTF-16 and groups them into `Utf16Char`s
+    ///
+    /// When errors (unmatched leading surrogates or unexpected trailing surrogates)
+    /// are encountered, an error is produced for every unit.
+    ///
+    /// # Examples
+    ///
+    /// Replace errors with '�':
+    #[cfg_attr(feature="std", doc=" ```")]
+    #[cfg_attr(not(feature="std"), doc=" ```no_compile")]
+    /// use encode_unicode::{IterExt, Utf16Char};
+    ///
+    /// let slice = &['a' as u16, 0xdf00, 0xd83c, 0xdca0][..];
+    /// let string = slice.iter()
+    ///     .to_utf16chars()
+    ///     .map(|r| r.unwrap_or(Utf16Char::from('\u{fffd}')) ) // REPLACEMENT_CHARACTER
+    ///     .collect::<String>();
+    ///
+    /// assert_eq!(string, "a�🂠");
+    /// ```
+    ///
+    /// ```
+    /// use encode_unicode::{IterExt, Utf16Char};
+    /// use encode_unicode::error::Utf16PairError::*;
+    ///
+    /// let slice = [0xdcba, 0xdeff, 0xd8be, 0xdeee, 'Y' as u16, 0xdab1, 0xdab1];
+    /// let mut iter = slice.iter().to_utf16chars();
+    /// assert_eq!(iter.size_hint(), (3, Some(7)));
+    /// assert_eq!(iter.next(), Some(Err(UnexpectedTrailingSurrogate)));
+    /// assert_eq!(iter.next(), Some(Err(UnexpectedTrailingSurrogate)));
+    /// assert_eq!(iter.next(), Some(Ok(Utf16Char::from('\u{3faee}'))));
+    /// assert_eq!(iter.next(), Some(Ok(Utf16Char::from('Y'))));
+    /// assert_eq!(iter.next(), Some(Err(UnmatchedLeadingSurrogate)));
+    /// assert_eq!(iter.next(), Some(Err(Incomplete)));
+    /// assert_eq!(iter.into_remaining_units().next(), None);
+    /// ```
+    ///
+    /// Search for a codepoint and return the codepoint index of the first match:
+    /// ```
+    /// use encode_unicode::{IterExt, Utf16Char};
+    ///
+    /// let position = [0xd875, 0xdd4f, '≈' as u16, '2' as u16].iter()
+    ///     .to_utf16chars()
+    ///     .position(|r| r == Ok(Utf16Char::from('≈')) );
+    ///
+    /// assert_eq!(position, Some(1));
+    /// ```
+    fn to_utf16chars(self) -> Utf16CharMerger<Self::Item,Self> where Self::Item: Borrow<u16>;
 }
 
 impl<I:Iterator> IterExt for I {
@@ -640,5 +751,157 @@ impl<I:Iterator> IterExt for I {
     }
     fn to_units(self) -> Utf16CharSplitter<Self::Item,Self> where Self::Item: Borrow<Utf16Char> {
         iter_units(self)
+    }
+    fn to_utf8chars(self) -> Utf8CharMerger<Self::Item,Self> where Self::Item: Borrow<u8> {
+        Utf8CharMerger::from(self)
+    }
+    fn to_utf16chars(self) -> Utf16CharMerger<Self::Item,Self> where Self::Item: Borrow<u16> {
+        Utf16CharMerger::from(self)
+    }
+}
+
+
+/// Methods for iterating over `u8` and `u16` slices as UTF-8 or UTF-16 characters.
+///
+/// The iterators are slightly faster than the similar methods in [`IterExt`](trait.IterExt.html)
+/// because they con "push back" items for free after errors and don't need a
+/// separate buffer that must be checked on every call to `.next()`.
+pub trait SliceExt: Index<RangeFull> {
+    /// Decode `u8` slices as UTF-8 and iterate over the codepoints as `Utf8Char`s,
+    ///
+    /// # Examples
+    ///
+    /// Get the index and error type of the first error:
+    #[cfg_attr(feature="std", doc=" ```")]
+    #[cfg_attr(not(feature="std"), doc=" ```no_compile")]
+    /// use encode_unicode::{SliceExt, Utf8Char};
+    /// use encode_unicode::error::InvalidUtf8Slice;
+    ///
+    /// let slice = b"ab\0\xe0\xbc\xa9 \xf3\x80\x77";
+    /// let result = slice.utf8char_indices()
+    ///     .map(|(offset,r,length)| r.map_err(|e| (offset,e,length) ) )
+    ///     .collect::<Result<String,(usize,InvalidUtf8Slice,usize)>>();
+    ///
+    /// assert_eq!(result, Err((7, InvalidUtf8Slice::TooShort(4), 1)));
+    /// ```
+    ///
+    /// ```
+    /// use encode_unicode::{SliceExt, Utf8Char};
+    /// use std::error::Error;
+    ///
+    /// let slice = b"\xf0\xbf\xbf\xbfXY\xdd\xbb\xe1\x80\x99quux123";
+    /// let mut fixed_size = [Utf8Char::default(); 8];
+    /// for (cp_i, (byte_index, r, _)) in slice.utf8char_indices().enumerate().take(8) {
+    ///     match r {
+    ///         Ok(u8c) => fixed_size[cp_i] = u8c,
+    ///         Err(e) => panic!("Invalid codepoint at index {} ({})", cp_i, e.description()),
+    ///     }
+    /// }
+    /// let chars = ['\u{3ffff}', 'X', 'Y', '\u{77b}', '\u{1019}', 'q', 'u', 'u'];
+    /// assert_eq!(fixed_size, chars);
+    /// ```
+    ///
+    #[cfg_attr(feature="std", doc=" ```")]
+    #[cfg_attr(not(feature="std"), doc=" ```no_compile")]
+    /// use encode_unicode::{SliceExt, Utf8Char};
+    /// use encode_unicode::error::InvalidUtf8Slice::*;
+    /// use encode_unicode::error::{InvalidUtf8, InvalidUtf8FirstByte, InvalidCodepoint};
+    ///
+    /// let bytes = b"\xfa-\xf4\x8f\xee\xa1\x8f-\xed\xa9\x87\xf0\xcc\xbb";
+    /// let mut errors = Vec::new();
+    /// let mut lengths = Vec::new();
+    /// let mut string = String::new();
+    /// for (offset,result,length) in bytes.utf8char_indices() {
+    ///     lengths.push((offset,length));
+    ///     let c = result.unwrap_or_else(|error| {
+    ///         errors.push((offset,error));
+    ///         Utf8Char::from('\u{fffd}') // replacement character
+    ///     });
+    ///     string.push_str(c.as_str());
+    /// }
+    ///
+    /// assert_eq!(string, "�-��\u{e84f}-����\u{33b}");
+    /// assert_eq!(lengths, [(0,1), (1,1), (2,1), (3,1), (4,3), (7,1),
+    ///                      (8,1), (9,1), (10,1), (11,1), (12,2)]);
+    /// assert_eq!(errors, [
+    ///     ( 0, Utf8(InvalidUtf8::FirstByte(InvalidUtf8FirstByte::TooLongSeqence))),
+    ///     ( 2, Utf8(InvalidUtf8::NotAContinuationByte(2))),
+    ///     ( 3, Utf8(InvalidUtf8::FirstByte(InvalidUtf8FirstByte::ContinuationByte))),
+    ///     ( 8, Codepoint(InvalidCodepoint::Utf16Reserved)),
+    ///     ( 9, Utf8(InvalidUtf8::FirstByte(InvalidUtf8FirstByte::ContinuationByte))),
+    ///     (10, Utf8(InvalidUtf8::FirstByte(InvalidUtf8FirstByte::ContinuationByte))),
+    ///     (11, TooShort(4)), // (but it was not the last element returned!)
+    /// ]);
+    /// ```
+    fn utf8char_indices(&self) -> Utf8CharDecoder where Self::Output: Borrow<[u8]>;
+
+
+    /// Decode `u16` slices as UTF-16 and iterate over the codepoints as `Utf16Char`s,
+    ///
+    /// The iterator produces `(usize,Result<Utf16Char,Utf16Error>,usize)`,
+    /// and the slice is validated as you go.
+    ///
+    /// The first `usize` contains the offset from the start of the slice and
+    /// the last `usize` contains the length of the codepoint or error.
+    /// The length is either 1 or 2, and always 1 for errors.
+    ///
+    /// # Examples
+    ///
+    #[cfg_attr(feature="std", doc=" ```")]
+    #[cfg_attr(not(feature="std"), doc=" ```no_compile")]
+    /// use encode_unicode::{SliceExt, Utf8Char};
+    ///
+    /// let slice = &['a' as u16, 0xdf00, 0xd83c, 0xdca0][..];
+    /// let mut errors = Vec::new();
+    /// let string = slice.utf16char_indices().map(|(offset,r,_)| match r {
+    ///     Ok(u16c) => Utf8Char::from(u16c),
+    ///     Err(_) => {
+    ///         errors.push(offset);
+    ///         Utf8Char::from('\u{fffd}') // REPLACEMENT_CHARACTER
+    ///     }
+    /// }).collect::<String>();
+    ///
+    /// assert_eq!(string, "a�🂠");
+    /// assert_eq!(errors, [1]);
+    /// ```
+    ///
+    /// Search for a codepoint and return its unit and codepoint index.
+    /// ```
+    /// use encode_unicode::{SliceExt, Utf16Char};
+    ///
+    /// let slice = [0xd875,/*'𝕏'*/ 0xdd4f, '≈' as u16, '2' as u16];
+    /// let position = slice.utf16char_indices()
+    ///     .enumerate()
+    ///     .find(|&(_,(_,r,_))| r == Ok(Utf16Char::from('≈')) )
+    ///     .map(|(codepoint, (offset, _, _))| (codepoint, offset) );
+    ///
+    /// assert_eq!(position, Some((1,2)));
+    /// ```
+    ///
+    /// Error types:
+    /// ```
+    /// use encode_unicode::{SliceExt, Utf16Char};
+    /// use encode_unicode::error::Utf16PairError::*;
+    ///
+    /// let slice = [0xdcba, 0xdeff, 0xd8be, 0xdeee, 'λ' as u16, 0xdab1, 0xdab1];
+    /// let mut iter = slice.utf16char_indices();
+    /// assert_eq!(iter.next(), Some((0, Err(UnexpectedTrailingSurrogate), 1)));
+    /// assert_eq!(iter.next(), Some((1, Err(UnexpectedTrailingSurrogate), 1)));
+    /// assert_eq!(iter.next(), Some((2, Ok(Utf16Char::from('\u{3faee}')), 2)));
+    /// assert_eq!(iter.next(), Some((4, Ok(Utf16Char::from('λ')), 1)));
+    /// assert_eq!(iter.next(), Some((5, Err(UnmatchedLeadingSurrogate), 1)));
+    /// assert_eq!(iter.next(), Some((6, Err(Incomplete), 1)));
+    /// assert_eq!(iter.next(), None);
+    /// assert_eq!(iter.as_slice(), [])
+    /// ```
+    fn utf16char_indices(&self) -> Utf16CharDecoder where Self::Output: Borrow<[u16]>;
+}
+
+impl<S: ?Sized+Index<RangeFull>> SliceExt for S {
+    fn utf8char_indices(&self) -> Utf8CharDecoder where Self::Output: Borrow<[u8]> {
+        Utf8CharDecoder::from(self[..].borrow())
+    }
+    fn utf16char_indices(&self) -> Utf16CharDecoder where Self::Output: Borrow<[u16]> {
+        Utf16CharDecoder::from(self[..].borrow())
     }
 }

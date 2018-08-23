@@ -20,3 +20,11 @@ members = ["."]
 [[bin]]
 name = "utf8char_from_slice_start"
 path = "fuzz_targets/utf8char_from_slice_start.rs"
+
+[[bin]]
+name = "utf8char_decoding_iterators"
+path = "fuzz_targets/utf8char_decoding_iterators.rs"
+
+[[bin]]
+name = "utf16char_decoding_iterators"
+path = "fuzz_targets/utf16char_decoding_iterators.rs"

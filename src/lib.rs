@@ -52,8 +52,9 @@ mod utf8_char;
 mod utf8_iterators;
 mod utf16_char;
 mod utf16_iterators;
+mod decoding_iterators;
 
-pub use traits::{CharExt, U8UtfExt, U16UtfExt, StrExt, IterExt};
+pub use traits::{CharExt, U8UtfExt, U16UtfExt, StrExt, IterExt, SliceExt};
 pub use utf8_char::Utf8Char;
 pub use utf16_char::Utf16Char;
 pub use utf8_iterators::{Utf8Iterator, iter_bytes};
@@ -66,10 +67,13 @@ pub mod error {// keeping the public interface in one file
     pub use errors::{InvalidUtf8FirstByte,InvalidUtf16FirstUnit};
     pub use errors::{InvalidUtf8Slice,InvalidUtf16Slice};
     pub use errors::{InvalidUtf8Array,InvalidUtf16Tuple};
+    pub use errors::Utf16PairError;
 }
 
 pub mod iterator {
     //! Iterator types that you should rarely need to name
     pub use utf8_iterators::{Utf8Iterator, Utf8CharSplitter, Utf8Chars, Utf8CharIndices};
     pub use utf16_iterators::{Utf16Iterator, Utf16CharSplitter, Utf16Chars, Utf16CharIndices};
+    pub use decoding_iterators::{Utf8CharMerger, Utf8CharDecoder};
+    pub use decoding_iterators::{Utf16CharMerger, Utf16CharDecoder};
 }

@@ -131,6 +131,16 @@ simple!{/// Reasons why a slice of `u16`s doesn't start with valid UTF-16.
         ::SecondNotLowSurrogate => "the required second unit is not a trailing surrogate",
     }}
 
+simple!{/// Types of invalid sequences encountered by `Utf16CharParser`.
+    Utf16PairError {
+        /// A trailing surrogate was not preceeded by a leading surrogate.
+        ::UnexpectedTrailingSurrogate => "a trailing surrogate was not preceeded by a leading surrogate",
+        /// A leading surrogate was followed by an unit that was not a trailing surrogate.
+        ::UnmatchedLeadingSurrogate => "a leading surrogate was followed by an unit that was not a trailing surrogate",
+        /// A trailing surrogate was expected when the end was reached.
+        ::Incomplete => "a trailing surrogate was expected when the end was reached",
+    }}
+
 
 simple!{/// Reasons why `Utf8Char::from_str()` or `Utf16Char::from_str()` failed.
     FromStrError {

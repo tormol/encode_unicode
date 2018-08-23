@@ -6,20 +6,100 @@
  * copied, modified, or distributed except according to those terms.
  */
 
-//! Tests for ensuring that iterators which also implement Read support
-//! interleaving calls of `read()` and `next()`, and that they implement Read
-//! correctly (support any buffer size at any time).
+//! Iterator tests
 
 #![cfg(feature="std")]
 
+extern crate encode_unicode;
+
+use encode_unicode::{IterExt, SliceExt, CharExt};
+use encode_unicode::iterator::Utf8CharSplitter;
+use encode_unicode::error::InvalidUtf8Slice::*;
+use encode_unicode::error::InvalidUtf8::*;
+use encode_unicode::error::InvalidUtf8FirstByte::*;
+use encode_unicode::error::InvalidCodepoint::*;
+use encode_unicode::error::Utf16PairError::*;
 use std::io::Read;
 use std::cmp::min;
-extern crate encode_unicode;
-use encode_unicode::CharExt;
-use encode_unicode::iterator::Utf8CharSplitter;
 
-#[test]
-fn read_single_ascii() {
+#[test] fn utf8charmerger() {
+    let slice = b"\xf0\xa1\x92X\xcc\xbb";
+    let mut iter = slice.iter().to_utf8chars();
+    assert_eq!(iter.size_hint(), (1, Some(6)));
+    assert_eq!(format!("{:?}", &iter),
+               format!("Utf8CharMerger {{ buffered: [], inner: {:?} }}", slice.iter()));
+
+    assert_eq!(iter.next(), Some(Err(Utf8(NotAContinuationByte(3)))));
+    assert_eq!(iter.size_hint(), (0, Some(5)));
+    assert_eq!(
+        format!("{:?}", &iter),
+        format!("Utf8CharMerger {{ buffered: [161, 146, 88], inner: {:?} }}", slice[4..].iter())
+    );
+
+    assert_eq!(iter.next(), Some(Err(Utf8(FirstByte(ContinuationByte)))));
+    assert_eq!(iter.into_inner().next(), Some(&b'\xcc'));
+}
+
+#[test] fn utf8chardecoder() {
+    let slice = b"\xf4\xbf\x80\x80XY\xcc\xbbZ_";
+    let mut iter = slice.utf8char_indices();
+    assert_eq!(iter.size_hint(), (2, Some(10)));
+    assert_eq!(
+        format!("{:?}", &iter),
+        format!("Utf8CharDecoder {{ bytes[0..]: {:?} }}", &slice)
+    );
+
+    assert_eq!(iter.next(), Some((0, Err(Codepoint(TooHigh)), 1)));
+    assert_eq!(
+        format!("{:?}", &iter),
+        format!("Utf8CharDecoder {{ bytes[1..]: {:?} }}", &slice[1..])
+    );
+    assert_eq!(iter.size_hint(), (2, Some(9)));
+    assert_eq!(iter.count(), 8);
+}
+
+#[test] fn utf16charmerger() {
+    let slice = [0xd800, 'x' as u16, 0xd900, 0xdfff, 'λ' as u16];
+    let mut iter = slice.iter().to_utf16chars();
+    assert_eq!(iter.size_hint(), (2, Some(5)));
+    assert_eq!(format!("{:?}", &iter),
+               format!("Utf16CharMerger {{ buffered: None, inner: {:?} }}", slice.iter()));
+
+    assert_eq!(iter.next(), Some(Err(UnmatchedLeadingSurrogate)));
+    assert_eq!(iter.size_hint(), (1, Some(4)));
+    assert_eq!(
+        format!("{:?}", &iter),
+        format!("Utf16CharMerger {{ buffered: Some(120), inner: {:?} }}", slice[2..].iter())
+    );
+
+    assert_eq!(iter.into_inner().next(), Some(&0xd900));
+}
+
+#[test] fn utf16chardecoder() {
+    let slice = [0xd800, 'x' as u16, 0xd900, 0xdfff, 'λ' as u16];
+    let mut iter = slice.utf16char_indices();
+    assert_eq!(iter.size_hint(), (2, Some(5)));
+    assert_eq!(
+        format!("{:?}", &iter),
+        format!("Utf16CharDecoder {{ units[0..]: {:?} }}", &slice)
+    );
+
+    assert_eq!(iter.next(), Some((0, Err(UnmatchedLeadingSurrogate), 1)));
+    assert_eq!(
+        format!("{:?}", &iter),
+        format!("Utf16CharDecoder {{ units[1..]: {:?} }}", &slice[1..])
+    );
+    assert_eq!(iter.size_hint(), (2, Some(4)));
+    assert_eq!(iter.count(), 3);
+}
+
+
+
+/// Tests for ensuring that iterators which also implement Read support
+/// interleaving calls of `read()` and `next()`, and that they implement Read
+/// correctly (support any buffer size at any time).
+
+#[test] fn read_single_ascii() {
     let uc = 'a'.to_utf8();
     assert_eq!(uc.len(), 1);
     for chunk in 1..5 {
@@ -38,8 +118,7 @@ fn read_single_ascii() {
     }
 }
 
-#[test]
-fn read_single_nonascii() {
+#[test] fn read_single_nonascii() {
     let uc = 'ä'.to_utf8();
     assert_eq!(uc.len(), 2);
     for chunk in 1..5 {
@@ -59,8 +138,7 @@ fn read_single_nonascii() {
 }
 
 
-#[test]
-fn utf8charsplitter_read_all_sizes() {
+#[test] fn utf8charsplitter_read_all_sizes() {
     let s = "1111\u{104444}\u{222}1\u{833}1111\u{100004}";
     assert!(s.len()%3 == 1);
     let mut buf = vec![b'E'; s.len()+6];
@@ -76,8 +154,7 @@ fn utf8charsplitter_read_all_sizes() {
     }
 }
 
-#[test]
-fn utf8charsplitter_alternate_iter_read() {
+#[test] fn utf8charsplitter_alternate_iter_read() {
     let s = "1111\u{104444}\u{222}1\u{833}1111\u{100004}";
     let mut buf = [b'0'; 10];
     for n in 0..2 {
