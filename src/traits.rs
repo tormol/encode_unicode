@@ -10,12 +10,13 @@
 
 use utf8_char::Utf8Char;
 use utf16_char::Utf16Char;
-use utf8_iterators::{Utf8Iterator, Utf8Chars, Utf8CharIndices};
-use utf16_iterators::{Utf16Iterator, Utf16Chars, Utf16CharIndices};
+use utf8_iterators::*;
+use utf16_iterators::*;
 use error::*;
 extern crate core;
 use self::core::{char, u32, mem};
 use self::core::ops::Not;
+use self::core::borrow::Borrow;
 #[cfg(feature="ascii")]
 extern crate ascii;
 #[cfg(feature="ascii")]
@@ -471,5 +472,112 @@ impl StrExt for AsciiStr {
     }
     fn utf16char_indices(&self) -> Utf16CharIndices {
         Utf16CharIndices::from(self.as_str())
+    }
+}
+
+
+
+/// Adds methods for splitting and merging `Utf8Char` and `Utf16Char` to and
+/// from `u8`s or `u16`s.
+pub trait IterExt: Iterator+Sized {
+    /// Converts an iterator of `Utf8Char` or `&Utf8Char` to an iterator of 
+    /// `u8`s.  
+    /// Has the same effect as `.flat_map()` or `.flatten()`, but the returned
+    /// iterator is ~40% faster.
+    ///
+    /// The iterator also implements `Read`
+    /// (when the `std` feature isn't disabled).  
+    /// Reading will never produce an error, and calls to `.read()` and `.next()`
+    /// can be mixed.
+    ///
+    /// The exact number of bytes cannot be known in advance, but `size_hint()`
+    /// gives the possible range.
+    /// (min: all remaining characters are ASCII, max: all require four bytes)
+    ///
+    /// # Examples
+    ///
+    /// From iterator of values:
+    ///
+    /// ```
+    /// use encode_unicode::{IterExt, StrExt};
+    ///
+    /// let iterator = "foo".utf8chars();
+    /// let mut bytes = [0; 4];
+    /// for (u,dst) in iterator.to_bytes().zip(&mut bytes) {*dst=u;}
+    /// assert_eq!(&bytes, b"foo\0");
+    /// ```
+    ///
+    /// From iterator of references:
+    ///
+    #[cfg_attr(feature="std", doc=" ```")]
+    #[cfg_attr(not(feature="std"), doc=" ```no_compile")]
+    /// use encode_unicode::{IterExt, StrExt, Utf8Char};
+    ///
+    /// let chars: Vec<Utf8Char> = "💣 bomb 💣".utf8chars().collect();
+    /// let bytes: Vec<u8> = chars.iter().to_bytes().collect();
+    /// let flat_map: Vec<u8> = chars.iter().flat_map(|u8c| *u8c ).collect();
+    /// assert_eq!(bytes, flat_map);
+    /// ```
+    ///
+    /// `Read`ing from it:
+    ///
+    #[cfg_attr(feature="std", doc=" ```")]
+    #[cfg_attr(not(feature="std"), doc=" ```no_compile")]
+    /// use encode_unicode::{IterExt, StrExt};
+    /// use std::io::Read;
+    ///
+    /// let s = "Ååh‽";
+    /// assert_eq!(s.len(), 8);
+    /// let mut buf = [b'E'; 9];
+    /// let mut reader = s.utf8chars().to_bytes();
+    /// assert_eq!(reader.read(&mut buf[..]).unwrap(), 8);
+    /// assert_eq!(reader.read(&mut buf[..]).unwrap(), 0);
+    /// assert_eq!(&buf[..8], s.as_bytes());
+    /// assert_eq!(buf[8], b'E');
+    /// ```
+    fn to_bytes(self) -> Utf8CharSplitter<Self::Item,Self> where Self::Item: Borrow<Utf8Char>;
+
+    /// Converts an iterator of `Utf16Char` (or `&Utf16Char`) to an iterator of
+    /// `u16`s.  
+    /// Has the same effect as `.flat_map()` or `.flatten()`, but the returned
+    /// iterator is about twice as fast.
+    ///
+    /// The exact number of units cannot be known in advance, but `size_hint()`
+    /// gives the possible range.
+    ///
+    /// # Examples
+    ///
+    /// From iterator of values:
+    ///
+    /// ```
+    /// use encode_unicode::{IterExt, StrExt};
+    ///
+    /// let iterator = "foo".utf16chars();
+    /// let mut units = [0; 4];
+    /// for (u,dst) in iterator.to_units().zip(&mut units) {*dst=u;}
+    /// assert_eq!(units, ['f' as u16, 'o' as u16, 'o' as u16, 0]);
+    /// ```
+    ///
+    /// From iterator of references:
+    ///
+    #[cfg_attr(feature="std", doc=" ```")]
+    #[cfg_attr(not(feature="std"), doc=" ```no_compile")]
+    /// use encode_unicode::{IterExt, StrExt, Utf16Char};
+    ///
+    /// // (💣 takes two units)
+    /// let chars: Vec<Utf16Char> = "💣 bomb 💣".utf16chars().collect();
+    /// let units: Vec<u16> = chars.iter().to_units().collect();
+    /// let flat_map: Vec<u16> = chars.iter().flat_map(|u16c| *u16c ).collect();
+    /// assert_eq!(units, flat_map);
+    /// ```
+    fn to_units(self) -> Utf16CharSplitter<Self::Item,Self> where Self::Item: Borrow<Utf16Char>;
+}
+
+impl<I:Iterator> IterExt for I {
+    fn to_bytes(self) -> Utf8CharSplitter<Self::Item,Self> where Self::Item: Borrow<Utf8Char> {
+        iter_bytes(self)
+    }
+    fn to_units(self) -> Utf16CharSplitter<Self::Item,Self> where Self::Item: Borrow<Utf16Char> {
+        iter_units(self)
     }
 }
