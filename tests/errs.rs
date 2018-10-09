@@ -107,7 +107,8 @@ fn from_utf16_slice_start() {
 fn overlong_utf8() {
     use encode_unicode::error::InvalidUtf8::OverLong;
     let overlongs = [[0xc0,0xbf], [0xe0,0x9f], [0xf0,0x8f],
-                     [0xc0,0x9f], [0xe0,0x8f], [0xf0,0x87]];
+                     [0xc0,0x9f], [0xe0,0x8f], [0xf0,0x87],
+                     [0xc1, 0x92]];
     for o in overlongs.iter() {
         let arr = [o[0],o[1], 0x80, 0x80];
         assert_eq!(char::from_utf8_slice_start(&arr), Err(InvalidUtf8Slice::Utf8(OverLong)));
