@@ -340,15 +340,17 @@ impl CharExt for char {
     }
 }
 
-
-// If all the data bits in the first byte are zero, the sequence might be longer than necessary
-// When you go up one byte, you gain 6-1 data bits, so if the five first are zero it's too long.
-// The first byte has 3 + (4-len) data bits, which we know are zero.
-// The first two bits in the second byte are 10, which gets shifted out.
-fn overlong(first: u8,  second: u8) -> bool {
-    let both = ((first as u16) << 8)  |  (second << 2) as u16;
-    let both = both << 1+both.not().leading_zeros();
-    both.leading_zeros() >= 5
+// Adapted from https://www.cl.cam.ac.uk/~mgk25/ucs/utf8_check.c
+fn overlong(first: u8, second: u8) -> bool {
+    if first < 0x80 {
+        false
+    } else if (first & 0xe0) == 0xc0 {
+        (first & 0xfe) == 0xc0
+    } else if (first & 0xf0) == 0xe0 {
+        first == 0xe0 && (second & 0xe0) == 0x80
+    } else {
+        first == 0xf0 && (second & 0xf0) == 0x80
+    }
 }
 
 // Create a `char` from a leading and a trailing surrogate.
