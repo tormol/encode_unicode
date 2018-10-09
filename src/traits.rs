@@ -360,20 +360,6 @@ fn overlong(s: &[u8]) -> bool {
     }
 }
 
-// // If all the data bits in the first byte are zero, the sequence might be longer than necessary
-// // When you go up one byte, you gain 6-1 data bits, so if the five first are zero it's too long.
-// // The first byte has 3 + (4-len) data bits, which we know are zero.
-// // The first two bits in the second byte are 10, which gets shifted out.
-// fn overlong(first: u8,  second: u8) -> bool {
-//     let encoded: u16 = (second & 0b0011_1111) as u16;
-//     // let both = ((first as u16) << 8)  |  (second << 2) as u16;
-//     // println!("{:016b}", both);
-//     // println!("{:016b}", both.not());
-//     // let both = both << 1+both.not().leading_zeros();
-//     // println!("{:016b}\n", both);
-//     // both.leading_zeros() >= 5
-// }
-
 // Create a `char` from a leading and a trailing surrogate.
 unsafe fn combine_surrogates(first: u16, second: u16) -> char {
     let high = (first & 0x_03_ff) as u32;
