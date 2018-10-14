@@ -221,7 +221,7 @@ impl CharExt for char {
         };
         if let Some(i) = bytes.iter().skip(1).position(|&b| (b >> 6) != 0b10 ) {
             Err(Utf8(NotAContinuationByte(i+1)))
-        } else if overlong(src) {
+        } else if overlong(bytes[0], bytes[1]) {
             Err(Utf8(OverLong))
         } else {
             let c = unsafe{ char::from_utf8_exact_slice_unchecked(bytes) };
@@ -242,7 +242,7 @@ impl CharExt for char {
         };
         if let Some(i) = src[1..].iter().position(|&b| (b >> 6) != 0b10 ) {
             Err(Utf8(NotAContinuationByte(i+1)))
-        } else if overlong(&utf8[..]) {
+        } else if overlong(utf8[0], utf8[1]) {
             Err(Utf8(OverLong))
         } else {
             let c = unsafe{ char::from_utf8_exact_slice_unchecked(src) };
@@ -340,23 +340,16 @@ impl CharExt for char {
     }
 }
 
-// Only called with slices with 0 < data.len() <= 4
-// Assumes that the input is valid except for possibly overlongness and surrogate code points
 // Adapted from https://www.cl.cam.ac.uk/~mgk25/ucs/utf8_check.c
-fn overlong(s: &[u8]) -> bool {
-    if s[0] < 0x80 {
+fn overlong(first: u8, second: u8) -> bool {
+    if first < 0x80 {
         false
-    } else if (s[0] & 0xe0) == 0xc0 {
-        ((s[1] & 0xc0) != 0x80) || ((s[0] & 0xfe) == 0xc0)
-    } else if (s[0] & 0xf0) == 0xe0 {
-        (s[1] & 0xc0) != 0x80 ||
-        (s[2] & 0xc0) != 0x80 ||
-        (s[0] == 0xe0 && (s[1] & 0xe0) == 0x80)
+    } else if (first & 0xe0) == 0xc0 {
+        (first & 0xfe) == 0xc0
+    } else if (first & 0xf0) == 0xe0 {
+        first == 0xe0 && (second & 0xe0) == 0x80
     } else {
-        (s[1] & 0xc0) != 0x80 ||
-        (s[2] & 0xc0) != 0x80 ||
-        (s[3] & 0xc0) != 0x80 ||
-        (s[0] == 0xf0 && (s[1] & 0xf0) == 0x80)
+        first == 0xf0 && (second & 0xf0) == 0x80
     }
 }
 
