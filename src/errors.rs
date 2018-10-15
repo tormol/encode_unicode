@@ -101,17 +101,17 @@ simple!{/// Reasons why a slice of `u16`s doesn't start with valid UTF-16.
     }}
 
 
-/// Cannot create an `Utf8Char` for the first codepoint of a str,
+/// Cannot create an `Utf8Char` or `Utf16Char` from the first codepoint of a str,
 /// because there are none.
 #[derive(Clone,Copy, Debug, PartialEq,Eq)]
 pub struct EmptyStrError;
-description!{EmptyStrError, |_| "Is empty" }
+description!{EmptyStrError, |_| "is empty" }
 
-simple!{/// Reasons why `Utf8Char::from_str()` failed.
+simple!{/// Reasons why `Utf8Char::from_str()` or `Utf16Char::from_str()` failed.
     FromStrError {
-        /// `Utf8Char` cannot store more than a single codepoint.
+        /// `Utf8Char` or `Utf16Char` cannot store more than a single codepoint.
         ::MultipleCodepoints => "has more than one codepoint",
-        /// `Utf8Char` cannot be empty.
+        /// `Utf8Char` or `Utf16Char` cannot be empty.
         ::Empty => "is empty",
     }}
 
