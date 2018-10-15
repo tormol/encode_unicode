@@ -261,7 +261,7 @@ complex!{InvalidUtf8Slice {
     } {
         InvalidUtf8Slice::Utf8(_) => "the sequence is invalid UTF-8",
         InvalidUtf8Slice::Codepoint(_) => "the encoded codepoint is invalid",
-        InvalidUtf8Slice::TooShort(0) => "the slice is empty",
+        InvalidUtf8Slice::TooShort(1) => "the slice is empty",
         InvalidUtf8Slice::TooShort(_) => "the slice is shorter than the sequence",
     } => true => {
         InvalidUtf8Slice::Utf8(ref u) => Some(u),
