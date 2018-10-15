@@ -7,12 +7,13 @@
  */
 
 
-//! Boilerplatey error enums
+//! Boilerplatey error types
 
 extern crate core;
 use self::core::fmt::{self,Display,Formatter};
 #[cfg(feature="std")]
 use std::error::Error;
+
 
 macro_rules! description {($err:ty, $desc:expr) => {
     #[cfg(not(feature="std"))]
@@ -36,11 +37,40 @@ macro_rules! description {($err:ty, $desc:expr) => {
 }}
 
 
-/// Cannot tell whether an `u16` needs an extra unit,
-/// because it's a trailing surrogate itself.
-#[derive(Clone,Copy, Debug, PartialEq,Eq)]
-pub struct InvalidUtf16FirstUnit;
-description!{InvalidUtf16FirstUnit, |_| "Is a trailing surrogate" }
+macro_rules! single_cause {(#[$doc1:meta] #[$doc2:meta] $err:ident => $desc:expr) => {
+    // Rust 1.15 doesn't understand $(#[$doc:meta])* $:ident
+    #[$doc1]
+    #[$doc2]
+    #[derive(Clone,Copy, Debug, PartialEq,Eq)]
+    pub struct $err;
+    description!{$err, |_| $desc }
+}}
+
+
+single_cause!{
+    /// Cannot tell whether an `u16` needs an extra unit,
+    /// because it's a trailing surrogate itself.
+    InvalidUtf16FirstUnit => "is a trailing surrogate"
+}
+
+single_cause!{
+    /// Cannot create an `Utf8Char` or `Utf16Char` from the first codepoint of a str,
+    /// because there are none.
+    EmptyStrError => "is empty"
+}
+
+single_cause!{
+    /// Cannot create an `Utf8Char` from a standalone `u8`
+    /// that is not an ASCII character.
+    NonAsciiError => "is not an ASCII character"
+}
+
+single_cause!{
+    /// Cannot create an `Utf16Char` from a standalone `u16` that is not a
+    /// codepoint in the basic multilingual plane, but part of a suurrogate pair.
+    NonBMPError => "is not a codepoint in the basic multilingual plane"
+}
+
 
 
 macro_rules! simple {(#[$tydoc:meta] $err:ident  {
@@ -88,6 +118,7 @@ simple!{/// Reasons why one or two `u16`s are not valid UTF-16, in sinking prece
         ::InvalidSecond => "the required second unit is not a trailing / low surrogate",
     }}
 
+
 simple!{/// Reasons why a slice of `u16`s doesn't start with valid UTF-16.
     InvalidUtf16Slice {
         /// The slice is empty.
@@ -101,12 +132,6 @@ simple!{/// Reasons why a slice of `u16`s doesn't start with valid UTF-16.
     }}
 
 
-/// Cannot create an `Utf8Char` or `Utf16Char` from the first codepoint of a str,
-/// because there are none.
-#[derive(Clone,Copy, Debug, PartialEq,Eq)]
-pub struct EmptyStrError;
-description!{EmptyStrError, |_| "is empty" }
-
 simple!{/// Reasons why `Utf8Char::from_str()` or `Utf16Char::from_str()` failed.
     FromStrError {
         /// `Utf8Char` or `Utf16Char` cannot store more than a single codepoint.
@@ -114,6 +139,7 @@ simple!{/// Reasons why `Utf8Char::from_str()` or `Utf16Char::from_str()` failed
         /// `Utf8Char` or `Utf16Char` cannot be empty.
         ::Empty => "is empty",
     }}
+
 
 simple!{/// Reasons why a byte is not the start of a UTF-8 codepoint.
     InvalidUtf8FirstByte {

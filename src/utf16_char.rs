@@ -9,7 +9,7 @@
 use utf16_iterators::Utf16Iterator;
 use traits::{CharExt, U16UtfExt};
 use utf8_char::Utf8Char;
-use errors::{InvalidUtf16Slice, InvalidUtf16Tuple, EmptyStrError, FromStrError};
+use errors::{InvalidUtf16Slice, InvalidUtf16Tuple, NonBMPError, EmptyStrError, FromStrError};
 extern crate core;
 use self::core::{hash,fmt,cmp};
 use self::core::borrow::Borrow;
@@ -362,9 +362,45 @@ impl Utf16Char {
     /// Create an `Utf16Char` from a tuple as returned from `char.to_utf16_tuple()`.
     ///
     /// # Safety
+    ///
     /// The units must represent a single valid codepoint.
     pub unsafe fn from_tuple_unchecked(utf16: (u16,Option<u16>)) -> Self {
         Utf16Char{ units: [utf16.0, utf16.1.unwrap_or(0)] }
+    }
+    /// Create an `Utf16Char` from a single unit.
+    ///
+    /// The unit must be a codepoint in the basic multilingual plane,
+    /// or, not a part of a surrogate pair.
+    ///
+    /// # Errors
+    ///
+    /// Returns `NonBMPError` if the unit is in the range `0xd800..0xe000`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use encode_unicode::Utf16Char;
+    /// assert_eq!(Utf16Char::from_bmp(0x40).unwrap(), '@');
+    /// assert_eq!(Utf16Char::from_bmp('ø' as u16).unwrap(), 'ø');
+    /// assert!(Utf16Char::from_bmp(0xdddd).is_err());
+    /// ```
+    pub fn from_bmp(bmp_codepoint: u16) -> Result<Self,NonBMPError> {
+        if bmp_codepoint & 0xf800 != 0xd800 {
+            Ok(Utf16Char{ units: [bmp_codepoint, 0] })
+        } else {
+            Err(NonBMPError)
+        }
+    }
+    /// Create an `Utf16Char` from a single unit without checking that it's a
+    /// valid codepoint on its own.
+    ///
+    /// # Safety
+    ///
+    /// The unit must be less than 0xd800 or greater than 0xdfff codepoint in the basic multilingual plane,
+    /// or, not a surrogate.
+    #[inline]
+    pub unsafe fn from_bmp_unchecked(bmp_codepoint: u16) -> Self {
+        Utf16Char{ units: [bmp_codepoint, 0] }
     }
 
     /// The number of units this character is made up of.

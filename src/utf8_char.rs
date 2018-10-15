@@ -6,7 +6,7 @@
  * copied, modified, or distributed except according to those terms.
  */
 
-use errors::{FromStrError, EmptyStrError, InvalidUtf8Slice, InvalidUtf8Array};
+use errors::{FromStrError, EmptyStrError, NonAsciiError, InvalidUtf8Slice, InvalidUtf8Array};
 use utf8_iterators::Utf8Iterator;
 use traits::{CharExt, U8UtfExt};
 use utf16_char::Utf16Char;
@@ -353,6 +353,38 @@ impl Utf8Char {
     /// Unused bytes must be zero
     pub unsafe fn from_array_unchecked(utf8: [u8;4]) -> Self {
         Utf8Char{ bytes: utf8 }
+    }
+    /// Create an `Utf8Char` from a single byte.
+    ///
+    /// The byte must be an ASCII character.
+    ///
+    /// # Errors
+    ///
+    /// Returns `NonAsciiError` if the byte greater than 127.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use encode_unicode::Utf8Char;
+    /// assert_eq!(Utf8Char::from_ascii(b'a').unwrap(), 'a');
+    /// assert!(Utf8Char::from_ascii(128).is_err());
+    /// ```
+    pub fn from_ascii(ascii: u8) -> Result<Self,NonAsciiError> {
+        if ascii as i8 >= 0 {
+            Ok(Utf8Char{ bytes: [ascii, 0, 0, 0] })
+        } else {
+            Err(NonAsciiError)
+        }
+    }
+    /// Create an `Utf8Char` from a single byte without checking that it's a
+    /// valid codepoint on its own, which is only true for ASCII characters.
+    ///
+    /// # Safety
+    ///
+    /// The byte must be less than 128.
+    #[inline]
+    pub unsafe fn from_ascii_unchecked(ascii: u8) -> Self {
+        Utf8Char{ bytes: [ascii, 0, 0, 0] }
     }
 
     /// The number of bytes this character needs.
