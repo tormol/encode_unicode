@@ -184,30 +184,75 @@ pub trait CharExt: Sized {
     fn iter_utf16_units(self) -> Utf16Iterator;
 
 
-    /// Convert this char to an UTF-8 array and lenght,
+    /// Convert this char to an UTF-8 array, and also return how many bytes of
+    /// the array are used,
     ///
-    /// The returned array is left-aligned with unused bytes set to zero,
-    /// and the usize is how many bytes are used.
+    /// The returned array is left-aligned with unused bytes set to zero.
     fn to_utf8_array(self) -> ([u8; 4], usize);
 
-    /// Convert this char to UTF-16.
+    /// Convert this `char` to UTF-16.
     /// The second `u16` is `Some` if a surrogate pair is required.
     fn to_utf16_tuple(self) -> (u16, Option<u16>);
 
 
 
-    /// Create a `char` from the start of a UTF-8 slice,
+    /// Create a `char` from the start of an UTF-8 slice,
     /// and also return how many bytes were used.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `Err` if the slice is empty, doesn't start with a valid
+    /// UTF-8 sequence or is too short for the sequence.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use encode_unicode::CharExt;
+    /// use encode_unicode::error::InvalidUtf8Slice::*;
+    /// use encode_unicode::error::InvalidUtf8::*;
+    ///
+    /// assert_eq!(char::from_utf8_slice_start(&[b'A', b'B', b'C']), Ok(('A',1)));
+    /// assert_eq!(char::from_utf8_slice_start(&[0xdd, 0xbb]), Ok(('\u{77b}',2)));
+    ///
+    /// assert_eq!(char::from_utf8_slice_start(&[]), Err(TooShort(1)));
+    /// assert_eq!(char::from_utf8_slice_start(&[0xf0, 0x99]), Err(TooShort(4)));
+    /// assert_eq!(char::from_utf8_slice_start(&[0xee, b'F', 0x80]), Err(Utf8(NotAContinuationByte(1))));
+    /// assert_eq!(char::from_utf8_slice_start(&[0xee, 0x99, 0x0f]), Err(Utf8(NotAContinuationByte(2))));
+    /// ```
     fn from_utf8_slice_start(src: &[u8]) -> Result<(Self,usize),InvalidUtf8Slice>;
 
-    /// Create a `char` from the start of a UTF-16 slice,
+    /// Create a `char` from the start of an UTF-16 slice,
     /// and also return how many units were used.
     ///
-    /// If you want to continue after an error, continue with the next `u16`.
+    /// If you want to continue after an error, continue with the next `u16` unit.
     fn from_utf16_slice_start(src: &[u16]) -> Result<(Self,usize), InvalidUtf16Slice>;
 
 
     /// Convert an UTF-8 sequence as returned from `.to_utf8_array()` into a `char`
+    ///
+    /// The codepoint must start at the first byte, and leftover bytes are ignored.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `Err` if the array doesn't start with a valid UTF-8 sequence.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use encode_unicode::CharExt;
+    /// use encode_unicode::error::InvalidUtf8Array::*;
+    /// use encode_unicode::error::InvalidUtf8::*;
+    /// use encode_unicode::error::InvalidCodepoint::*;
+    ///
+    /// assert_eq!(char::from_utf8_array([b'A', 0, 0, 0]), Ok('A'));
+    /// assert_eq!(char::from_utf8_array([0xf4, 0x8b, 0xbb, 0xbb]), Ok('\u{10befb}'));
+    /// assert_eq!(char::from_utf8_array([b'A', b'B', b'C', b'D']), Ok('A'));
+    /// assert_eq!(char::from_utf8_array([0, 0, 0xcc, 0xbb]), Ok('\0'));
+    ///
+    /// assert_eq!(char::from_utf8_array([0xef, b'F', 0x80, 0x80]), Err(Utf8(NotAContinuationByte(1))));
+    /// assert_eq!(char::from_utf8_array([0xc1, 0x80, 0, 0]), Err(Utf8(OverLong)));
+    /// assert_eq!(char::from_utf8_array([0xf7, 0xaa, 0x99, 0x88]), Err(Codepoint(TooHigh)));
+    /// ```
     fn from_utf8_array(utf8: [u8; 4]) -> Result<Self,InvalidUtf8Array>;
 
     /// Convert a UTF-16 pair as returned from `.to_utf16_tuple()` into a `char`.
@@ -215,9 +260,16 @@ pub trait CharExt: Sized {
 
 
     /// Convert an UTF-8 sequence into a char.
-    /// The length of the slice is the length of the sequence, should be 1,2,3 or 4.
+    ///
+    /// The length of the slice is taken as length of the sequence;
+    /// it should be 1,2,3 or 4.
+    ///
+    /// # Safety
+    ///
+    /// The slice must contain exactly one, valid UTF-8 sequence.
     ///
     /// # Panics
+    ///
     /// If the slice is empty
     unsafe fn from_utf8_exact_slice_unchecked(src: &[u8]) -> Self;
 
@@ -228,7 +280,9 @@ pub trait CharExt: Sized {
     /// Perform some extra validations compared to `char::from_u32_unchecked()`
     ///
     /// # Errors
+    ///
     /// This function will return an error if
+    ///
     /// * the value is greater than 0x10ffff
     /// * the value is between 0xd800 and 0xdfff (inclusive)
     fn from_u32_detailed(c: u32) -> Result<Self,InvalidCodepoint>;

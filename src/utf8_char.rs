@@ -408,39 +408,95 @@ impl Utf8Char {
             }
         }
     }
-    /// Validate the first codepoint in an UTF-8 slice and return it as an `Utf8Char`.
-    /// Also returns how many bytes were needed.
+    /// Create an `Utf8Char` of the first codepoint in an UTF-8 slice.  
+    /// Also returns the length of the UTF-8 sequence for the codepoint.
     ///
-    /// If it's a `str`, use `::from_str_start()` to skip UTF-8 validation.
+    /// If the slice is from a `str`, use `::from_str_start()` to skip UTF-8 validation.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `Err` if the slice is empty, doesn't start with a valid
+    /// UTF-8 sequence or is too short for the sequence.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use encode_unicode::Utf8Char;
+    /// use encode_unicode::error::InvalidUtf8Slice::*;
+    /// use encode_unicode::error::InvalidUtf8::*;
+    ///
+    /// assert_eq!(Utf8Char::from_slice_start(&[b'A', b'B', b'C']), Ok((Utf8Char::from('A'),1)));
+    /// assert_eq!(Utf8Char::from_slice_start(&[0xdd, 0xbb]), Ok((Utf8Char::from('\u{77b}'),2)));
+    ///
+    /// assert_eq!(Utf8Char::from_slice_start(&[]), Err(TooShort(1)));
+    /// assert_eq!(Utf8Char::from_slice_start(&[0xf0, 0x99]), Err(TooShort(4)));
+    /// assert_eq!(Utf8Char::from_slice_start(&[0xee, b'F', 0x80]), Err(Utf8(NotAContinuationByte(1))));
+    /// assert_eq!(Utf8Char::from_slice_start(&[0xee, 0x99, 0x0f]), Err(Utf8(NotAContinuationByte(2))));
+    /// ```
     pub fn from_slice_start(src: &[u8]) -> Result<(Self,usize),InvalidUtf8Slice> {
         char::from_utf8_slice_start(src).map(|(_,len)| {
             let mut bytes = [0; 4];
             bytes[..len].copy_from_slice(&src[..len]);
-            (Utf8Char{bytes: bytes}, len)
+            (Utf8Char{ bytes: bytes }, len)
         })
     }
     /// A `from_slice_start()` that doesn't validate the codepoint.
     ///
     /// # Safety
+    ///
     /// The slice must be non-empty and start with a valid UTF-8 codepoint.  
-    /// Invalid or incomplete values might cause buffer overflows and overreads.
+    /// Invalid or incomplete values might cause reads of uninitalized memory.
     pub unsafe fn from_slice_start_unchecked(src: &[u8]) -> (Self,usize) {
         let len = 1+src.get_unchecked(0).extra_utf8_bytes_unchecked();
         let mut bytes = [0; 4];
         ptr::copy_nonoverlapping(src.as_ptr(), &mut bytes[0] as *mut u8, len);
         (Utf8Char{ bytes: bytes }, len)
     }
-    /// Validate the array and store it.
+    /// Create an `Utf8Char` from a byte array after validating it.
+    ///
+    /// The codepoint must start at the first byte.  
+    /// Unused bytes are set to zero by this function and so can be anything.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `Err` if the array doesn't start with a valid UTF-8 sequence.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use encode_unicode::Utf8Char;
+    /// use encode_unicode::error::InvalidUtf8Array::*;
+    /// use encode_unicode::error::InvalidUtf8::*;
+    /// use encode_unicode::error::InvalidCodepoint::*;
+    ///
+    /// assert_eq!(Utf8Char::from_array([b'A', 0, 0, 0]), Ok(Utf8Char::from('A')));
+    /// assert_eq!(Utf8Char::from_array([0xf4, 0x8b, 0xbb, 0xbb]), Ok(Utf8Char::from('\u{10befb}')));
+    /// assert_eq!(Utf8Char::from_array([b'A', b'B', b'C', b'D']), Ok(Utf8Char::from('A')));
+    /// assert_eq!(Utf8Char::from_array([0, 0, 0xcc, 0xbb]), Ok(Utf8Char::from('\0')));
+    ///
+    /// assert_eq!(Utf8Char::from_array([0xef, b'F', 0x80, 0x80]), Err(Utf8(NotAContinuationByte(1))));
+    /// assert_eq!(Utf8Char::from_array([0xc1, 0x80, 0, 0]), Err(Utf8(OverLong)));
+    /// assert_eq!(Utf8Char::from_array([0xf7, 0xaa, 0x99, 0x88]), Err(Codepoint(TooHigh)));
+    /// ```
     pub fn from_array(utf8: [u8;4]) -> Result<Self,InvalidUtf8Array> {
         unsafe {
+            // perform all validation
             try!(char::from_utf8_array(utf8));
             let extra = utf8[0].extra_utf8_bytes_unchecked() as u32;
+            // zero unused bytes in one operation by transmuting the arrary to
+            // u32, apply an endian-corrected mask and transmute back
             let mask = u32::from_le(0xff_ff_ff_ff >> 8*(3-extra));
             let unused_zeroed = mask  &  transmute::<_,u32>(utf8);
             Ok(Utf8Char{ bytes: transmute(unused_zeroed) })
         }
     }
-    /// Unused bytes must be zero
+    /// Zero-cost constructor.
+    ///
+    /// # Safety
+    ///
+    /// Must represent a valid codepoint,
+    /// starting at the first byte with the unused zeroed.
+    #[inline]
     pub unsafe fn from_array_unchecked(utf8: [u8;4]) -> Self {
         Utf8Char{ bytes: utf8 }
     }
@@ -566,6 +622,7 @@ impl Utf8Char {
     /// and then returns the number of bytes written.
     ///
     /// # Panics
+    ///
     /// Will panic the buffer is too small;
     /// You can get the required length from `.len()`,
     /// but a buffer of length four is always large enough.
@@ -581,7 +638,8 @@ impl Utf8Char {
         (self.bytes, self.len())
     }
     /// Return a `str` view of the array the codepoint is stored as.
-    /// Ns an unambiguous version of `.as_ref()`.
+    ///
+    /// Is an unambiguous version of `.as_ref()`.
     pub fn as_str(&self) -> &str {
         self.deref()
     }
