@@ -1,14 +1,15 @@
 [package]
 name = "encode_unicode"
 keywords = ["unicode","UTF-8","UTF-16"]
+categories = ["encoding","no-std"]
 description = """
-UTF-8 and UTF-16 iterators, character types and related methods for char, u8 and u16.
+UTF-8 and UTF-16 character types, iterators and related methods for char, u8 and u16.
 """
 readme = "README.md"
 version = "0.3.2"
 license = "MIT/Apache-2.0"
 repository = "https://github.com/tormol/encode_unicode"
-documentation = "http://tormol.github.io/rustdoc/encode_unicode"
+documentation = "https://docs.rs/encode_unicode/"
 authors = ["Torbjørn Birch Moltu <t.b.moltu@lyse.net>"]
 
 [dependencies]
@@ -22,3 +23,6 @@ lazy_static = {version="1.0.*"}
 [features]
 std = []
 default = ["std"]
+
+[package.metadata.docs.rs]
+all-features = true
