@@ -76,18 +76,54 @@ fn eq_cmp_hash(c: char) -> (Utf8Char, Utf16Char) {
     assert_eq!(u16c.cmp(&u16c), Ordering::Equal);
     assert!(u16c.eq_ignore_ascii_case(&u16c));
 
+    assert_eq!(u8c, c);
+    assert_eq!(c, u8c);
+    assert_eq!(u16c, c);
+    assert_eq!(c, u16c);
+    assert_eq!(u8c, u16c);
+    assert_eq!(u16c, u8c);
+    assert_eq!(u8c == c as u8,  c <= '\u{7F}');
+    assert_eq!(u16c == c as u8,  c <= '\u{FF}');
+    assert_eq!(u16c == c as u16,  c <= '\u{FFFF}');
+
+    assert_eq!(u8c.partial_cmp(&c), Some(Ordering::Equal));
+    assert_eq!(c.partial_cmp(&u8c), Some(Ordering::Equal));
+    assert_eq!(u16c.partial_cmp(&c), Some(Ordering::Equal));
+    assert_eq!(c.partial_cmp(&u16c), Some(Ordering::Equal));
+    assert_eq!(u8c.partial_cmp(&u16c), Some(Ordering::Equal));
+    assert_eq!(u16c.partial_cmp(&u8c), Some(Ordering::Equal));
+
+
     for &other in &EDGES_AND_BETWEEN {
         let u8other = other.to_utf8();
         assert_eq!(u8c == u8other,  c == other);
         assert_eq!(hash(u8c)==hash(u8other),  hash(c)==hash(other));
         assert_eq!(u8c.cmp(&u8other), c.cmp(&other));
         assert_eq!(u8c.eq_ignore_ascii_case(&u8other), c.eq_ignore_ascii_case(&other));
+        assert_eq!(u8c.partial_cmp(&other), c.partial_cmp(&other));
+        assert_eq!(c.partial_cmp(&u8other), c.partial_cmp(&other));
+        assert_eq!(u8other.partial_cmp(&c), other.partial_cmp(&c));
+        assert_eq!(other.partial_cmp(&u8c), other.partial_cmp(&c));
+        assert_eq!(u8c == other as u8,  other as u8 <= 127 && c == other as u8 as char);
 
         let u16other = other.to_utf16();
         assert_eq!(u16c == u16other,  c == other);
         assert_eq!(hash(u16c)==hash(u16other),  hash(c)==hash(other));
         assert_eq!(u16c.cmp(&u16other), c.cmp(&other));
         assert_eq!(u16c.eq_ignore_ascii_case(&u16other), c.eq_ignore_ascii_case(&other));
+        assert_eq!(u16c.partial_cmp(&other), c.partial_cmp(&other));
+        assert_eq!(c.partial_cmp(&u16other), c.partial_cmp(&other));
+        assert_eq!(u16other.partial_cmp(&c), other.partial_cmp(&c));
+        assert_eq!(other.partial_cmp(&u16c), other.partial_cmp(&c));
+        assert_eq!(u16c == other as u8,  c == other as u8 as char);
+        assert_eq!(u16c == other as u16,  c as u32 == other as u16 as u32);
+
+        assert_eq!(u8c == u16other,  c == other);
+        assert_eq!(u16c == u8other,  c == other);
+        assert_eq!(u8c.partial_cmp(&u16other),  c.partial_cmp(&other));
+        assert_eq!(u16c.partial_cmp(&u8other),  c.partial_cmp(&other));
+        assert_eq!(u8other.partial_cmp(&u16c),  other.partial_cmp(&c));
+        assert_eq!(u16other.partial_cmp(&u8c),  other.partial_cmp(&c));
     }
     (u8c, u16c)
 }

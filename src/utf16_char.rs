@@ -11,7 +11,8 @@ use traits::{CharExt, U16UtfExt};
 use utf8_char::Utf8Char;
 use errors::{InvalidUtf16Slice, InvalidUtf16Tuple, NonBMPError, EmptyStrError, FromStrError};
 extern crate core;
-use self::core::{hash,fmt,cmp};
+use self::core::{hash,fmt};
+use self::core::cmp::Ordering;
 use self::core::borrow::Borrow;
 use self::core::ops::Deref;
 use self::core::str::FromStr;
@@ -251,15 +252,15 @@ impl fmt::Display for Utf16Char {
 }
 // Cannot derive these impls because two-unit characters must always compare
 // greater than one-unit ones.
-impl cmp::PartialOrd for Utf16Char {
+impl PartialOrd for Utf16Char {
     #[inline]
-    fn partial_cmp(&self,  rhs: &Self) -> Option<cmp::Ordering> {
+    fn partial_cmp(&self,  rhs: &Self) -> Option<Ordering> {
         Some(self.cmp(rhs))
     }
 }
-impl cmp::Ord for Utf16Char {
+impl Ord for Utf16Char {
     #[inline]
-    fn cmp(&self,  rhs: &Self) -> cmp::Ordering {
+    fn cmp(&self,  rhs: &Self) -> Ordering {
         // Shift the first unit by 0xd if surrogate, and 0 otherwise.
         // This ensures surrogates are always greater than 0xffff, and
         // that the second unit only affect the result when the first are equal.
@@ -271,6 +272,110 @@ impl cmp::Ord for Utf16Char {
         let lhs = (lhs.0 << (lhs.1 >> 12)) + lhs.1;
         let rhs = (rhs.0 << (rhs.1 >> 12)) + rhs.1;
         lhs.cmp(&rhs)
+    }
+}
+
+
+  ////////////////////////////////
+ //Comparisons with other types//
+////////////////////////////////
+impl PartialEq<char> for Utf16Char {
+    fn eq(&self,  u32c: &char) -> bool {
+        *self == Utf16Char::from(*u32c)
+    }
+}
+impl PartialEq<Utf16Char> for char {
+    fn eq(&self,  u16c: &Utf16Char) -> bool {
+        Utf16Char::from(*self) == *u16c
+    }
+}
+impl PartialOrd<char> for Utf16Char {
+    fn partial_cmp(&self,  u32c: &char) -> Option<Ordering> {
+        self.partial_cmp(&Utf16Char::from(*u32c))
+    }
+}
+impl PartialOrd<Utf16Char> for char {
+    fn partial_cmp(&self,  u16c: &Utf16Char) -> Option<Ordering> {
+        Utf16Char::from(*self).partial_cmp(u16c)
+    }
+}
+
+impl PartialEq<Utf8Char> for Utf16Char {
+    fn eq(&self,  u8c: &Utf8Char) -> bool {
+        *self == Utf16Char::from(*u8c)
+    }
+}
+impl PartialOrd<Utf8Char> for Utf16Char {
+    fn partial_cmp(&self,  u8c: &Utf8Char) -> Option<Ordering> {
+        self.partial_cmp(&Utf16Char::from(*u8c))
+    }
+}
+// The other direction reverse impls in utf8_char.rs
+
+/// Only considers the unit equal if the codepoint of the `Utf16Char` is not
+/// made up of a surrogate pair.
+///
+/// There is no impl in the opposite direction, as this should only be used to
+/// compare `Utf16Char`s against constants.
+///
+/// # Examples
+///
+/// ```
+/// # use encode_unicode::Utf16Char;
+/// assert!(Utf16Char::from('6') == b'6' as u16);
+/// assert!(Utf16Char::from('\u{FFFF}') == 0xffff_u16);
+/// assert!(Utf16Char::from_tuple((0xd876, Some(0xdef9))).unwrap() != 0xd876_u16);
+/// ```
+impl PartialEq<u16> for Utf16Char {
+    fn eq(&self,  unit: &u16) -> bool {
+        self.units[0] == *unit  &&  self.units[1] == 0
+    }
+}
+/// Only considers the byte equal if the codepoint of the `Utf16Char` is <= U+FF.
+///
+/// # Examples
+///
+/// ```
+/// # use encode_unicode::Utf16Char;
+/// assert!(Utf16Char::from('6') == b'6');
+/// assert!(Utf16Char::from('\u{00FF}') == b'\xff');
+/// assert!(Utf16Char::from('\u{0100}') != b'\0');
+/// ```
+impl PartialEq<u8> for Utf16Char {
+    fn eq(&self,  byte: &u8) -> bool {
+        self.units[0] == *byte as u16
+    }
+}
+#[cfg(feature = "ascii")]
+/// `Utf16Char`s that are not ASCII never compare equal.
+impl PartialEq<AsciiChar> for Utf16Char {
+    #[inline]
+    fn eq(&self,  ascii: &AsciiChar) -> bool {
+        self.units[0] == *ascii as u16
+    }
+}
+#[cfg(feature = "ascii")]
+/// `Utf16Char`s that are not ASCII never compare equal.
+impl PartialEq<Utf16Char> for AsciiChar {
+    #[inline]
+    fn eq(&self,  u16c: &Utf16Char) -> bool {
+        *self as u16 == u16c.units[0]
+    }
+}
+#[cfg(feature = "ascii")]
+/// `Utf16Char`s that are not ASCII always compare greater.
+impl PartialOrd<AsciiChar> for Utf16Char {
+    #[inline]
+    fn partial_cmp(&self,  ascii: &AsciiChar) -> Option<Ordering> {
+        self.units[0].partial_cmp(&(*ascii as u16))
+    }
+}
+#[cfg(feature = "ascii")]
+/// `Utf16Char`s that are not ASCII always compare greater.
+impl PartialOrd<Utf16Char> for AsciiChar {
+    #[inline]
+    fn partial_cmp(&self,  u16c: &Utf16Char) -> Option<Ordering> {
+        (*self as u16).partial_cmp(&u16c.units[0])
     }
 }
 

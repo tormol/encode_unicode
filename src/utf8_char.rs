@@ -12,6 +12,7 @@ use traits::{CharExt, U8UtfExt};
 use utf16_char::Utf16Char;
 extern crate core;
 use self::core::{hash, fmt, str, ptr};
+use self::core::cmp::Ordering;
 use self::core::borrow::Borrow;
 use self::core::ops::Deref;
 use self::core::mem::transmute;
@@ -286,6 +287,95 @@ impl fmt::Debug for Utf8Char {
 impl fmt::Display for Utf8Char {
     fn fmt(&self,  fmtr: &mut fmt::Formatter) -> fmt::Result {
         fmtr.write_str(self.as_str())
+    }
+}
+
+
+  ////////////////////////////////
+ //Comparisons with other types//
+////////////////////////////////
+impl PartialEq<char> for Utf8Char {
+    fn eq(&self,  u32c: &char) -> bool {
+        *self == Utf8Char::from(*u32c)
+    }
+}
+impl PartialEq<Utf8Char> for char {
+    fn eq(&self,  u8c: &Utf8Char) -> bool {
+        Utf8Char::from(*self) == *u8c
+    }
+}
+impl PartialOrd<char> for Utf8Char {
+    fn partial_cmp(&self,  u32c: &char) -> Option<Ordering> {
+        self.partial_cmp(&Self::from(*u32c))
+    }
+}
+impl PartialOrd<Utf8Char> for char {
+    fn partial_cmp(&self,  u8c: &Utf8Char) -> Option<Ordering> {
+        Utf8Char::from(*self).partial_cmp(u8c)
+    }
+}
+
+impl PartialEq<Utf16Char> for Utf8Char {
+    fn eq(&self,  u16c: &Utf16Char) -> bool {
+        *self == Self::from(*u16c)
+    }
+}
+impl PartialOrd<Utf16Char> for Utf8Char {
+    fn partial_cmp(&self,  u16c: &Utf16Char) -> Option<Ordering> {
+        self.partial_cmp(&Self::from(*u16c))
+    }
+}
+// The other direction is implemented in utf16_char.rs
+
+/// Only considers the byte equal if both it and the `Utf8Char` represents ASCII characters.
+///
+/// There is no impl in the opposite direction, as this should only be used to
+/// compare `Utf8Char`s against constants.
+///
+/// # Examples
+///
+/// ```
+/// # use encode_unicode::Utf8Char;
+/// assert!(Utf8Char::from('8') == b'8');
+/// assert!(Utf8Char::from_array([0xf1,0x80,0x80,0x80]).unwrap() != 0xf1);
+/// assert!(Utf8Char::from('\u{ff}') != 0xff);
+/// assert!(Utf8Char::from('\u{80}') != 0x80);
+/// ```
+impl PartialEq<u8> for Utf8Char {
+    fn eq(&self,  byte: &u8) -> bool {
+        self.bytes[0] == *byte  &&  self.bytes[1] == 0
+    }
+}
+#[cfg(feature = "ascii")]
+/// `Utf8Char`s that are not ASCII never compare equal.
+impl PartialEq<AsciiChar> for Utf8Char {
+    #[inline]
+    fn eq(&self,  ascii: &AsciiChar) -> bool {
+        self.bytes[0] == *ascii as u8
+    }
+}
+#[cfg(feature = "ascii")]
+/// `Utf8Char`s that are not ASCII never compare equal.
+impl PartialEq<Utf8Char> for AsciiChar {
+    #[inline]
+    fn eq(&self,  u8c: &Utf8Char) -> bool {
+        u8c == self
+    }
+}
+#[cfg(feature = "ascii")]
+/// `Utf8Char`s that are not ASCII always compare greater.
+impl PartialOrd<AsciiChar> for Utf8Char {
+    #[inline]
+    fn partial_cmp(&self,  ascii: &AsciiChar) -> Option<Ordering> {
+        self.bytes[0].partial_cmp(ascii)
+    }
+}
+#[cfg(feature = "ascii")]
+/// `Utf8Char`s that are not ASCII always compare greater.
+impl PartialOrd<Utf8Char> for AsciiChar {
+    #[inline]
+    fn partial_cmp(&self,  u8c: &Utf8Char) -> Option<Ordering> {
+        self.partial_cmp(&u8c.bytes[0])
     }
 }
 
