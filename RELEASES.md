@@ -1,9 +1,23 @@
+Version 0.3.3 (2018-10-16)
+==========================
+* Fix UTF-8 overlong check. (`from_array()` and `from_slice()` accepted two-byte encodings of ASCII characters >= '@', which includes all letters)
+* Implement `FromStr` for `Utf16Char`
+* Add `from_str_start()` to `Utf8Char` and `Utf16Char`
+* Add `Utf{8,16}Char{s,Indices}`: `str`-based iterators for `Utf8Char` and `Utf16Char` equivalent to `char`'s `Chars` and `CharIndices`.
+* Add `StrExt` with functions to create the above iterators.
+* Implement `FromIterator` and `Extend` for `Vec<{u8,u16}>` with reference-producing `Utf{8,16}Char` iterators too.
+* Add `Utf8CharSplitter` and `Utf16CharSplitter`: `Utf{8,16}Char`-to-`u{8,16}` iterator adapters.
+* Add `IterExt`, `iter_bytes()` and `iter_units()` to create the above splitting iterators.
+* Add `Utf8Char::from_ascii()`, `Utf16Char::from_bmp()` with `_unchecked` versions of both.
+* Add cross-type `PartialEq` and `PartialOrd` implementations.
+* Change the `description()` for a few error types.
+
 Version 0.3.2 (2018-08-08)
 ==========================
 * Hide `AsciiExt` deprecation warning and add replacement methods.
 * Correct documentation for `U8UtfExt::extra_utf8_bytes()`.
 * Fix misspellings in some error descriptions.
-* Avoid potentionally bad transmutes.
+* Avoid potentially bad transmutes.
 
 Version 0.3.1 (2017-06-16)
 ==========================
