@@ -266,7 +266,11 @@ pub trait CharExt: Sized {
     ///
     /// # Safety
     ///
-    /// The slice must contain exactly one, valid UTF-8 sequence.
+    /// The slice must contain exactly one, valid, UTF-8 sequence.
+    ///
+    /// Passing a slice that produces an invalid codepoint is always undefined
+    /// behavior; Later checks that the codepoint is valid can be removed
+    /// by the compiler.
     ///
     /// # Panics
     ///
@@ -347,8 +351,7 @@ impl CharExt for char {
         } else if overlong(bytes[0], bytes[1]) {
             Err(Utf8(OverLong))
         } else {
-            let c = unsafe{ char::from_utf8_exact_slice_unchecked(bytes) };
-            match char::from_u32_detailed(c as u32) {
+            match char::from_u32_detailed(merge_nonascii_unchecked_utf8(bytes)) {
                 Ok(c) => Ok((c, bytes.len())),
                 Err(e) => Err(Codepoint(e)),
             }
@@ -368,8 +371,7 @@ impl CharExt for char {
         } else if overlong(utf8[0], utf8[1]) {
             Err(Utf8(OverLong))
         } else {
-            let c = unsafe{ char::from_utf8_exact_slice_unchecked(src) };
-            char::from_u32_detailed(c as u32)
+            char::from_u32_detailed(merge_nonascii_unchecked_utf8(src))
                  .map_err(|e| Codepoint(e) )
         }
     }
@@ -378,11 +380,7 @@ impl CharExt for char {
         if src.len() == 1 {
             src[0] as char
         } else {
-            let mut c = src[0] as u32 & (0xff >> 2+src.len()-1);
-            for b in &src[1..] {
-                c = (c << 6)  |  (b & 0b0011_1111) as u32;
-            }
-            unsafe{ char::from_u32_unchecked(c) }
+            char::from_u32_unchecked(merge_nonascii_unchecked_utf8(src))
         }
     }
 
@@ -471,6 +469,18 @@ fn overlong(first: u8, second: u8) -> bool {
     } else {
         first == 0xf0 && (second & 0xf0) == 0x80
     }
+}
+
+/// Decodes the codepoint represented by a multi-byte UTF-8 sequence.
+///
+/// Does not check that the codepoint is valid,
+/// and returns `u32` because casting invalid codepoints to `char` is insta UB.
+fn merge_nonascii_unchecked_utf8(src: &[u8]) -> u32 {
+    let mut c = src[0] as u32 & (0x7f >> src.len());
+    for b in &src[1..] {
+        c = (c << 6)  |  (b & 0b0011_1111) as u32;
+    }
+    c
 }
 
 // Create a `char` from a leading and a trailing surrogate.
