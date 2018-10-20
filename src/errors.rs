@@ -38,10 +38,8 @@ macro_rules! description {($err:ty, $desc:expr) => {
 }}
 
 
-macro_rules! single_cause {(#[$doc1:meta] #[$doc2:meta] $err:ident => $desc:expr) => {
-    // Rust 1.15 doesn't understand $(#[$doc:meta])* $:ident
-    #[$doc1]
-    #[$doc2]
+macro_rules! single_cause {($(#[$doc:meta])* $err:ident => $desc:expr) => {
+    $(#[$doc])*
     #[derive(Clone,Copy, Debug, PartialEq,Eq)]
     pub struct $err;
     description!{$err, |_| $desc }
@@ -74,24 +72,25 @@ single_cause!{
 
 
 
-macro_rules! simple {(#[$tydoc:meta] $err:ident  {
-                          $($(#[$vardoc:meta])* ::$variant:ident => $string:expr),+,
+macro_rules! simple {($(#[$tydoc:meta])* $err:ident {
+                          $( $(#[$vardoc:meta])* $variant:ident => $string:expr, )+
                       } ) => {
-    #[$tydoc]
+    $(#[$tydoc])*
     #[derive(Clone,Copy, Debug, PartialEq,Eq)]
     pub enum $err {
-        $($(#[$vardoc])* $variant),*
+        $( $(#[$vardoc])* $variant, )*
     }
-    description!{$err, |e: &$err| match *e {$($err::$variant=>$string),*} }
+    description!{$err, |e: &$err| match *e {$($err::$variant => $string),*} }
 }}
 
 
-simple!{/// Reasons why an `u32` is not a valid UTF codepoint.
+simple!{
+    /// Reasons why an `u32` is not a valid Unicode codepoint. The enum values are not stable
     InvalidCodepoint {
         /// It's reserved for UTF-16 surrogate pairs."
-        ::Utf16Reserved => "is reserved for UTF-16 surrogate pairs",
+        Utf16Reserved => "is reserved for UTF-16 surrogate pairs",
         /// It's higher than the highest codepoint (which is 0x10ffff).
-        ::TooHigh => "is higher than the highest codepoint",
+        TooHigh => "is higher than the highest codepoint",
     }}
 use self::InvalidCodepoint::*;
 impl InvalidCodepoint {
@@ -113,55 +112,55 @@ simple!{/// Reasons why a `[u16; 2]` doesn't form a valid UTF-16 codepoint.
 
 simple!{/// Reasons why one or two `u16`s are not valid UTF-16, in sinking precedence.
     InvalidUtf16Tuple {
-        /// The first unit is a trailing surrogate, which is never valid.
-        ::FirstIsTrailingSurrogate => "the first unit is a trailing surrogate, which is never valid",
+        /// The first unit is a trailing/low surrogate, which is never valid.
+        FirstIsTrailingSurrogate => "the first unit is a trailing / low surrogate, which is never valid",
         /// You provided a second unit, but the first one stands on its own.
-        ::SuperfluousSecond => "the second unit is superfluous",
+        SuperfluousSecond => "the second unit is superfluous",
         /// The first and only unit requires a second unit.
-        ::MissingSecond => "the first unit requires a second unit",
+        MissingSecond => "the first unit requires a second unit",
         /// The second unit is needed and was provided, but is not a trailing surrogate.
-        ::SecondIsNotTrailingSurrogate => "the required second unit is not a trailing surrogate",
+        SecondIsNotTrailingSurrogate => "the required second unit is not a trailing surrogate",
     }}
 
 
 simple!{/// Reasons why a slice of `u16`s doesn't start with valid UTF-16.
     InvalidUtf16Slice {
         /// The slice is empty.
-        ::EmptySlice => "the slice is empty",
+        EmptySlice => "the slice is empty",
         /// The first unit is a trailing surrogate.
-        ::FirstIsTrailingSurrogate => "the first unit is a trailing surrogate",
+        FirstIsTrailingSurrogate => "the first unit is a trailing surrogate",
         /// The first and only unit requires a second unit.
-        ::MissingSecond => "the first and only unit requires a second one",
+        MissingSecond => "the first and only unit requires a second one",
         /// The first unit requires a second one, but it's not a trailing surrogate.
-        ::SecondIsNotTrailingSurrogate => "the required second unit is not a trailing surrogate",
+        SecondIsNotTrailingSurrogate => "the required second unit is not a trailing surrogate",
     }}
 
-simple!{/// Types of invalid sequences encountered by `Utf16CharParser`.
+simple!{/// Types of invalid sequences encountered by `Utf16CharDecoder`.
     Utf16PairError {
         /// A trailing surrogate was not preceeded by a leading surrogate.
-        ::UnexpectedTrailingSurrogate => "a trailing surrogate was not preceeded by a leading surrogate",
+        UnexpectedTrailingSurrogate => "a trailing surrogate was not preceeded by a leading surrogate",
         /// A leading surrogate was followed by an unit that was not a trailing surrogate.
-        ::UnmatchedLeadingSurrogate => "a leading surrogate was followed by an unit that was not a trailing surrogate",
+        UnmatchedLeadingSurrogate => "a leading surrogate was followed by an unit that was not a trailing surrogate",
         /// A trailing surrogate was expected when the end was reached.
-        ::Incomplete => "a trailing surrogate was expected when the end was reached",
+        Incomplete => "a trailing surrogate was expected when the end was reached",
     }}
 
 
 simple!{/// Reasons why `Utf8Char::from_str()` or `Utf16Char::from_str()` failed.
     FromStrError {
         /// `Utf8Char` or `Utf16Char` cannot store more than a single codepoint.
-        ::MultipleCodepoints => "has more than one codepoint",
+        MultipleCodepoints => "has more than one codepoint",
         /// `Utf8Char` or `Utf16Char` cannot be empty.
-        ::Empty => "is empty",
+        Empty => "is empty",
     }}
 
 
 simple!{/// Reasons why a byte is not the start of a UTF-8 codepoint.
     InvalidUtf8FirstByte {
         /// Sequences cannot be longer than 4 bytes. Is given for values >= 240.
-        ::TooLongSequence => "is greater than 247 (UTF-8 sequences cannot be longer than four bytes)",
+        TooLongSequence => "is greater than 247 (UTF-8 sequences cannot be longer than four bytes)",
         /// This byte belongs to a previous sequence. Is given for values between 128 and 192 (exclusive).
-        ::ContinuationByte => "is a continuation of a previous sequence",
+        ContinuationByte => "is a continuation of a previous sequence",
     }}
 use self::InvalidUtf8FirstByte::*;
 
