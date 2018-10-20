@@ -452,14 +452,11 @@ impl CharExt for char {
 
 
     fn from_u32_detailed(c: u32) -> Result<Self,InvalidCodepoint> {
-        use errors::InvalidCodepoint::*;
-        unsafe{ match c {
-            0x00_00_00...0x00_d7_ff => Ok(char::from_u32_unchecked(c)),
-            0x00_d8_00...0x00_df_ff => Err(Utf16Reserved),
-            0x00_e0_00...0x10_ff_ff => Ok(char::from_u32_unchecked(c)),
-            0x11_00_00...u32::MAX   => Err(TooHigh),
-                       _            => unreachable!()
-        }}
+        match char::from_u32(c) {
+            Some(c) => Ok(c),
+            None if c > 0x10_ff_ff => Err(InvalidCodepoint::TooHigh),
+            None => Err(InvalidCodepoint::Utf16Reserved),
+        }
     }
 }
 
