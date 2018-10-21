@@ -34,6 +34,23 @@ fn same_size_as_char() {
     assert_eq!(size_of::<Utf16Char>(), size_of::<char>());
 }
 
+#[test]
+fn utf16chars_to_string() {
+    let s = "aå\u{10ffff}‽\u{100000}\u{fee1}";
+    let u16cs = s.chars().map(|c| Utf16Char::from(c) ).collect::<Vec<Utf16Char>>();
+
+    let mut from_refs: String = u16cs.iter().collect();
+    assert_eq!(&from_refs, s);
+    from_refs.extend(&u16cs);
+    assert_eq!(&from_refs[s.len()..], s);
+
+    let mut from_vals: String = u16cs.iter().cloned().collect();
+    assert_eq!(&from_vals, s);
+    from_vals.extend(u16cs);
+    assert_eq!(&from_vals[s.len()..], s);
+}
+
+
 const EDGES_AND_BETWEEN: [char;19] = [
     '\u{0}',// min
     '\u{3b}',// middle ASCII

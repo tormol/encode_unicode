@@ -154,6 +154,33 @@ impl<'a> FromIterator<&'a Utf16Char> for Vec<u16> {
     }
 }
 
+#[cfg(feature="std")]
+impl Extend<Utf16Char> for String {
+    fn extend<I:IntoIterator<Item=Utf16Char>>(&mut self,  iter: I) {
+        self.extend(iter.into_iter().map(|u16c| Utf8Char::from(u16c) ));
+    }
+}
+#[cfg(feature="std")]
+impl<'a> Extend<&'a Utf16Char> for String {
+    fn extend<I:IntoIterator<Item=&'a Utf16Char>>(&mut self,  iter: I) {
+        self.extend(iter.into_iter().cloned());
+    }
+}
+#[cfg(feature="std")]
+impl FromIterator<Utf16Char> for String {
+    fn from_iter<I:IntoIterator<Item=Utf16Char>>(iter: I) -> Self {
+        let mut s = String::new();
+        s.extend(iter);
+        return s;
+    }
+}
+#[cfg(feature="std")]
+impl<'a> FromIterator<&'a Utf16Char> for String {
+    fn from_iter<I:IntoIterator<Item=&'a Utf16Char>>(iter: I) -> Self {
+        Self::from_iter(iter.into_iter().cloned())
+    }
+}
+
 
   /////////////////
  //getter traits//
