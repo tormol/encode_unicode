@@ -13,7 +13,7 @@ documentation = "https://docs.rs/encode_unicode/"
 authors = ["Torbjørn Birch Moltu <t.b.moltu@lyse.net>"]
 
 [dependencies]
-ascii = {optional=true, version="0.8", default-features=false}# disable std
+ascii = {optional=true, version=">=0.8, <=0.10", default-features=false}# disable std
 clippy = {optional=true, version="0.*"}# wildest wildcard crates.io will allow.
 
 [target.'cfg(unix)'.dev-dependencies]
