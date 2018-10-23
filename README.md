@@ -6,21 +6,21 @@ UTF-8 and UTF-16 iterators, character types and related methods for `char`, `u8`
 
 ## Features
 
-* **[`Utf8Char`](http://tormol.github.io/rustdoc/encode_unicode/struct.Utf8Char.html)**:
+* **[`Utf8Char`](https://docs.rs/encode_unicode/latest/encode_unicode/struct.Utf8Char.html)**:
   A `char` stored as UTF-8. Can be borrowed as a `str` or `u8` slice.
-* **[`Utf16Char`](http://tormol.github.io/rustdoc/encode_unicode/struct.Utf16Char.html)**:
+* **[`Utf16Char`](https://docs.rs/encode_unicode/latest/encode_unicode/struct.Utf16Char.html)**:
   A `char` stored as UTF-16. Can be borrowed as an `u16` slice.
-* [Conversion methods on `char`](http://tormol.github.io/rustdoc/encode_unicode/trait.CharExt.html):
+* [Conversion methods on `char`](https://docs.rs/encode_unicode/latest/encode_unicode/trait.CharExt.html):
   * to and from UTF-8 as `[u8; 4]` or slice.
   * to and from UTF-16 as `(u16, Option<u16>)` or slice.
 * Optimized functions for converting iterators of the character types to iterators of
-  [bytes](http://tormol.github.io/rustdoc/encode_unicode/fn.iter_bytes.html) or
-  [units](http://tormol.github.io/rustdoc/encode_unicode/fn.iter_units.html).
-* Iterators over the [UTF-8 bytes](http://tormol.github.io/rustdoc/encode_unicode/struct.Utf8Iterator.html)
-  or [UTF-16 units](http://tormol.github.io/rustdoc/encode_unicode/struct.Utf16Iterator.html) of a codepoint.
-* [Precise errors when decoding a char from UTF-8, UTF-16 or `u32` fails](http://tormol.github.io/rustdoc/encode_unicode/error/index.html).
-* Utility methods on [`u8`](http://tormol.github.io/rustdoc/encode_unicode/trait.U8UtfExt.html)
-  and [`u16`](http://tormol.github.io/rustdoc/encode_unicode/trait.U16UtfExt.html).
+  [bytes](https://docs.rs/encode_unicode/latest/encode_unicode/fn.iter_bytes.html) or
+  [units](https://docs.rs/encode_unicode/latest/encode_unicode/fn.iter_units.html).
+* Iterators over the [UTF-8 bytes](https://docs.rs/encode_unicode/latest/encode_unicode/struct.Utf8Iterator.html)
+  or [UTF-16 units](https://docs.rs/encode_unicode/latest/encode_unicode/struct.Utf16Iterator.html) of a codepoint.
+* [Precise errors when decoding a char from UTF-8, UTF-16 or `u32` fails](http://docs.rs/encode_unicode/latest/encode_unicode/error/index.html).
+* Utility methods on [`u8`](https://docs.rs/encode_unicode/latest/encode_unicode/trait.U8UtfExt.html)
+  and [`u16`](https://docs.rs/encode_unicode/latest/encode_unicode/trait.U16UtfExt.html).
 
 The minimum supported version of Rust is 1.15,
 older versions might work now but can break with a minor update.
