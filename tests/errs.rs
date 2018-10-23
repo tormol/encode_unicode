@@ -14,11 +14,15 @@ use core::char;
 extern crate encode_unicode;
 use encode_unicode::*;
 use encode_unicode::error::*;
+use encode_unicode::error::InvalidUtf8Array as a;
+use encode_unicode::error::InvalidUtf8Slice as s;
+use encode_unicode::error::InvalidCodepoint::*;
+use encode_unicode::error::InvalidUtf8::*;
+use encode_unicode::error::InvalidUtf8FirstByte::*;
 
 
 #[test]
 fn from_u32() {
-    use encode_unicode::error::InvalidCodepoint::*;
     for c in 0xd800..0xe000 {
         assert_eq!(char::from_u32_detailed(c),  Err(Utf16Reserved));
     }
@@ -35,7 +39,6 @@ fn from_u32() {
 
 #[test]
 fn utf8_extra_bytes() {
-    use encode_unicode::error::InvalidUtf8FirstByte::*;
     for c in 0..256 {
         assert_eq!( (c as u8).extra_utf8_bytes(), match c {
             0b_1000_0000...0b_1011_1111 => Err(ContinuationByte),
@@ -105,15 +108,21 @@ fn from_utf16_slice_start() {
 }
 
 #[test]
-fn overlong_utf8() {
-    use encode_unicode::error::InvalidUtf8::OverLong;
-    let overlongs = [[0xc0,0xbf], [0xe0,0x9f], [0xf0,0x8f],
-                     [0xc0,0x9f], [0xe0,0x8f], [0xf0,0x87],
-                     [0xc1, 0x92]];
+fn utf8_overlong() {
+    let overlongs = [
+        [0xf0,0x8f], [0xf0,0x87], [0xf0,0x80], // 4-byte
+        [0xe0,0x9f], [0xe0,0x8f], [0xe0,0x80], // 3-byte
+        [0xc1,0xbf], [0xc1,0x92], [0xc1,0x80], // 2-byte
+        [0xc0,0xbf], [0xc0,0x9f], [0xc0,0x80], // 2-byte
+    ];
     for o in overlongs.iter() {
-        let arr = [o[0],o[1], 0x80, 0x80];
-        assert_eq!(char::from_utf8_slice_start(&arr), Err(InvalidUtf8Slice::Utf8(OverLong)));
-        assert_eq!(char::from_utf8_array(arr), Err(InvalidUtf8Array::Utf8(OverLong)));
+        for &last in &[0x80, 0xbf] {
+            let arr = [o[0], o[1], last, last];
+            assert_eq!(char::from_utf8_slice_start(&arr), Err(InvalidUtf8Slice::Utf8(OverLong)));
+            assert_eq!(char::from_utf8_array(arr), Err(InvalidUtf8Array::Utf8(OverLong)));
+            assert_eq!(Utf8Char::from_slice_start(&arr), Err(InvalidUtf8Slice::Utf8(OverLong)));
+            assert_eq!(Utf8Char::from_array(arr), Err(InvalidUtf8Array::Utf8(OverLong)));
+        }
     }
 }
 
@@ -121,4 +130,68 @@ fn overlong_utf8() {
 fn from_str_start() {
     assert_eq!(Utf8Char::from_str_start(""), Err(EmptyStrError));
     assert_eq!(Utf16Char::from_str_start(""), Err(EmptyStrError));
+}
+
+#[test] fn utf8_codepoint_is_too_high() {
+    assert_eq!(Utf8Char::from_array([0xf4, 0x90, 0x80, 0x80]), Err(a::Codepoint(TooHigh)));
+    assert_eq!(char::from_utf8_array([0xf4, 0x90, 0x80, 0x80]), Err(a::Codepoint(TooHigh)));
+    assert_eq!(Utf8Char::from_slice_start(&[0xf4, 0x90, 0x80, 0x80]), Err(s::Codepoint(TooHigh)));
+    assert_eq!(char::from_utf8_slice_start(&[0xf4, 0x90, 0x80, 0x80]), Err(s::Codepoint(TooHigh)));
+
+    assert_eq!(Utf8Char::from_array([0xf5, 0x88, 0x99, 0xaa]), Err(a::Codepoint(TooHigh)));
+    assert_eq!(char::from_utf8_array([0xf5, 0xaa, 0xbb, 0x88]), Err(a::Codepoint(TooHigh)));
+    assert_eq!(Utf8Char::from_slice_start(&[0xf5, 0x99, 0xaa, 0xbb]), Err(s::Codepoint(TooHigh)));
+    assert_eq!(char::from_utf8_slice_start(&[0xf5, 0xbb, 0x88, 0x99]), Err(s::Codepoint(TooHigh)));
+}
+
+#[test] fn utf8_codepoint_is_utf16_reserved() {
+    assert_eq!(Utf8Char::from_array([0xed, 0xa0, 0x80, 0xff]), Err(a::Codepoint(Utf16Reserved)));
+    assert_eq!(char::from_utf8_array([0xed, 0xa0, 0x8f, 0x00]), Err(a::Codepoint(Utf16Reserved)));
+    assert_eq!(Utf8Char::from_slice_start(&[0xed, 0xa0, 0xbe, 0xa5]), Err(s::Codepoint(Utf16Reserved)));
+    assert_eq!(char::from_utf8_slice_start(&[0xed, 0xa0, 0xbf]), Err(s::Codepoint(Utf16Reserved)));
+    assert_eq!(Utf8Char::from_array([0xed, 0xbf, 0x80, 0xff]), Err(a::Codepoint(Utf16Reserved)));
+    assert_eq!(char::from_utf8_array([0xed, 0xbf, 0x8f, 0x00]), Err(a::Codepoint(Utf16Reserved)));
+    assert_eq!(Utf8Char::from_slice_start(&[0xed, 0xbf, 0xbe, 0xa5]), Err(s::Codepoint(Utf16Reserved)));
+    assert_eq!(char::from_utf8_slice_start(&[0xed, 0xbf, 0xbf]), Err(s::Codepoint(Utf16Reserved)));
+}
+
+#[test] fn utf8_first_is_continuation_byte() {
+    for first in 0x80..0xc0 {
+        let arr = [first, first<<2, first<<4, first<<6];
+        assert_eq!(Utf8Char::from_array(arr), Err(a::Utf8(FirstByte(ContinuationByte))));
+        assert_eq!(char::from_utf8_array(arr), Err(a::Utf8(FirstByte(ContinuationByte))));
+        let len = (1 + first%3) as usize;
+        assert_eq!(Utf8Char::from_slice_start(&arr[..len]), Err(s::Utf8(FirstByte(ContinuationByte))));
+        assert_eq!(char::from_utf8_slice_start(&arr[..len]), Err(s::Utf8(FirstByte(ContinuationByte))));
+    }
+}
+
+#[test] fn utf8_too_long() {
+    for first in 0xf8..0x100 {
+        let arr = [first as u8, 0x88, 0x80, 0x80];
+        assert_eq!(Utf8Char::from_array(arr), Err(a::Utf8(FirstByte(TooLongSeqence))));
+        assert_eq!(char::from_utf8_array(arr), Err(a::Utf8(FirstByte(TooLongSeqence))));
+        let arr = [first as u8, 0x88, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80];
+        let slice = &arr[..if first&1 == 0 {1} else {8}];
+        assert_eq!(Utf8Char::from_slice_start(slice), Err(s::Utf8(FirstByte(TooLongSeqence))));
+        assert_eq!(char::from_utf8_slice_start(slice), Err(s::Utf8(FirstByte(TooLongSeqence))));
+    }
+}
+
+#[test] fn utf8_not_continuation_byte() {
+    for first in 0xc2..0xf4 {
+        let mut arr = [first, 0x90, 0xa0, 0xb0];
+        let extra = first.extra_utf8_bytes().unwrap();
+        for corrupt in (1..extra).rev() {
+            let expected = NotAContinuationByte(corrupt);
+            for &bad in &[0x00, 0x3f,  0x40, 0x7f,  0xc0, 0xff] {
+                arr[corrupt] = bad;
+                assert_eq!(Utf8Char::from_array(arr), Err(a::Utf8(expected)), "{:?}", arr);
+                assert_eq!(char::from_utf8_array(arr), Err(a::Utf8(expected)));
+                let slice = if first&1 == 0 {&arr[..1+extra]} else {&arr};
+                assert_eq!(Utf8Char::from_slice_start(slice), Err(s::Utf8(expected)), "{:?}", slice);
+                assert_eq!(char::from_utf8_slice_start(slice), Err(s::Utf8(expected)));
+            }
+        }
+    }
 }
