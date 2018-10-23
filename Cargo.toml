@@ -25,4 +25,4 @@ std = []
 default = ["std"]
 
 [package.metadata.docs.rs]
-all-features = true
+features = ["ascii/std"]
