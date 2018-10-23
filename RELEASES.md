@@ -1,3 +1,7 @@
+Version 0.3.5 (2018-10-23)
+==========================
+* Fix docs.rs build failure
+
 Version 0.3.4 (2018-10-23)
 ==========================
 * Fix UB in UTF-8 validation which lead to invalid codepoints being accepted in release mode
