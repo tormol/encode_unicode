@@ -14,10 +14,10 @@ Miscellaneous UTF-8 and UTF-16 types and methods.
 * `#![no_std]`-mode: There are a few differences:
   * `Error` doesn't exist, but `description()` is made available as an inherent impl.
   * `Extend`/`FromIterator`-implementations for `String`/`Vec<u8>`/`Vec<u16>` are missing.
-  * There is no `io`, so `Utf8Iterator` doesn't implement `Read`.
+  * There is no `io`, so `Utf8Iterator` and `Utf8CharSplitter` doesn't implement `Read`.
 
   This feature is enabled by setting `default-features=false` in `Cargo.toml`:
-  `encode_unicode = {version="0.3", default-features=false}`
+  `encode_unicode = {version="0.3.4", default-features=false}`
 * Integration with the [ascii](https://tomprogrammer.github.io/rust-ascii/ascii/index.html) crate:  
   Convert `Utf8Char` and `Utf16Char` to and from
   [ascii::`AsciiChar`](https://tomprogrammer.github.io/rust-ascii/ascii/enum.AsciiChar.html).
