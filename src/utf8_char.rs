@@ -494,8 +494,9 @@ impl Utf8Char {
     ///
     /// # Safety
     ///
-    /// Must represent a valid codepoint,
-    /// starting at the first byte with the unused zeroed.
+    /// Must contain a valid codepoint starting at the first byte, with the
+    /// unused bytes zeroed.  
+    /// Bad values can easily lead to undefined behavior.
     #[inline]
     pub unsafe fn from_array_unchecked(utf8: [u8;4]) -> Self {
         Utf8Char{ bytes: utf8 }

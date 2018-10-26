@@ -192,7 +192,17 @@ pub trait CharExt: Sized {
     fn to_utf8_array(self) -> ([u8; 4], usize);
 
     /// Convert this `char` to UTF-16.
-    /// The second `u16` is `Some` if a surrogate pair is required.
+    /// The second item is `Some` if a surrogate pair is required.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use encode_unicode::CharExt;
+    ///
+    /// assert_eq!('@'.to_utf16_tuple(), ('@' as u16, None));
+    /// assert_eq!('睷'.to_utf16_tuple(), ('睷' as u16, None));
+    /// assert_eq!('\u{abcde}'.to_utf16_tuple(), (0xda6f, Some(0xdcde)));
+    /// ```
     fn to_utf16_tuple(self) -> (u16, Option<u16>);
 
 
@@ -282,7 +292,7 @@ pub trait CharExt: Sized {
     unsafe fn from_utf16_tuple_unchecked(utf16: (u16, Option<u16>)) -> Self;
 
 
-    /// Perform some extra validations compared to `char::from_u32_unchecked()`
+    /// Produces more detailed errors than `char::from_u32()`
     ///
     /// # Errors
     ///
@@ -290,6 +300,20 @@ pub trait CharExt: Sized {
     ///
     /// * the value is greater than 0x10ffff
     /// * the value is between 0xd800 and 0xdfff (inclusive)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use encode_unicode::CharExt;
+    /// use encode_unicode::error::InvalidCodepoint;
+    ///
+    /// assert_eq!(char::from_u32_detailed(0x41), Ok('A'));
+    /// assert_eq!(char::from_u32_detailed(0x40_00_00), Err(InvalidCodepoint::TooHigh));
+    /// assert_eq!(char::from_u32_detailed(0xd951), Err(InvalidCodepoint::Utf16Reserved));
+    /// assert_eq!(char::from_u32_detailed(0xdddd), Err(InvalidCodepoint::Utf16Reserved));
+    /// assert_eq!(char::from_u32_detailed(0xdd), Ok('Ý'));
+    /// assert_eq!(char::from_u32_detailed(0x1f331), Ok('🌱'));
+    /// ```
     fn from_u32_detailed(c: u32) -> Result<Self,InvalidCodepoint>;
 }
 
@@ -399,11 +423,10 @@ impl CharExt for char {
     }
 
     fn to_utf16_tuple(self) -> (u16, Option<u16>) {
-        let c = self as u32;
-        if c <= 0x_ff_ff {// single (or reserved, which we ignore)
-            (c as u16, None)
-        } else {// double (or too high, which we ignore)
-            let c = c - 0x_01_00_00;
+        if self <= '\u{ffff}' {// single
+            (self as u16, None)
+        } else {// double
+            let c = self as u32 - 0x_01_00_00;
             let high = 0x_d8_00 + (c >> 10);
             let low = 0x_dc_00 + (c & 0x_03_ff);
             (high as u16,  Some(low as u16))

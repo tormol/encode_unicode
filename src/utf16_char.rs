@@ -337,7 +337,7 @@ impl PartialOrd<Utf8Char> for Utf16Char {
         self.partial_cmp(&Utf16Char::from(*u8c))
     }
 }
-// The other direction reverse impls in utf8_char.rs
+// The other direction is implemented in utf8_char.rs
 
 /// Only considers the unit equal if the codepoint of the `Utf16Char` is not
 /// made up of a surrogate pair.
@@ -475,6 +475,7 @@ impl Utf16Char {
     /// Store the first UTF-16 codepoint of the slice.
     ///
     /// # Safety
+    ///
     /// The slice must be non-empty and start with a valid UTF-16 codepoint.  
     /// The length of the slice is never checked.
     pub unsafe fn from_slice_start_unchecked(src: &[u16]) -> (Self,usize) {
@@ -495,18 +496,21 @@ impl Utf16Char {
     ///
     /// # Safety
     ///
-    /// The units must represent a single valid codepoint.
+    /// The units must form a valid codepoint with the second being 0 when a
+    /// surrogate pair is not required.
+    /// Violating this can easily lead to undefined behavior.
     pub unsafe fn from_tuple_unchecked(utf16: (u16,Option<u16>)) -> Self {
-        Utf16Char{ units: [utf16.0, utf16.1.unwrap_or(0)] }
+        Utf16Char { units: [utf16.0, utf16.1.unwrap_or(0)] }
     }
     /// Create an `Utf16Char` from a single unit.
     ///
-    /// The unit must be a codepoint in the basic multilingual plane,
-    /// or, not a part of a surrogate pair.
+    /// Codepoints < '\u{1_0000}' (which fit in a `u16`) are part of the basic
+    /// multilingual plane unless they are reserved for surrogate pairs.
     ///
     /// # Errors
     ///
-    /// Returns `NonBMPError` if the unit is in the range `0xd800..0xe000`.
+    /// Returns `NonBMPError` if the unit is in the range `0xd800..0xe000`
+    /// (which means that it's part of a surrogat pair)
     ///
     /// # Examples
     ///
@@ -528,8 +532,9 @@ impl Utf16Char {
     ///
     /// # Safety
     ///
-    /// The unit must be less than 0xd800 or greater than 0xdfff codepoint in the basic multilingual plane,
-    /// or, not a surrogate.
+    /// The unit must be less than 0xd800 or greater than 0xdfff.
+    /// In other words, not part of a surrogate pair.  
+    /// Violating this can easily lead to undefined behavior.
     #[inline]
     pub unsafe fn from_bmp_unchecked(bmp_codepoint: u16) -> Self {
         Utf16Char{ units: [bmp_codepoint, 0] }
