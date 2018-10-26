@@ -852,10 +852,10 @@ pub trait IterExt: Iterator+Sized {
 
 impl<I:Iterator> IterExt for I {
     fn to_bytes(self) -> Utf8CharSplitter<Self::Item,Self> where Self::Item: Borrow<Utf8Char> {
-        iter_bytes(self)
+        Utf8CharSplitter::from(self)
     }
     fn to_units(self) -> Utf16CharSplitter<Self::Item,Self> where Self::Item: Borrow<Utf16Char> {
-        iter_units(self)
+        Utf16CharSplitter::from(self)
     }
     fn to_utf8chars(self) -> Utf8CharMerger<Self::Item,Self> where Self::Item: Borrow<u8> {
         Utf8CharMerger::from(self)

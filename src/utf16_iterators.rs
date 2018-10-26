@@ -81,11 +81,11 @@ impl fmt::Debug for Utf16Iterator {
 /// From iterator of values:
 ///
 /// ```
-/// use encode_unicode::{iter_units, CharExt};
+/// use encode_unicode::{IterExt, CharExt};
 ///
 /// let iterator = "foo".chars().map(|c| c.to_utf16() );
 /// let mut units = [0; 4];
-/// iter_units(iterator).zip(&mut units).for_each(|(u,dst)| *dst = u );
+/// iterator.to_units().zip(&mut units).for_each(|(u,dst)| *dst = u );
 /// assert_eq!(units, ['f' as u16, 'o' as u16, 'o' as u16, 0]);
 /// ```
 ///
@@ -93,35 +93,29 @@ impl fmt::Debug for Utf16Iterator {
 ///
 #[cfg_attr(feature="std", doc=" ```")]
 #[cfg_attr(not(feature="std"), doc=" ```no_compile")]
-/// use encode_unicode::{iter_units, CharExt, Utf16Char};
+/// use encode_unicode::{IterExt, CharExt, Utf16Char};
 ///
 /// // (💣 takes two units)
 /// let chars: Vec<Utf16Char> = "💣 bomb 💣".chars().map(|c| c.to_utf16() ).collect();
-/// let units: Vec<u16> = iter_units(&chars).collect();
+/// let units: Vec<u16> = chars.iter().to_units().collect();
 /// let flat_map: Vec<u16> = chars.iter().cloned().flatten().collect();
 /// assert_eq!(units, flat_map);
 /// ```
-pub fn iter_units<U:Borrow<Utf16Char>, I:IntoIterator<Item=U>>
-(iterable: I) -> Utf16CharSplitter<U, I::IntoIter> {
-    Utf16CharSplitter{ inner: iterable.into_iter(),  prev_second: 0 }
-}
-
-/// The iterator type returned by `iter_units()`
 #[derive(Clone)]
 pub struct Utf16CharSplitter<U:Borrow<Utf16Char>, I:Iterator<Item=U>> {
     inner: I,
     prev_second: u16,
 }
-impl<I:Iterator<Item=Utf16Char>> From<I> for Utf16CharSplitter<Utf16Char,I> {
-    /// A less generic constructor than `iter_units()`
-    fn from(iter: I) -> Self {
-        iter_units(iter)
+impl<U:Borrow<Utf16Char>, I:IntoIterator<Item=U>>
+From<I> for Utf16CharSplitter<U, I::IntoIter> {
+    fn from(iterable: I) -> Self {
+        Utf16CharSplitter { inner: iterable.into_iter(),  prev_second: 0 }
     }
 }
 impl<U:Borrow<Utf16Char>, I:Iterator<Item=U>> Utf16CharSplitter<U,I> {
     /// Extracts the source iterator.
     ///
-    /// Note that `iter_units(iter.into_inner())` is not a no-op:  
+    /// Note that `iter.into_inner().to_units()` is not a no-op:  
     /// If the last returned unit from `next()` was a leading surrogate,
     /// the trailing surrogate is lost.
     pub fn into_inner(self) -> I {

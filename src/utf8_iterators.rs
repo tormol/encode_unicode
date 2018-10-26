@@ -103,11 +103,11 @@ impl fmt::Debug for Utf8Iterator {
 /// From iterator of values:
 ///
 /// ```
-/// use encode_unicode::{iter_bytes, CharExt};
+/// use encode_unicode::{IterExt, CharExt};
 ///
 /// let iterator = "foo".chars().map(|c| c.to_utf8() );
 /// let mut bytes = [0; 4];
-/// iter_bytes(iterator).zip(&mut bytes).for_each(|(b,dst)| *dst = b );
+/// iterator.to_bytes().zip(&mut bytes).for_each(|(b,dst)| *dst = b );
 /// assert_eq!(&bytes, b"foo\0");
 /// ```
 ///
@@ -115,10 +115,10 @@ impl fmt::Debug for Utf8Iterator {
 ///
 #[cfg_attr(feature="std", doc=" ```")]
 #[cfg_attr(not(feature="std"), doc=" ```no_compile")]
-/// use encode_unicode::{iter_bytes, CharExt, Utf8Char};
+/// use encode_unicode::{IterExt, CharExt, Utf8Char};
 ///
 /// let chars: Vec<Utf8Char> = "💣 bomb 💣".chars().map(|c| c.to_utf8() ).collect();
-/// let bytes: Vec<u8> = iter_bytes(&chars).collect();
+/// let bytes: Vec<u8> = chars.iter().to_bytes().collect();
 /// let flat_map: Vec<u8> = chars.iter().cloned().flatten().collect();
 /// assert_eq!(bytes, flat_map);
 /// ```
@@ -127,42 +127,34 @@ impl fmt::Debug for Utf8Iterator {
 ///
 #[cfg_attr(feature="std", doc=" ```")]
 #[cfg_attr(not(feature="std"), doc=" ```no_compile")]
-/// use encode_unicode::{iter_bytes, CharExt};
+/// use encode_unicode::{IterExt, CharExt};
 /// use std::io::Read;
 ///
 /// let s = "Ååh‽";
 /// assert_eq!(s.len(), 8);
 /// let mut buf = [b'E'; 9];
-/// let mut reader = iter_bytes(s.chars().map(|c| c.to_utf8() ));
+/// let mut reader = s.chars().map(|c| c.to_utf8() ).to_bytes();
 /// assert_eq!(reader.read(&mut buf[..]).unwrap(), 8);
 /// assert_eq!(reader.read(&mut buf[..]).unwrap(), 0);
 /// assert_eq!(&buf[..8], s.as_bytes());
 /// assert_eq!(buf[8], b'E');
 /// ```
-pub fn iter_bytes<U:Borrow<Utf8Char>, I:IntoIterator<Item=U>>
-(iterable: I) -> Utf8CharSplitter<U, I::IntoIter> {
-    Utf8CharSplitter{ inner: iterable.into_iter(),  prev: 0 }
-}
-
-/// The iterator type returned by `iter_bytes()`
-///
-/// See its documentation for details.
 #[derive(Clone)]
 pub struct Utf8CharSplitter<U:Borrow<Utf8Char>, I:Iterator<Item=U>> {
     inner: I,
     prev: u32,
 }
-impl<I:Iterator<Item=Utf8Char>> From<I> for Utf8CharSplitter<Utf8Char,I> {
-    /// A less generic constructor than `iter_bytes()`
-    fn from(iter: I) -> Self {
-        iter_bytes(iter)
+impl<U:Borrow<Utf8Char>, I:IntoIterator<Item=U>>
+From<I> for Utf8CharSplitter<U,I::IntoIter> {
+    fn from(iterable: I) -> Self {
+        Utf8CharSplitter { inner: iterable.into_iter(),  prev: 0 }
     }
 }
 impl<U:Borrow<Utf8Char>, I:Iterator<Item=U>> Utf8CharSplitter<U,I> {
     /// Extracts the source iterator.
     ///
-    /// Note that `iter_bytes(iter.into_inner())` is not a no-op:  
-    /// If the last returned byte from `next()` was not an ASCII by,
+    /// Note that `iter.into_inner().to_bytes()` is not a no-op:  
+    /// If the last returned byte from `next()` was not an ASCII character,
     /// the remaining bytes of that codepoint is lost.
     pub fn into_inner(self) -> I {
         self.inner

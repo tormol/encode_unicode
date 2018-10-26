@@ -5,7 +5,7 @@ extern crate test;
 use test::{Bencher, black_box};
 #[macro_use] extern crate lazy_static;
 extern crate encode_unicode;
-use encode_unicode::{CharExt, Utf8Char, Utf16Char, iter_bytes, iter_units};
+use encode_unicode::{CharExt, Utf8Char, Utf16Char, IterExt};
 
 static ENGLISH: &str = include_str!("/usr/share/dict/american-english");
 // TODO find a big chinese file; `aptitude search '?provides(wordlist)'` didn't have one
@@ -18,7 +18,7 @@ lazy_static!{
 #[bench]
 fn utf16_split_all_single_mulititerator(b: &mut Bencher) {
     b.iter(|| {
-        iter_units(black_box(&*UTF16CHARS)).for_each(|u| assert!(u != 0) );
+        black_box(&*UTF16CHARS).iter().to_units().for_each(|u| assert!(u != 0) );
     });
 }
 #[bench]
@@ -38,7 +38,7 @@ fn utf16_split_all_single_cloned_flatten(b: &mut Bencher) {
 #[bench]
 fn utf8_split_mostly_ascii_multiiterator(b: &mut Bencher) {
     b.iter(|| {
-        iter_bytes(black_box(&*UTF8CHARS)).for_each(|b| assert!(b != 0) );
+        black_box(&*UTF8CHARS).iter().to_bytes().for_each(|b| assert!(b != 0) );
     });
 }
 #[bench]
@@ -58,7 +58,7 @@ fn utf8_split_mostly_ascii_cloned_flatten(b: &mut Bencher) {
 #[bench]
 fn utf8_extend_mostly_ascii_multiiterator(b: &mut Bencher) {
     b.iter(|| {
-        let vec: Vec<u8> = iter_bytes(black_box(&*UTF8CHARS)).collect();
+        let vec: Vec<u8> = black_box(&*UTF8CHARS).iter().to_bytes().collect();
         assert_eq!(black_box(vec).len(), ENGLISH.len());
     });
 }
@@ -80,7 +80,7 @@ fn utf8_extend_mostly_ascii_custom_str(b: &mut Bencher) {
 #[bench]
 fn utf16_extend_all_single_multiiterator(b: &mut Bencher) {
     b.iter(|| {
-        let vec: Vec<u16> = iter_units(black_box(&*UTF16CHARS)).collect();
+        let vec: Vec<u16> = black_box(&*UTF16CHARS).iter().to_units().collect();
         assert!(black_box(vec).len() < ENGLISH.len());
     });
 }

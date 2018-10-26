@@ -68,8 +68,8 @@ mod decoding_iterators;
 pub use traits::{CharExt, U8UtfExt, U16UtfExt, StrExt, IterExt, SliceExt};
 pub use utf8_char::Utf8Char;
 pub use utf16_char::Utf16Char;
-pub use utf8_iterators::{Utf8Iterator, iter_bytes};
-pub use utf16_iterators::{Utf16Iterator, iter_units};
+pub use utf8_iterators::Utf8Iterator;
+pub use utf16_iterators::Utf16Iterator;
 
 pub mod error {// keeping the public interface in one file
     //! Errors returned by various conversion methods in this crate.

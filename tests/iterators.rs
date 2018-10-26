@@ -12,7 +12,7 @@
 
 extern crate encode_unicode;
 
-use encode_unicode::{IterExt, SliceExt, CharExt};
+use encode_unicode::{IterExt, SliceExt, CharExt, Utf8Char};
 use encode_unicode::iterator::Utf8CharSplitter;
 use encode_unicode::error::InvalidUtf8Slice::*;
 use encode_unicode::error::InvalidUtf8::*;
@@ -160,8 +160,8 @@ use std::cmp::min;
     for n in 0..2 {
         // need to collect to test size_hint()
         // because chars().size_hint() returns ((bytes+3)/4, Some(bytes))
-        let u8chars = s.chars().map(|c| c.to_utf8() ).collect::<Vec<_>>();
-        let mut iter: Utf8CharSplitter<_,_> = u8chars.into_iter().into();
+        let u8chars = s.chars().map(|c| c.to_utf8() ).collect::<Vec<Utf8Char>>();
+        let mut iter = Utf8CharSplitter::from(u8chars.into_iter());
         for (i, byte) in s.bytes().enumerate() {
             let until_next = s.as_bytes()[i..].iter().take_while(|&b| (b>>6)==0b10u8 ).count();
             let remaining_chars = s[i+until_next..].chars().count();
