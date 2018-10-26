@@ -11,6 +11,7 @@
 
 extern crate core;
 use self::core::fmt::{self,Display,Formatter};
+use self::core::ops::RangeInclusive;
 #[cfg(feature="std")]
 use std::error::Error;
 
@@ -95,9 +96,9 @@ simple!{/// Reasons why an `u32` is not a valid UTF codepoint.
 use self::InvalidCodepoint::*;
 impl InvalidCodepoint {
     /// Get the range of values for which this error would be given.
-    pub fn error_range(self) -> (u32,u32) {match self {
-        Utf16Reserved => (0xd8_00, 0xdf_ff),
-        TooHigh => (0x00_10_ff_ff, 0xff_ff_ff_ff),
+    pub fn error_range(self) -> RangeInclusive<u32> {match self {
+        Utf16Reserved => 0xd8_00..=0xdf_ff,
+        TooHigh => 0x00_10_ff_ff..=0xff_ff_ff_ff,
     }}
 }
 
@@ -105,9 +106,9 @@ impl InvalidCodepoint {
 simple!{/// Reasons why a `[u16; 2]` doesn't form a valid UTF-16 codepoint.
     InvalidUtf16Array {
         /// The first unit is a trailing/low surrogate, which is never valid.
-        ::FirstIsTrailingSurrogate => "the first unit is a trailing surrogate, which is never valid",
+        FirstIsTrailingSurrogate => "the first unit is a trailing surrogate, which is never valid",
         /// The second unit is needed, but is not a trailing surrogate.
-        ::SecondIsNotTrailingSurrogate => "the second unit is needed but is not a trailing surrogate",
+        SecondIsNotTrailingSurrogate => "the second unit is needed but is not a trailing surrogate",
     }}
 
 simple!{/// Reasons why one or two `u16`s are not valid UTF-16, in sinking precedence.
@@ -171,7 +172,7 @@ macro_rules! complex {
  {$($sub:ty => $to:expr,)*}
  {$($desc:pat => $string:expr),+,}
  => $use_cause:expr =>
- {$($cause:pat => $result:expr),+,} $(#[$causedoc:meta])*
+ {$($cause:pat => $result:expr),+,} $(#[$sourcedoc:meta])*
 ) => {
     $(impl From<$sub> for $err {
           fn from(error: $sub) -> $err {
@@ -192,14 +193,18 @@ macro_rules! complex {
         fn description(&self) -> &'static str {
             match *self{ $($desc => $string,)* }
         }
-        $(#[$causedoc])*
-        fn cause(&self) -> Option<&Error> {
+        $(#[$sourcedoc])*
+        fn source(&self) -> Option<&(dyn Error+'static)> {
             match *self{ $($cause => $result,)* }
+        }
+        $(#[$sourcedoc])*
+        fn cause(&self) -> Option<&dyn Error> {
+            self.source()
         }
     }
     impl Display for $err {
         fn fmt(&self,  fmtr: &mut Formatter) -> fmt::Result {
-            match (self.cause(), $use_cause) {
+            match (self.source(), $use_cause) {
                 (Some(d),true) => write!(fmtr, "{}: {}", self.description(), d),
                         _      => write!(fmtr, "{}", self.description()),
             }

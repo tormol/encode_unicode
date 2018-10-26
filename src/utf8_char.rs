@@ -79,10 +79,10 @@ impl str::FromStr for Utf8Char {
 impl From<Utf16Char> for Utf8Char {
     fn from(utf16: Utf16Char) -> Utf8Char {
         match utf16.to_tuple() {
-            (a @ 0...0x00_7f, _) => {
+            (a @ 0..=0x00_7f, _) => {
                 Utf8Char{ bytes: [a as u8, 0, 0, 0] }
             },
-            (u @ 0...0x07_ff, _) => {
+            (u @ 0..=0x07_ff, _) => {
                 let b = 0x80 |  (u & 0x00_3f) as u8;
                 let a = 0xc0 | ((u & 0x07_c0) >> 6) as u8;
                 Utf8Char{ bytes: [a, b, 0, 0] }
@@ -449,7 +449,7 @@ impl Utf8Char {
     pub fn from_array(utf8: [u8;4]) -> Result<Self,InvalidUtf8Array> {
         unsafe {
             // perform all validation
-            try!(char::from_utf8_array(utf8));
+            char::from_utf8_array(utf8)?;
             let extra = utf8[0].extra_utf8_bytes_unchecked() as u32;
             // zero unused bytes in one operation by transmuting the arrary to
             // u32, apply an endian-corrected mask and transmute back

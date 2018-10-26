@@ -143,11 +143,11 @@ impl<B:Borrow<u8>, I:Iterator<Item=B>> Iterator for Utf8CharMerger<B,I> {
         unsafe {
             let mut bytes = [first, 0, 0, 0];
             let ok = match first {
-                0b0000_0000...0b0111_1111 => {/*1 and */Ok(())},
-                0b1100_0010...0b1101_1111 => {//2 and not overlong
+                0b0000_0000..=0b0111_1111 => {/*1 and */Ok(())},
+                0b1100_0010..=0b1101_1111 => {//2 and not overlong
                     self.extra(&mut bytes, 2) // no extra validation required
                 },
-                0b1110_0000...0b1110_1111 => {//3
+                0b1110_0000..=0b1110_1111 => {//3
                     if let Err(e) = self.extra(&mut bytes, 3) {
                         Err(e)
                     } else if bytes[0] == 0b1110_0000  &&  bytes[1] <= 0b10_011111 {
@@ -160,7 +160,7 @@ impl<B:Borrow<u8>, I:Iterator<Item=B>> Iterator for Utf8CharMerger<B,I> {
                         Ok(())
                     }
                 },
-                0b1111_0000...0b1111_0100 => {//4
+                0b1111_0000..=0b1111_0100 => {//4
                     if let Err(e) = self.extra(&mut bytes, 4) {
                         Err(e)
                     } else if bytes[0] == 0b11110_000  &&  bytes[1] <= 0b10_001111 {
@@ -173,19 +173,18 @@ impl<B:Borrow<u8>, I:Iterator<Item=B>> Iterator for Utf8CharMerger<B,I> {
                         Ok(())
                     }
                 },
-                0b1000_0000...0b1011_1111 => {// continuation byte
+                0b1000_0000..=0b1011_1111 => {// continuation byte
                     Err(Utf8(FirstByte(ContinuationByte)))
                 },
-                0b1100_0000...0b1100_0001 => {// 2 and overlong
+                0b1100_0000..=0b1100_0001 => {// 2 and overlong
                     Err(Utf8(Overlong))
                 },
-                0b1111_0101...0b1111_0111 => {// 4 and too high codepoint
+                0b1111_0101..=0b1111_0111 => {// 4 and too high codepoint
                     Err(Codepoint(TooHigh))
                 },
-                0b1111_1000...0b1111_1111 => {
+                0b1111_1000..=0b1111_1111 => {
                     Err(Utf8(FirstByte(TooLongSequence)))
                 },
-                _ => unreachable!("all possible byte values should be covered")
             };
             Some(ok.map(|()| Utf8Char::from_array_unchecked(bytes) ))
         }

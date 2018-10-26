@@ -408,16 +408,16 @@ impl Utf16Char {
         let b = s.as_bytes();
         // Read the last byte first to reduce the number of unnecesary length checks.
         match b[0] {
-            0...127 => {// 1 byte => 1 unit
+            0..=127 => {// 1 byte => 1 unit
                 let unit = b[0] as u16;// 0b0000_0000_0xxx_xxxx
                 Ok((Utf16Char{ units: [unit, 0] }, 1))
             },
-            0b1000_0000...0b1101_1111 => {// 2 bytes => 1 unit
+            0b1000_0000..=0b1101_1111 => {// 2 bytes => 1 unit
                 let unit = (((b[1] & 0x3f) as u16) << 0) // 0b0000_0000_00xx_xxxx
                          | (((b[0] & 0x1f) as u16) << 6);// 0b0000_0xxx_xx00_0000
                 Ok((Utf16Char{ units: [unit, 0] }, 2))
             },
-            0b1110_0000...0b1110_1111 => {// 3 bytes => 1 unit
+            0b1110_0000..=0b1110_1111 => {// 3 bytes => 1 unit
                 let unit = (((b[2] & 0x3f) as u16) <<  0) // 0b0000_0000_00xx_xxxx
                          | (((b[1] & 0x3f) as u16) <<  6) // 0b0000_xxxx_xx00_0000
                          | (((b[0] & 0x0f) as u16) << 12);// 0bxxxx_0000_0000_0000
@@ -476,7 +476,7 @@ impl Utf16Char {
         if (units[0] & 0xf8_00) != 0xd8_00 {
             Ok(Utf16Char { units: [units[0], 0] })
         } else if units[0] < 0xdc_00  &&  (units[1] & 0xfc_00) == 0xdc_00 {
-            Ok(Utf16Char { units: units })
+            Ok(Utf16Char { units })
         } else if units[0] < 0xdc_00 {
             Err(InvalidUtf16Array::SecondIsNotTrailingSurrogate)
         } else {
@@ -492,7 +492,7 @@ impl Utf16Char {
     /// Violating this can easily lead to undefined behavior, although unlike
     /// `char` bad `Utf16Char`s simply existing is not immediately UB.
     pub unsafe fn from_array_unchecked(units: [u16; 2]) -> Self {
-        Utf16Char { units: units }
+        Utf16Char { units }
     }
     /// Validate and store a UTF-16 pair as returned from `char.to_utf16_tuple()`.
     pub fn from_tuple(utf16: (u16,Option<u16>)) -> Result<Self,InvalidUtf16Tuple> {

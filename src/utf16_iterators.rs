@@ -68,8 +68,9 @@ impl fmt::Debug for Utf16Iterator {
 
 
 /// Converts an iterator of `Utf16Char` (or `&Utf16Char`)
-/// to an iterator of `u16`s.  
-/// Is equivalent to calling `.flat_map()` on the original iterator,
+/// to an iterator of `u16`s.
+///
+/// Is equivalent to calling `.flatten()` or `.flat_map()` on the original iterator,
 /// but the returned iterator is about twice as fast.
 ///
 /// The exact number of units cannot be known in advance, but `size_hint()`
@@ -84,7 +85,7 @@ impl fmt::Debug for Utf16Iterator {
 ///
 /// let iterator = "foo".chars().map(|c| c.to_utf16() );
 /// let mut units = [0; 4];
-/// for (u,dst) in iter_units(iterator).zip(&mut units) {*dst=u;}
+/// iter_units(iterator).zip(&mut units).for_each(|(u,dst)| *dst = u );
 /// assert_eq!(units, ['f' as u16, 'o' as u16, 'o' as u16, 0]);
 /// ```
 ///
@@ -97,7 +98,7 @@ impl fmt::Debug for Utf16Iterator {
 /// // (💣 takes two units)
 /// let chars: Vec<Utf16Char> = "💣 bomb 💣".chars().map(|c| c.to_utf16() ).collect();
 /// let units: Vec<u16> = iter_units(&chars).collect();
-/// let flat_map: Vec<u16> = chars.iter().flat_map(|u16c| *u16c ).collect();
+/// let flat_map: Vec<u16> = chars.iter().cloned().flatten().collect();
 /// assert_eq!(units, flat_map);
 /// ```
 pub fn iter_units<U:Borrow<Utf16Char>, I:IntoIterator<Item=U>>

@@ -58,7 +58,7 @@ impl U8UtfExt for u8 {
             return Ok(0);// ASCII
         }
         match ((self as u32)<<25).not().leading_zeros() {
-            n @ 1...3 => Ok(n as usize),// start of multibyte
+            n @ 1..=3 => Ok(n as usize),// start of multibyte
             0 => Err(ContinuationByte),// following byte
             _ => Err(TooLongSequence),// too big
         }
@@ -142,8 +142,8 @@ impl U16UtfExt for u16 {
     fn utf16_needs_extra_unit(self) -> Result<bool,InvalidUtf16FirstUnit> {
         match self {
             // https://en.wikipedia.org/wiki/UTF-16#U.2B10000_to_U.2B10FFFF
-            0x00_00...0xd7_ff | 0xe0_00...0xff_ff => Ok(false),
-            0xd8_00...0xdb_ff => Ok(true),
+            0x00_00..=0xd7_ff | 0xe0_00..=0xff_ff => Ok(false),
+            0xd8_00..=0xdb_ff => Ok(true),
                     _         => Err(InvalidUtf16FirstUnit)
         }
     }
@@ -422,7 +422,7 @@ impl CharExt for char {
             Ok(0)     => return Ok((first as char, 1)),
             Ok(extra) if extra >= src.len()
                       => return Err(TooShort(extra+1)),
-            Ok(extra) => &src[..extra+1],
+            Ok(extra) => &src[..=extra],
         };
         if let Some(i) = bytes.iter().skip(1).position(|&b| (b >> 6) != 0b10 ) {
             Err(Utf8(NotAContinuationByte(i+1)))
@@ -442,7 +442,7 @@ impl CharExt for char {
         let src = match utf8[0].extra_utf8_bytes() {
             Err(error) => return Err(Utf8(FirstByte(error))),
             Ok(0)      => return Ok(utf8[0] as char),
-            Ok(extra)  => &utf8[..extra+1],
+            Ok(extra)  => &utf8[..=extra],
         };
         if let Some(i) = src[1..].iter().position(|&b| (b >> 6) != 0b10 ) {
             Err(Utf8(NotAContinuationByte(i+1)))
@@ -494,16 +494,15 @@ impl CharExt for char {
     fn from_utf16_slice_start(src: &[u16]) -> Result<(Self,usize), InvalidUtf16Slice> {
         use errors::InvalidUtf16Slice::*;
         unsafe {match (src.get(0), src.get(1)) {
-            (Some(&u @ 0x00_00...0xd7_ff), _) |
-            (Some(&u @ 0xe0_00...0xff_ff), _)
+            (Some(&u @ 0x00_00..=0xd7_ff), _) |
+            (Some(&u @ 0xe0_00..=0xff_ff), _)
                 => Ok((char::from_u32_unchecked(u as u32), 1)),
-            (Some(&0xdc_00...0xdf_ff), _) => Err(FirstIsTrailingSurrogate),
+            (Some(0xdc_00..=0xdf_ff), _) => Err(FirstIsTrailingSurrogate),
             (None, _) => Err(EmptySlice),
-            (Some(&f @ 0xd8_00...0xdb_ff), Some(&s @ 0xdc_00...0xdf_ff))
+            (Some(&f @ 0xd8_00..=0xdb_ff), Some(&s @ 0xdc_00..=0xdf_ff))
                 => Ok((char::from_utf16_tuple_unchecked((f, Some(s))), 2)),
-            (Some(&0xd8_00...0xdb_ff), Some(_)) => Err(SecondIsNotTrailingSurrogate),
-            (Some(&0xd8_00...0xdb_ff), None) => Err(MissingSecond),
-            (Some(_), _) => unreachable!()
+            (Some(0xd8_00..=0xdb_ff), Some(_)) => Err(SecondIsNotTrailingSurrogate),
+            (Some(0xd8_00..=0xdb_ff), None) => Err(MissingSecond),
         }}
     }
 
@@ -523,15 +522,14 @@ impl CharExt for char {
     fn from_utf16_tuple(utf16: (u16, Option<u16>)) -> Result<Self, InvalidUtf16Tuple> {
         use errors::InvalidUtf16Tuple::*;
         unsafe{ match utf16 {
-            (0x00_00...0xd7_ff, None) | // single
-            (0xe0_00...0xff_ff, None) | // single
-            (0xd8_00...0xdb_ff, Some(0xdc_00...0xdf_ff)) // correct surrogate
+            (0x00_00..=0xd7_ff, None) | // single
+            (0xe0_00..=0xff_ff, None) | // single
+            (0xd8_00..=0xdb_ff, Some(0xdc_00..=0xdf_ff)) // correct surrogate
                 => Ok(char::from_utf16_tuple_unchecked(utf16)),
-            (0xd8_00...0xdb_ff, Some(_)) => Err(SecondIsNotTrailingSurrogate),
-            (0xd8_00...0xdb_ff, None   ) => Err(MissingSecond),
-            (0xdc_00...0xdf_ff,    _   ) => Err(FirstIsTrailingSurrogate),
+            (0xd8_00..=0xdb_ff, Some(_)) => Err(SecondIsNotTrailingSurrogate),
+            (0xd8_00..=0xdb_ff, None   ) => Err(MissingSecond),
+            (0xdc_00..=0xdf_ff,    _   ) => Err(FirstIsTrailingSurrogate),
             (        _        , Some(_)) => Err(SuperfluousSecond),
-            (        _        , None   ) => unreachable!()
         }}
     }
 
@@ -675,7 +673,7 @@ pub trait IterExt: Iterator+Sized {
     ///
     /// let iterator = "foo".utf8chars();
     /// let mut bytes = [0; 4];
-    /// for (u,dst) in iterator.to_bytes().zip(&mut bytes) {*dst=u;}
+    /// iterator.to_bytes().zip(&mut bytes).for_each(|(b,dst)| *dst = b );
     /// assert_eq!(&bytes, b"foo\0");
     /// ```
     ///
@@ -687,7 +685,7 @@ pub trait IterExt: Iterator+Sized {
     ///
     /// let chars: Vec<Utf8Char> = "💣 bomb 💣".utf8chars().collect();
     /// let bytes: Vec<u8> = chars.iter().to_bytes().collect();
-    /// let flat_map: Vec<u8> = chars.iter().flat_map(|u8c| *u8c ).collect();
+    /// let flat_map: Vec<u8> = chars.iter().cloned().flatten().collect();
     /// assert_eq!(bytes, flat_map);
     /// ```
     ///
@@ -727,7 +725,7 @@ pub trait IterExt: Iterator+Sized {
     ///
     /// let iterator = "foo".utf16chars();
     /// let mut units = [0; 4];
-    /// for (u,dst) in iterator.to_units().zip(&mut units) {*dst=u;}
+    /// iterator.to_units().zip(&mut units).for_each(|(u,dst)| *dst = u );
     ///
     /// assert_eq!(units, ['f' as u16, 'o' as u16, 'o' as u16, 0]);
     /// ```
@@ -765,7 +763,7 @@ pub trait IterExt: Iterator+Sized {
     /// let mut buf = [b'\0'; 255];
     /// let len = b"foo\xCFbar".iter()
     ///     .to_utf8chars()
-    ///     .flat_map(|r| r.unwrap_or(Utf8Char::from('\u{FFFD}')).into_iter() )
+    ///     .flat_map(|r| r.unwrap_or(Utf8Char::from('\u{FFFD}')) )
     ///     .zip(&mut buf[..])
     ///     .map(|(byte, dst)| *dst = byte )
     ///     .count();

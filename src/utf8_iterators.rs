@@ -85,8 +85,9 @@ impl fmt::Debug for Utf8Iterator {
 
 
 /// Converts an iterator of `Utf8Char` (or `&Utf8Char`)
-/// to an iterator of `u8`s.  
-/// Is equivalent to calling `.flat_map()` on the original iterator,
+/// to an iterator of `u8`s.
+///
+/// Is equivalent to calling `.flatten()` or `.flat_map()` on the original iterator,
 /// but the returned iterator is ~40% faster.
 ///
 /// The iterator also implements `Read` (if the `std` feature isn't disabled).
@@ -106,7 +107,7 @@ impl fmt::Debug for Utf8Iterator {
 ///
 /// let iterator = "foo".chars().map(|c| c.to_utf8() );
 /// let mut bytes = [0; 4];
-/// for (u,dst) in iter_bytes(iterator).zip(&mut bytes) {*dst=u;}
+/// iter_bytes(iterator).zip(&mut bytes).for_each(|(b,dst)| *dst = b );
 /// assert_eq!(&bytes, b"foo\0");
 /// ```
 ///
@@ -118,7 +119,7 @@ impl fmt::Debug for Utf8Iterator {
 ///
 /// let chars: Vec<Utf8Char> = "💣 bomb 💣".chars().map(|c| c.to_utf8() ).collect();
 /// let bytes: Vec<u8> = iter_bytes(&chars).collect();
-/// let flat_map: Vec<u8> = chars.iter().flat_map(|u8c| *u8c ).collect();
+/// let flat_map: Vec<u8> = chars.iter().cloned().flatten().collect();
 /// assert_eq!(bytes, flat_map);
 /// ```
 ///

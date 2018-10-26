@@ -24,7 +24,7 @@ fn utf16_split_all_single_mulititerator(b: &mut Bencher) {
 #[bench]
 fn utf16_split_all_single_flatmap(b: &mut Bencher) {
     b.iter(|| {
-        black_box(&*UTF16CHARS).iter().flat_map(|&u16c| u16c ).for_each(|u| assert!(u != 0) );
+        black_box(&*UTF16CHARS).iter().cloned().flatten().for_each(|u| assert!(u != 0) );
     });
 }
 #[bench]
@@ -44,7 +44,7 @@ fn utf8_split_mostly_ascii_multiiterator(b: &mut Bencher) {
 #[bench]
 fn utf8_split_mostly_ascii_flatmap(b: &mut Bencher) {
     b.iter(|| {
-        black_box(&*UTF8CHARS).iter().flat_map(|&u8c| u8c ).for_each(|b| assert!(b != 0) );
+        black_box(&*UTF8CHARS).iter().cloned().flatten().for_each(|b| assert!(b != 0) );
     });
 }
 #[bench]
