@@ -39,23 +39,23 @@ not require a newer Rust version than 1.42.
 #![cfg_attr(not(feature="std"), no_std)]
 
 #![warn(missing_docs)]
-#![cfg_attr(feature="cargo-clippy", allow(
-    inconsistent_digit_grouping,
-    large_digit_groups,// I sometimes group into UTF-8 control part and codepoint part
-    derive_hash_xor_eq,// tested
-    len_without_is_empty,// tha character types are never empty
-    needless_return,// `foo.bar();\n foo` looks unfinished
-    redundant_closure,// looks weird just passing the name of an enum variant
-    redundant_closure_call,// not redundant in macros
-    cast_lossless,// the sizes are part of the struct name and so won't change
-    many_single_char_names,// the variables are in different scopes
-    needless_range_loop,// the suggested iterator chains are less intuitive
-    trivially_copy_pass_by_ref,// compatibility with char methods originally from AsciiExt
-    identity_op,// applying a set of opereations with varying arguments to many elements looks nice
-))]
-#![cfg_attr(feature="cargo-clippy", warn(doc_markdown, filter_map))]
+#![allow(
+    clippy::inconsistent_digit_grouping,
+    clippy::large_digit_groups,// I sometimes group into UTF-8 control part and codepoint part
+    clippy::derive_hash_xor_eq,// tested
+    clippy::len_without_is_empty,// tha character types are never empty
+    clippy::needless_return,// `foo.bar();\n foo` looks unfinished
+    clippy::redundant_closure,// looks weird just passing the name of an enum variant
+    clippy::redundant_closure_call,// not redundant in macros
+    clippy::cast_lossless,// the sizes are part of the struct name and so won't change
+    clippy::many_single_char_names,// the variables are in different scopes
+    clippy::needless_range_loop,// the suggested iterator chains are less intuitive
+    clippy::trivially_copy_pass_by_ref,// compatibility with char methods originally from AsciiExt
+    clippy::identity_op,// applying a set of opereations with varying arguments to many elements looks nice
+)]
+#![warn(clippy::doc_markdown, clippy::filter_map)]
 // opt-in lints that might be interesting to recheck once in a while:
-//#![cfg_attr(feature="cargo-clippy", warn(result_unwrap_used, option_unwrap_used))]
+//#![warn(clippy::result_unwrap_used, clippy::option_unwrap_used))]
 
 mod errors;
 mod traits;
