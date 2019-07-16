@@ -539,6 +539,19 @@ impl Utf16Char {
     pub unsafe fn from_bmp_unchecked(bmp_codepoint: u16) -> Self {
         Utf16Char{ units: [bmp_codepoint, 0] }
     }
+    /// Checks that the codepoint is in the basic multilingual plane.
+    ///
+    /// # Examples
+    /// ```
+    /// # use encode_unicode::Utf16Char;
+    /// assert_eq!(Utf16Char::from('e').is_bmp(), true);
+    /// assert_eq!(Utf16Char::from('€').is_bmp(), true);
+    /// assert_eq!(Utf16Char::from('𝔼').is_bmp(), false);
+    /// ```
+    #[inline]
+    pub fn is_bmp(&self) -> bool {
+        self.units[1] == 0
+    }
 
     /// The number of units this character is made up of.
     ///
