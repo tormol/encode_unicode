@@ -192,6 +192,21 @@ pub trait CharExt: Sized {
     fn to_utf8_array(self) -> ([u8; 4], usize);
 
     /// Convert this `char` to UTF-16.
+    ///
+    /// The second element is non-zero when a surrogate pair is required.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use encode_unicode::CharExt;
+    ///
+    /// assert_eq!('@'.to_utf16_array(), ['@' as u16, 0]);
+    /// assert_eq!('睷'.to_utf16_array(), ['睷' as u16, 0]);
+    /// assert_eq!('\u{abcde}'.to_utf16_array(), [0xda6f, 0xdcde]);
+    /// ```
+    fn to_utf16_array(self) -> [u16; 2];
+
+    /// Convert this `char` to UTF-16.
     /// The second item is `Some` if a surrogate pair is required.
     ///
     /// # Examples
@@ -266,6 +281,25 @@ pub trait CharExt: Sized {
     /// ```
     fn from_utf8_array(utf8: [u8; 4]) -> Result<Self,InvalidUtf8Array>;
 
+    /// Convert a UTF-16 pair as returned from `.to_utf16_array()` into a `char`.
+    ///
+    /// The second element is ignored when not required.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use encode_unicode::CharExt;
+    /// use encode_unicode::error::InvalidUtf16Array;
+    ///
+    /// assert_eq!(char::from_utf16_array(['x' as u16, 'y' as u16]), Ok('x'));
+    /// assert_eq!(char::from_utf16_array(['睷' as u16, 0]), Ok('睷'));
+    /// assert_eq!(char::from_utf16_array([0xda6f, 0xdcde]), Ok('\u{abcde}'));
+    /// assert_eq!(char::from_utf16_array([0xf111, 0xdbad]), Ok('\u{f111}'));
+    /// assert_eq!(char::from_utf16_array([0xdaaf, 0xdaaf]), Err(InvalidUtf16Array::SecondIsNotTrailingSurrogate));
+    /// assert_eq!(char::from_utf16_array([0xdcac, 0x9000]), Err(InvalidUtf16Array::FirstIsTrailingSurrogate));
+    /// ```
+    fn from_utf16_array(utf16: [u16; 2]) -> Result<Self, InvalidUtf16Array>;
+
     /// Convert a UTF-16 pair as returned from `.to_utf16_tuple()` into a `char`.
     fn from_utf16_tuple(utf16: (u16, Option<u16>)) -> Result<Self, InvalidUtf16Tuple>;
 
@@ -287,6 +321,25 @@ pub trait CharExt: Sized {
     ///
     /// If the slice is empty
     unsafe fn from_utf8_exact_slice_unchecked(src: &[u8]) -> Self;
+
+    /// Convert a UTF-16 array as returned from `.to_utf16_array()` into a
+    /// `char`.
+    ///
+    /// This function is safe because it avoids creating invalid codepoints,
+    /// but the returned value might not be what one expectedd.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use encode_unicode::CharExt;
+    ///
+    /// // starts with a trailing surrogate - converted as if it was a valid
+    /// // surrogate pair anyway.
+    /// assert_eq!(char::from_utf16_array_unchecked([0xdbad, 0xf19e]), '\u{fb59e}');
+    /// // missing trailing surrogate - ditto
+    /// assert_eq!(char::from_utf16_array_unchecked([0xd802, 0]), '\u{10800}');
+    /// ```
+    fn from_utf16_array_unchecked(utf16: [u16;2]) -> Self;
 
     /// Convert a UTF-16 tuple as returned from `.to_utf16_tuple()` into a `char`.
     unsafe fn from_utf16_tuple_unchecked(utf16: (u16, Option<u16>)) -> Self;
@@ -422,6 +475,10 @@ impl CharExt for char {
         self.to_utf16().into_iter()
     }
 
+    fn to_utf16_array(self) -> [u16;2] {
+        let (first, second) = self.to_utf16_tuple();
+        [first, second.unwrap_or(0)]
+    }
     fn to_utf16_tuple(self) -> (u16, Option<u16>) {
         if self <= '\u{ffff}' {// single
             (self as u16, None)
@@ -450,6 +507,19 @@ impl CharExt for char {
         }}
     }
 
+    fn from_utf16_array(utf16: [u16;2]) -> Result<Self, InvalidUtf16Array> {
+        use errors::InvalidUtf16Array::*;
+        if let Some(c) = char::from_u32(utf16[0] as u32) {
+            Ok(c) // single
+        } else if utf16[0] < 0xdc_00  &&  utf16[1] & 0xfc_00 == 0xdc_00 {
+            // correct surrogate pair
+            Ok(combine_surrogates(utf16[0], utf16[1]))
+        } else if utf16[0] < 0xdc_00 {
+            Err(SecondIsNotTrailingSurrogate)
+        } else {
+            Err(FirstIsTrailingSurrogate)
+        }
+    }
     fn from_utf16_tuple(utf16: (u16, Option<u16>)) -> Result<Self, InvalidUtf16Tuple> {
         use errors::InvalidUtf16Tuple::*;
         unsafe{ match utf16 {
@@ -465,6 +535,15 @@ impl CharExt for char {
         }}
     }
 
+    fn from_utf16_array_unchecked(utf16: [u16;2]) -> Self {
+        // treat any array with a surrogate value in [0] as a surrogate because
+        // combine_surrogates() is safe.
+        // `(utf16[0] & 0xf800) == 0xd80` might not be quite as fast as
+        // `utf16[1] != 0`, but avoiding the potential for UB is worth it
+        // since the conversion isn't zero-cost in either case.
+        char::from_u32(utf16[0] as u32)
+            .unwrap_or_else(|| combine_surrogates(utf16[0], utf16[1]) )
+    }
     unsafe fn from_utf16_tuple_unchecked(utf16: (u16, Option<u16>)) -> Self {
         match utf16.1 {
             Some(second) => combine_surrogates(utf16.0, second),
@@ -507,12 +586,17 @@ fn merge_nonascii_unchecked_utf8(src: &[u8]) -> u32 {
     c
 }
 
-// Create a `char` from a leading and a trailing surrogate.
-unsafe fn combine_surrogates(first: u16, second: u16) -> char {
-    let high = (first & 0x_03_ff) as u32;
-    let low = (second & 0x_03_ff) as u32;
-    let c = ((high << 10) | low) + 0x_01_00_00; // no, the constant can't be or'd in
-    char::from_u32_unchecked(c)
+/// Create a `char` from a leading and a trailing surrogate.
+///
+/// This function is safe because it ignores the six most significant bits of
+/// each arguments and always produces a codepoint in 0x01_00_00..=0x10_ff_ff.
+fn combine_surrogates(first: u16,  second: u16) -> char {
+    unsafe {
+        let high = (first & 0x_03_ff) as u32;
+        let low = (second & 0x_03_ff) as u32;
+        let c = ((high << 10) | low) + 0x_01_00_00; // no, the constant can't be or'd in
+        char::from_u32_unchecked(c)
+    }
 }
 
 

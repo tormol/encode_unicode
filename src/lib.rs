@@ -65,7 +65,7 @@ pub mod error {// keeping the public interface in one file
     pub use errors::{InvalidCodepoint, InvalidUtf8};
     pub use errors::{InvalidUtf8FirstByte,InvalidUtf16FirstUnit};
     pub use errors::{InvalidUtf8Slice,InvalidUtf16Slice};
-    pub use errors::{InvalidUtf8Array,InvalidUtf16Tuple};
+    pub use errors::{InvalidUtf8Array,InvalidUtf16Array,InvalidUtf16Tuple};
     pub use errors::Utf16PairError;
 }
 

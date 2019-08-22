@@ -102,6 +102,14 @@ impl InvalidCodepoint {
 }
 
 
+simple!{/// Reasons why a `[u16; 2]` doesn't form a valid UTF-16 codepoint.
+    InvalidUtf16Array {
+        /// The first unit is a trailing/low surrogate, which is never valid.
+        ::FirstIsTrailingSurrogate => "the first unit is a trailing surrogate, which is never valid",
+        /// The second unit is needed, but is not a trailing surrogate.
+        ::SecondIsNotTrailingSurrogate => "the second unit is needed but is not a trailing surrogate",
+    }}
+
 simple!{/// Reasons why one or two `u16`s are not valid UTF-16, in sinking precedence.
     InvalidUtf16Tuple {
         /// The first unit is a trailing/low surrogate, which is never valid.
