@@ -1,3 +1,10 @@
+Version 0.3.6 (2019-08-23)
+==========================
+* Fix pointless undefined behavior in `Utf16Char.to_ascii_char()` (which is part of ascii feature)
+* Widen ascii version requirement to include 1.*
+* Add `[u16; 2]` UTF-16 array alternatives to `(u16, Some(u16))` UTF-16 tuple methods
+* Add `Utf16Char.is_bmp()`
+
 Version 0.3.5 (2018-10-23)
 ==========================
 * Fix docs.rs build failure
