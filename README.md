@@ -20,8 +20,14 @@ UTF-8 and UTF-16 character types, iterators and related methods for `char`, `u8`
 * Utility methods on [`u8`](https://docs.rs/encode_unicode/latest/encode_unicode/trait.U8UtfExt.html)
   and [`u16`](https://docs.rs/encode_unicode/latest/encode_unicode/trait.U16UtfExt.html).
 
-The minimum supported version of Rust is 1.15,
-older versions might work now but can break with a minor update.
+## Minimum supported Rust version
+
+The minimum supported Rust version for 1.0.\* releases is 1.33.0.  
+Later 1.y.0 releases might require newer Rust versions, but the three most
+recent stable releases at the time of publishing will always be supported.
+For example this means that if the current stable Rust version is 1.44 when
+encode_unicode 1.1.0 is released, then encode_unicode 1.1.\* will
+not require a newer Rust version than 1.42.
 
 ## Optional features
 
