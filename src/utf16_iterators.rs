@@ -132,9 +132,9 @@ impl<U:Borrow<Utf16Char>, I:Iterator<Item=U>> Iterator for Utf16CharSplitter<U,I
     fn next(&mut self) -> Option<Self::Item> {
         if self.prev_second == 0 {
             self.inner.next().map(|u16c| {
-                let (first, second) = u16c.borrow().to_tuple();
-                self.prev_second = second.unwrap_or(0);
-                first
+                let units = u16c.borrow().to_array();
+                self.prev_second = units[1];
+                units[0]
             })
         } else {
             let prev_second = self.prev_second;

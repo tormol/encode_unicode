@@ -9,7 +9,8 @@
 use utf16_iterators::Utf16Iterator;
 use traits::{CharExt, U16UtfExt};
 use utf8_char::Utf8Char;
-use errors::{InvalidUtf16Slice, InvalidUtf16Tuple, NonBMPError, EmptyStrError, FromStrError};
+use errors::{InvalidUtf16Slice, InvalidUtf16Array, InvalidUtf16Tuple};
+use errors::{NonBMPError, EmptyStrError, FromStrError};
 extern crate core;
 use self::core::{hash,fmt};
 use self::core::cmp::Ordering;
@@ -105,7 +106,7 @@ impl From<Utf8Char> for Utf16Char {
 }
 impl From<Utf16Char> for char {
     fn from(uc: Utf16Char) -> char {
-        unsafe{ char::from_utf16_tuple_unchecked(uc.to_tuple()) }
+        char::from_utf16_array_unchecked(uc.to_array())
     }
 }
 impl IntoIterator for Utf16Char {
@@ -219,11 +220,12 @@ impl From<AsciiChar> for Utf16Char {
 impl ToAsciiChar for Utf16Char {
     #[inline]
     fn to_ascii_char(self) -> Result<AsciiChar, ToAsciiCharError> {
-        unsafe{ AsciiChar::from(char::from_u32_unchecked(self.units[0] as u32)) }
+        // ToAsciiCHar is not implemented for u16 in ascii 0.9.0
+        if self.is_ascii() {self.units[0] as u8} else {255}.to_ascii_char()
     }
     #[inline]
     unsafe fn to_ascii_char_unchecked(self) -> AsciiChar {
-        AsciiChar::from_unchecked(self.units[0] as u8)
+        (self.units[0] as u8).to_ascii_char_unchecked()
     }
 }
 
@@ -306,7 +308,7 @@ impl PartialOrd<Utf8Char> for Utf16Char {
         self.partial_cmp(&Utf16Char::from(*u8c))
     }
 }
-// The other direction reverse impls in utf8_char.rs
+// The other direction is implemented in utf8_char.rs
 
 /// Only considers the unit equal if the codepoint of the `Utf16Char` is not
 /// made up of a surrogate pair.
@@ -444,6 +446,7 @@ impl Utf16Char {
     /// Store the first UTF-16 codepoint of the slice.
     ///
     /// # Safety
+    ///
     /// The slice must be non-empty and start with a valid UTF-16 codepoint.  
     /// The length of the slice is never checked.
     pub unsafe fn from_slice_start_unchecked(src: &[u16]) -> (Self,usize) {
@@ -453,6 +456,43 @@ impl Utf16Char {
         } else {
             (Utf16Char{ units: [first, 0] }, 1)
         }
+    }
+    /// Validate and store an UTF-16 array as returned from `char.to_utf16_array()`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use encode_unicode::Utf16Char;
+    /// use encode_unicode::error::InvalidUtf16Array;
+    ///
+    /// assert_eq!(Utf16Char::from_array(['x' as u16, 'y' as u16]), Ok(Utf16Char::from('x')));
+    /// assert_eq!(Utf16Char::from_array(['睷' as u16, 0]), Ok(Utf16Char::from('睷')));
+    /// assert_eq!(Utf16Char::from_array([0xda6f, 0xdcde]), Ok(Utf16Char::from('\u{abcde}')));
+    /// assert_eq!(Utf16Char::from_array([0xf111, 0xdbad]), Ok(Utf16Char::from('\u{f111}')));
+    /// assert_eq!(Utf16Char::from_array([0xdaaf, 0xdaaf]), Err(InvalidUtf16Array::SecondIsNotTrailingSurrogate));
+    /// assert_eq!(Utf16Char::from_array([0xdcac, 0x9000]), Err(InvalidUtf16Array::FirstIsTrailingSurrogate));
+    /// ```
+    pub fn from_array(units: [u16; 2]) -> Result<Self,InvalidUtf16Array> {
+        if (units[0] & 0xf8_00) != 0xd8_00 {
+            Ok(Utf16Char { units: [units[0], 0] })
+        } else if units[0] < 0xdc_00  &&  (units[1] & 0xfc_00) == 0xdc_00 {
+            Ok(Utf16Char { units: units })
+        } else if units[0] < 0xdc_00 {
+            Err(InvalidUtf16Array::SecondIsNotTrailingSurrogate)
+        } else {
+            Err(InvalidUtf16Array::FirstIsTrailingSurrogate)
+        }
+    }
+    /// Create an `Utf16Char` from an array as returned from `char.to_utf16_array()`.
+    ///
+    /// # Safety
+    ///
+    /// The units must form a valid codepoint, and the second unit must be 0
+    /// when a surrogate pair is not required.
+    /// Violating this can easily lead to undefined behavior, although unlike
+    /// `char` bad `Utf16Char`s simply existing is not immediately UB.
+    pub unsafe fn from_array_unchecked(units: [u16; 2]) -> Self {
+        Utf16Char { units: units }
     }
     /// Validate and store a UTF-16 pair as returned from `char.to_utf16_tuple()`.
     pub fn from_tuple(utf16: (u16,Option<u16>)) -> Result<Self,InvalidUtf16Tuple> {
@@ -464,18 +504,21 @@ impl Utf16Char {
     ///
     /// # Safety
     ///
-    /// The units must represent a single valid codepoint.
+    /// The units must form a valid codepoint with the second being 0 when a
+    /// surrogate pair is not required.
+    /// Violating this can easily lead to undefined behavior.
     pub unsafe fn from_tuple_unchecked(utf16: (u16,Option<u16>)) -> Self {
-        Utf16Char{ units: [utf16.0, utf16.1.unwrap_or(0)] }
+        Utf16Char { units: [utf16.0, utf16.1.unwrap_or(0)] }
     }
     /// Create an `Utf16Char` from a single unit.
     ///
-    /// The unit must be a codepoint in the basic multilingual plane,
-    /// or, not a part of a surrogate pair.
+    /// Codepoints < '\u{1_0000}' (which fit in a `u16`) are part of the basic
+    /// multilingual plane unless they are reserved for surrogate pairs.
     ///
     /// # Errors
     ///
-    /// Returns `NonBMPError` if the unit is in the range `0xd800..0xe000`.
+    /// Returns `NonBMPError` if the unit is in the range `0xd800..0xe000`
+    /// (which means that it's part of a surrogat pair)
     ///
     /// # Examples
     ///
@@ -497,11 +540,25 @@ impl Utf16Char {
     ///
     /// # Safety
     ///
-    /// The unit must be less than 0xd800 or greater than 0xdfff codepoint in the basic multilingual plane,
-    /// or, not a surrogate.
+    /// The unit must be less than 0xd800 or greater than 0xdfff.
+    /// In other words, not part of a surrogate pair.  
+    /// Violating this can easily lead to undefined behavior.
     #[inline]
     pub unsafe fn from_bmp_unchecked(bmp_codepoint: u16) -> Self {
         Utf16Char{ units: [bmp_codepoint, 0] }
+    }
+    /// Checks that the codepoint is in the basic multilingual plane.
+    ///
+    /// # Examples
+    /// ```
+    /// # use encode_unicode::Utf16Char;
+    /// assert_eq!(Utf16Char::from('e').is_bmp(), true);
+    /// assert_eq!(Utf16Char::from('€').is_bmp(), true);
+    /// assert_eq!(Utf16Char::from('𝔼').is_bmp(), false);
+    /// ```
+    #[inline]
+    pub fn is_bmp(&self) -> bool {
+        self.units[1] == 0
     }
 
     /// The number of units this character is made up of.
@@ -578,6 +635,13 @@ impl Utf16Char {
         }
         if extra != 0 {dst[0] = self.units[0];}
         extra+1
+    }
+    /// Get the character represented as an array of two units.
+    ///
+    /// The second `u16` is zero for codepoints that fit in one unit.
+    #[inline]
+    pub fn to_array(self) -> [u16;2] {
+        self.units
     }
     /// The second `u16` is used for surrogate pairs.
     #[inline]

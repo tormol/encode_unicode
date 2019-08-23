@@ -248,8 +248,11 @@ fn test(c: char) {
         let slice = &boxed[start..start]; // length of slice should be ignored.
         assert_eq!(Utf16Char::from_slice_start_unchecked(slice), (u16c,len));
     }
+    let array = c.to_utf16_array();
     let tuple = c.to_utf16_tuple();
+    assert_eq!(&array[..reference.len()], reference);
     assert_eq!(tuple, (reference[0],reference.get(1).cloned()));
+    assert_eq!(char::from_utf16_array(array), Ok(c));
     assert_eq!(char::from_utf16_tuple(tuple), Ok(c));
     assert_eq!(c.to_utf16().to_char(), c);
     assert_eq!(&Vec::<u16>::from_iter(Some(u16c))[..], reference);

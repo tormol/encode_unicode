@@ -382,7 +382,7 @@ impl<B:Borrow<u16>, I:Iterator<Item=B>> Iterator for Utf16CharMerger<B,I> {
         let first = self.prev.take().or_else(|| self.iter.next() );
         first.map(|first| unsafe {
             match first.borrow().utf16_needs_extra_unit() {
-                Ok(false) => Ok(Utf16Char::from_tuple_unchecked((*first.borrow(), None))),
+                Ok(false) => Ok(Utf16Char::from_array_unchecked([*first.borrow(), 0])),
                 Ok(true) => match self.iter.next() {
                     Some(second) => match second.borrow().utf16_needs_extra_unit() {
                         Err(InvalidUtf16FirstUnit) => Ok(Utf16Char::from_tuple_unchecked((
