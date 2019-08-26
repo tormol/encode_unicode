@@ -69,7 +69,7 @@ single_cause!{
 single_cause!{
     /// Cannot create an `Utf16Char` from a standalone `u16` that is not a
     /// codepoint in the basic multilingual plane, but part of a suurrogate pair.
-    NonBMPError => "is not a codepoint in the basic multilingual plane"
+    NonBmpError => "is not a codepoint in the basic multilingual plane"
 }
 
 

@@ -10,7 +10,7 @@ use utf16_iterators::Utf16Iterator;
 use traits::{CharExt, U16UtfExt};
 use utf8_char::Utf8Char;
 use errors::{InvalidUtf16Slice, InvalidUtf16Array, InvalidUtf16Tuple};
-use errors::{NonBMPError, EmptyStrError, FromStrError};
+use errors::{NonBmpError, EmptyStrError, FromStrError};
 extern crate core;
 use self::core::{hash,fmt};
 use self::core::cmp::Ordering;
@@ -516,7 +516,7 @@ impl Utf16Char {
     ///
     /// # Errors
     ///
-    /// Returns `NonBMPError` if the unit is in the range `0xd800..0xe000`
+    /// Returns `NonBmpError` if the unit is in the range `0xd800..0xe000`
     /// (which means that it's part of a surrogat pair)
     ///
     /// # Examples
@@ -527,11 +527,11 @@ impl Utf16Char {
     /// assert_eq!(Utf16Char::from_bmp('ø' as u16).unwrap(), 'ø');
     /// assert!(Utf16Char::from_bmp(0xdddd).is_err());
     /// ```
-    pub fn from_bmp(bmp_codepoint: u16) -> Result<Self,NonBMPError> {
+    pub fn from_bmp(bmp_codepoint: u16) -> Result<Self,NonBmpError> {
         if bmp_codepoint & 0xf800 != 0xd800 {
             Ok(Utf16Char{ units: [bmp_codepoint, 0] })
         } else {
-            Err(NonBMPError)
+            Err(NonBmpError)
         }
     }
     /// Create an `Utf16Char` from a single unit without checking that it's a
