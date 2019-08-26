@@ -41,7 +41,7 @@ fn load_wikipedia(language: &str,  article: &str,  english: &str,  revision: usi
     let mut reader = reqwest::get(&url).unwrap_or_else(|e| {
         panic!("Cannot get {}: {}", url, e);
     });
-    if reader.status() != reqwest::StatusCode::Ok {
+    if reader.status() != reqwest::StatusCode::OK {
         panic!("Bad URL {}: {}", url, reader.status());
     }
     let mut content = String::new();
