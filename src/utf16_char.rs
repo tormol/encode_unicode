@@ -220,12 +220,11 @@ impl From<AsciiChar> for Utf16Char {
 impl ToAsciiChar for Utf16Char {
     #[inline]
     fn to_ascii_char(self) -> Result<AsciiChar, ToAsciiCharError> {
-        // ToAsciiCHar is not implemented for u16 in ascii 0.9.0
-        if self.is_ascii() {self.units[0] as u8} else {255}.to_ascii_char()
+        self.units[0].to_ascii_char()
     }
     #[inline]
     unsafe fn to_ascii_char_unchecked(self) -> AsciiChar {
-        (self.units[0] as u8).to_ascii_char_unchecked()
+        self.units[0].to_ascii_char_unchecked()
     }
 }
 
