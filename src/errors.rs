@@ -85,9 +85,9 @@ macro_rules! simple {($(#[$tydoc:meta])* $err:ident {
 
 
 simple!{
-    /// Reasons why an `u32` is not a valid Unicode codepoint. The enum values are not stable
+    /// Reasons why an `u32` is not a valid unicode codepoint. The enum values are not stable
     InvalidCodepoint {
-        /// It's reserved for UTF-16 surrogate pairs."
+        /// It's reserved for UTF-16 surrogate pairs.
         Utf16Reserved => "is reserved for UTF-16 surrogate pairs",
         /// It's higher than the highest codepoint (which is 0x10ffff).
         TooHigh => "is higher than the highest codepoint",
@@ -104,17 +104,17 @@ impl InvalidCodepoint {
 
 simple!{/// Reasons why a `[u16; 2]` doesn't form a valid UTF-16 codepoint.
     InvalidUtf16Array {
-        /// The first unit is a trailing/low surrogate, which is never valid.
-        FirstIsTrailingSurrogate => "the first unit is a trailing surrogate, which is never valid",
-        /// The second unit is needed, but is not a trailing surrogate.
-        SecondIsNotTrailingSurrogate => "the second unit is needed but is not a trailing surrogate",
+        /// The first element is a trailing / low surrogate, which is never valid.
+        FirstIsTrailingSurrogate => "the first element is a trailing surrogate",
+        /// The second element is needed, but is not a trailing surrogate.
+        SecondIsNotTrailingSurrogate => "the second element is needed but is not a trailing surrogate",
     }}
 
 simple!{/// Reasons why one or two `u16`s are not valid UTF-16, in sinking precedence.
     InvalidUtf16Tuple {
-        /// The first unit is a trailing/low surrogate, which is never valid.
-        FirstIsTrailingSurrogate => "the first unit is a trailing / low surrogate, which is never valid",
-        /// You provided a second unit, but the first one stands on its own.
+        /// The first unit is a trailing / low surrogate, which is never valid.
+        FirstIsTrailingSurrogate => "the first unit is a trailing surrogate",
+        /// The provided second elemented is not necessary.
         SuperfluousSecond => "the second unit is superfluous",
         /// The first and only unit requires a second unit.
         MissingSecond => "the first unit requires a second unit",
