@@ -2,7 +2,7 @@
 
 UTF-8 and UTF-16 character types, iterators and related methods for `char`, `u8` and `u16`.
 
-[![crates.io page](https://img.shields.io/crates/v/encode_unicode.svg)](https://crates.io/crates/encode_unicode/)
+[![crates.io page](https://img.shields.io/crates/v/encode_unicode.svg)](https://crates.io/crates/encode_unicode/) ![License: Apache-2 or MIT](https://img.shields.io/crates/l/encode_unicode.svg) [![Documentation on docs.rrs](https://docs.rs/encode_unicode/badge.svg)](https://docs.rs/encode_unicode/)
 
 ## Features
 
@@ -59,7 +59,7 @@ conditions.
 ## History
 
 The original purpose of this crate was to provide standins for the then
-unstable `encode_utf8()` and `encode_utf16()`.  
-The standins were removed in 0.3 when Rust 1.15 stabilized the `encode_`
-methods, but the other stuff I added, such as iterators like
-those `encode_utf{8,16}() returned for a while, might still be of use.
+unstable `encode_utf8()` and `encode_utf16()` methods on `char`.  
+The standins were removed in version 0.3 when Rust 1.15 stabilized the
+`encode_` methods, but the other stuff I added, such as iterators like
+those `encode_utf{8,16}()` returned for a while, might still be of use.
