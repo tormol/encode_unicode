@@ -9,7 +9,7 @@
 use utf8_char::Utf8Char;
 use errors::EmptyStrError;
 extern crate core;
-use self::core::{mem, u32, u64};
+use self::core::{u32, u64};
 use self::core::ops::Not;
 use self::core::fmt;
 use self::core::borrow::Borrow;
@@ -24,7 +24,7 @@ pub struct Utf8Iterator (u32);
 
 impl From<Utf8Char> for Utf8Iterator {
     fn from(uc: Utf8Char) -> Self {
-        let used = u32::from_le(unsafe{ mem::transmute(uc.to_array().0) });
+        let used = u32::from_le_bytes(uc.to_array().0);
         // uses u64 because shifting an u32 by 32 bits is a no-op.
         let unused_set = (u64::MAX  <<  (uc.len() as u64*8)) as u32;
         Utf8Iterator(used | unused_set)
@@ -166,7 +166,7 @@ impl<U:Borrow<Utf8Char>, I:Iterator<Item=U>> Iterator for Utf8CharSplitter<U,I> 
         if self.prev == 0 {
             self.inner.next().map(|u8c| {
                 let array = u8c.borrow().to_array().0;
-                self.prev = unsafe{ u32::from_le(mem::transmute(array)) } >> 8;
+                self.prev = u32::from_le_bytes(array) >> 8;
                 array[0]
             })
         } else {
@@ -211,7 +211,7 @@ impl<U:Borrow<Utf8Char>, I:Iterator<Item=U>> Read for Utf8CharSplitter<U,I> {
                         i += 1;
                         written += 1;
                     } else {
-                        let bytes_as_u32 = unsafe{ u32::from_le(mem::transmute(bytes)) };
+                        let bytes_as_u32 = u32::from_le_bytes(bytes);
                         self.prev = bytes_as_u32 >> (8*written);
                         return Ok(i);
                     }

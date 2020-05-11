@@ -15,7 +15,6 @@ use self::core::{hash, fmt, str, ptr};
 use self::core::cmp::Ordering;
 use self::core::borrow::Borrow;
 use self::core::ops::Deref;
-use self::core::mem::transmute;
 #[cfg(feature="std")]
 use self::core::iter::FromIterator;
 #[cfg(feature="ascii")]
@@ -447,16 +446,14 @@ impl Utf8Char {
     /// assert_eq!(Utf8Char::from_array([0xf7, 0xaa, 0x99, 0x88]), Err(Codepoint(TooHigh)));
     /// ```
     pub fn from_array(utf8: [u8;4]) -> Result<Self,InvalidUtf8Array> {
-        unsafe {
-            // perform all validation
-            char::from_utf8_array(utf8)?;
-            let extra = utf8[0].extra_utf8_bytes_unchecked() as u32;
-            // zero unused bytes in one operation by transmuting the arrary to
-            // u32, apply an endian-corrected mask and transmute back
-            let mask = u32::from_le(0xff_ff_ff_ff >> (8*(3-extra)));
-            let unused_zeroed = mask  &  transmute::<_,u32>(utf8);
-            Ok(Utf8Char{ bytes: transmute(unused_zeroed) })
-        }
+        // perform all validation
+        char::from_utf8_array(utf8)?;
+        let extra = utf8[0].extra_utf8_bytes_unchecked() as u32;
+        // zero unused bytes in one operation by transmuting the arrary to
+        // u32, apply an endian-corrected mask and transmute back
+        let mask = u32::from_le(0xff_ff_ff_ff >> (8*(3-extra)));
+        let unused_zeroed = mask  &  u32::from_ne_bytes(utf8); // native endian
+        Ok(Utf8Char{ bytes: unused_zeroed.to_ne_bytes() })
     }
     /// Zero-cost constructor.
     ///
@@ -518,14 +515,14 @@ impl Utf8Char {
         // 0 for '\0' (which has 32 leading zeros).
         // trailing and leading is swapped below to optimize for little-endian
         // architectures.
-        (4 - (u32::to_le(unsafe{transmute(self.bytes)})|1).leading_zeros()/8) as usize
+        (4 - (u32::from_le_bytes(self.bytes)|1).leading_zeros()/8) as usize
 
         // Exploits that the extra bytes have their most significant bit set if
         // in use.
         // Takes fewer instructions than the one above if popcnt can be used,
         // (which it cannot by default,
         //  set RUSTFLAGS='-C target-cpu=native' to enable)
-        //let all: u32 = unsafe{transmute(self.bytes)};
+        //let all = u32::from_ne_bytes(self.bytes);
         //let msb_mask = u32::from_be(0x00808080);
         //let add_one = u32::from_be(0x80000000);
         //((all & msb_mask) | add_one).count_ones() as usize

@@ -15,7 +15,7 @@ use utf16_iterators::*;
 use decoding_iterators::*;
 use error::*;
 extern crate core;
-use self::core::{char, u32, mem};
+use self::core::{char, u32};
 use self::core::ops::{Not, Index, RangeFull};
 use self::core::borrow::Borrow;
 #[cfg(feature="ascii")]
@@ -404,8 +404,7 @@ impl CharExt for char {
             parts |= (0xff_00u32 >> len)  &  0xff;// store length
             parts &= Not::not(1u32 << (7-len));// clear the next bit after it
 
-            let bytes: [u8; 4] = unsafe{ mem::transmute(u32::from_le(parts)) };
-            (bytes, len)
+            (parts.to_le_bytes(), len)
         }
     }
 
