@@ -899,7 +899,7 @@ pub trait SliceExt: Index<RangeFull> {
     /// for (cp_i, (byte_index, r, _)) in slice.utf8char_indices().enumerate().take(8) {
     ///     match r {
     ///         Ok(u8c) => fixed_size[cp_i] = u8c,
-    ///         Err(e) => panic!("Invalid codepoint at index {} ({})", cp_i, e.description()),
+    ///         Err(e) => panic!("Invalid codepoint at index {} ({})", cp_i, e),
     ///     }
     /// }
     /// let chars = ['\u{3ffff}', 'X', 'Y', '\u{77b}', '\u{1019}', 'q', 'u', 'u'];

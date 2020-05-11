@@ -32,6 +32,7 @@ macro_rules! description {($err:ty, $desc:expr) => {
     }
     impl Display for $err {
         fn fmt(&self,  fmtr: &mut Formatter) -> fmt::Result {
+            #![allow(deprecated)] // calling our own function
             write!(fmtr, "{}", self.description())
         }
     }
@@ -203,6 +204,7 @@ macro_rules! complex {
     }
     impl Display for $err {
         fn fmt(&self,  fmtr: &mut Formatter) -> fmt::Result {
+            #![allow(deprecated)]
             match (self.source(), $use_cause) {
                 (Some(d),true) => write!(fmtr, "{}: {}", self.description(), d),
                         _      => write!(fmtr, "{}", self.description()),
