@@ -351,6 +351,52 @@ impl PartialOrd<Utf8Char> for AsciiChar {
  //pub impls that should be together for nicer rustdoc//
 ///////////////////////////////////////////////////////
 impl Utf8Char {
+    /// A `const fn` alternative to the trait-based `Utf8Char::from(char)`.
+    ///
+    /// It might currently be slightly slower than `Utf8Char::from()` at
+    /// run-time, due to the limited language features available in `const fn`s
+    /// as of Rust 1.44.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use encode_unicode::Utf8Char;
+    /// const REPLACEMENT_CHARACTER: Utf8Char = Utf8Char::new('\u{fffd}');
+    /// ```
+    pub const fn new(c: char) -> Self {
+        let ascii = Utf8Char{bytes: [c as u8, 0, 0, 0]};
+        let multibyte = {
+            // How many extra UTF-8 bytes that are needed to represent an
+            // UTF-32 codepoint with a number of bits.
+            // Stored as a bit-packed array using two bits per value.
+            // 0..=7 bits = no extra bytes
+            // +4 = 8..=11 bits = one xtra byte (5+6 bits)
+            // +5 = 12..=16 bits = two extra bytes (4+6+6 bits)
+            // +5 = 17..=21 bits = three extra bytes (3+6+6+6 bits)
+            const EXTRA_BYTES: u64 = 0b11_11_11_11_11__10_10_10_10_10__01_01_01_01__00_00_00_00_00_00_00__00;
+            let bits_used = 32 - (c as u32).leading_zeros();
+            let len = 1 + ((EXTRA_BYTES >> (bits_used*2)) & 0b11);
+            // copied from CharExt::to_utf8_array()
+            let mut c = c as u32;
+            let mut parts = 0;// convert to 6-bit bytes
+                        parts |= c & 0x3f;  c>>=6;
+            parts<<=8;  parts |= c & 0x3f;  c>>=6;
+            parts<<=8;  parts |= c & 0x3f;  c>>=6;
+            parts<<=8;  parts |= c & 0x3f;
+            parts |= 0x80_80_80_80;// set the most significant bit
+            parts >>= 8*(4-len);// right-align bytes
+            // Now, unused bytes are zero, (which matters for Utf8Char.eq())
+            // and the rest are 0b10xx_xxxx
+
+            // set header on first byte
+            parts |= (0xff_00u32 >> len)  &  0xff;// store length
+            parts &= !(1u32 << (7-len));// clear the next bit after it
+
+            Utf8Char {bytes: parts.to_le_bytes()}
+        };
+        [ascii, multibyte][((c as u32) > 127) as usize]
+    }
+
     /// Create an `Utf8Char` from the first codepoint in a `str`.
     ///
     /// Returns an error if the `str` is empty.
@@ -463,7 +509,7 @@ impl Utf8Char {
     /// unused bytes zeroed.  
     /// Bad values can easily lead to undefined behavior.
     #[inline]
-    pub unsafe fn from_array_unchecked(utf8: [u8;4]) -> Self {
+    pub const unsafe fn from_array_unchecked(utf8: [u8;4]) -> Self {
         Utf8Char{ bytes: utf8 }
     }
     /// Create an `Utf8Char` from a single byte.
@@ -481,12 +527,8 @@ impl Utf8Char {
     /// assert_eq!(Utf8Char::from_ascii(b'a').unwrap(), 'a');
     /// assert!(Utf8Char::from_ascii(128).is_err());
     /// ```
-    pub fn from_ascii(ascii: u8) -> Result<Self,NonAsciiError> {
-        if ascii as i8 >= 0 {
-            Ok(Utf8Char{ bytes: [ascii, 0, 0, 0] })
-        } else {
-            Err(NonAsciiError)
-        }
+    pub const fn from_ascii(ascii: u8) -> Result<Self,NonAsciiError> {
+        [Ok(Utf8Char{ bytes: [ascii, 0, 0, 0] }), Err(NonAsciiError)][(ascii >> 7) as usize]
     }
     /// Create an `Utf8Char` from a single byte without checking that it's a
     /// valid codepoint on its own, which is only true for ASCII characters.
@@ -495,7 +537,7 @@ impl Utf8Char {
     ///
     /// The byte must be less than 128.
     #[inline]
-    pub unsafe fn from_ascii_unchecked(ascii: u8) -> Self {
+    pub const unsafe fn from_ascii_unchecked(ascii: u8) -> Self {
         Utf8Char{ bytes: [ascii, 0, 0, 0] }
     }
 
@@ -504,7 +546,7 @@ impl Utf8Char {
     /// Is between 1 and 4 (inclusive) and identical to `.as_ref().len()` or
     /// `.as_char().len_utf8()`.
     #[inline]
-    pub fn len(self) -> usize {
+    pub const fn len(self) -> usize {
         // Invariants of the extra bytes enambles algorithms that
         // `u8.extra_utf8_bytes_unchecked()` cannot use.
         // Some of them turned out to require fewer x86 instructions:
@@ -530,7 +572,7 @@ impl Utf8Char {
     // There is no .is_emty() because this type is never empty.
 
     /// Checks that the codepoint is an ASCII character.
-    pub fn is_ascii(&self) -> bool {
+    pub const fn is_ascii(&self) -> bool {
         self.bytes[0] <= 127
     }
     /// Checks that two characters are an ASCII case-insensitive match.

@@ -187,6 +187,7 @@ fn test(c: char) {
     let (arr,arrlen) = u8c.to_array();
     assert_eq!(arrlen, len);
     assert_eq!(Utf8Char::from_array(arr), Ok(u8c));
+    assert_eq!(Utf8Char::new(c), u8c);
     assert_eq!(c.to_utf8_array(),  (arr, len));
 
     let str_ = str::from_utf8(reference).unwrap();

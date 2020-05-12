@@ -24,12 +24,12 @@ Miscellaneous UTF-8 and UTF-16 types and methods.
 
 # Minimum supported Rust version
 
-The minimum supported Rust version for 1.0.\* releases is 1.33.0.  
+The minimum supported Rust version for 1.0.\* releases is 1.44.0.  
 Later 1.y.0 releases might require newer Rust versions, but the three most
 recent stable releases at the time of publishing will always be supported.
-For example this means that if the current stable Rust version is 1.44 when
+For example this means that if the current stable Rust version is 1.55 when
 encode_unicode 1.1.0 is released, then encode_unicode 1.1.\* will
-not require a newer Rust version than 1.42.
+not require a newer Rust version than 1.53.
 
 [crates.io page](https://crates.io/crates/encode_unicode)  
 [github repository](https://github.com/tormol/encode_unicode)
