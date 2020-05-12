@@ -21,7 +21,7 @@ struct Distribution {
     utf8: [usize; 4],
 }
 
-fn read(file: &mut Read) -> (Distribution, Option<io::Error>) {
+fn read(file: &mut dyn Read) -> (Distribution, Option<io::Error>) {
     let mut r = Distribution::default();
     let mut buf = [0u8; 4096];
     loop {
