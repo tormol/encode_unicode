@@ -230,6 +230,7 @@ fn test(c: char) {
     assert_eq!(reference[0].utf16_needs_extra_unit(), Ok(len==2));
     assert_eq!(reference[0].is_utf16_leading_surrogate(), len==2);
     assert_eq!(u16c.as_ref(), reference);
+    assert_eq!(Utf16Char::new(c), u16c);
     let mut longer = [0; 3];
     longer[..len].copy_from_slice(reference);
     assert_eq!(char::from_utf16_slice_start(reference), Ok((c,len)));

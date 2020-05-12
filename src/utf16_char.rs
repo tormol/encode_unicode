@@ -381,6 +381,27 @@ impl PartialOrd<Utf16Char> for AsciiChar {
  //pub impls that should be together for nicer rustdoc//
 ///////////////////////////////////////////////////////
 impl Utf16Char {
+    /// A `const fn` alternative to the trait-based `Utf16Char::from(char)`.
+    ///
+    /// It might currently be slightly slower than `Utf16Char::from()` at
+    /// run-time, due to the current lack of branching in `const fn`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use encode_unicode::Utf16Char;
+    /// const REPLACEMENT_CHARACTER: Utf16Char = Utf16Char::new('\u{fffd}');
+    /// ```
+    pub const fn new(c: char) -> Self {
+        let single = Utf16Char{ units: [c as u16, 0] };
+        let pair = {
+            let c = (c as u32).wrapping_sub(0x01_00_00);
+            let first = 0xd8_00 | (c >> 10) as u16;
+            let second = 0xdc_00 | (c & 0x0_03_ff) as u16;
+            Utf16Char{ units: [first, second] }
+        };
+        [single, pair][(c as u32 > 0xffff) as usize]
+    }
     /// Create an `Utf16Char` from the first codepoint in a string slice,
     /// converting from UTF-8 to UTF-16.
     ///
@@ -490,7 +511,7 @@ impl Utf16Char {
     /// when a surrogate pair is not required.
     /// Violating this can easily lead to undefined behavior, although unlike
     /// `char` bad `Utf16Char`s simply existing is not immediately UB.
-    pub unsafe fn from_array_unchecked(units: [u16; 2]) -> Self {
+    pub const unsafe fn from_array_unchecked(units: [u16; 2]) -> Self {
         Utf16Char { units }
     }
     /// Validate and store a UTF-16 pair as returned from `char.to_utf16_tuple()`.
@@ -527,12 +548,10 @@ impl Utf16Char {
     /// assert_eq!(Utf16Char::from_bmp('ø' as u16).unwrap(), 'ø');
     /// assert!(Utf16Char::from_bmp(0xdddd).is_err());
     /// ```
-    pub fn from_bmp(bmp_codepoint: u16) -> Result<Self,NonBmpError> {
-        if bmp_codepoint & 0xf800 != 0xd800 {
-            Ok(Utf16Char{ units: [bmp_codepoint, 0] })
-        } else {
-            Err(NonBmpError)
-        }
+    pub const fn from_bmp(bmp_codepoint: u16) -> Result<Self,NonBmpError> {
+        let is_not_bmp = bmp_codepoint & 0xf800 == 0xd800;
+        let if_good = Utf16Char{ units: [bmp_codepoint, 0] };
+        [Ok(if_good), Err(NonBmpError)][is_not_bmp as usize]
     }
     /// Create an `Utf16Char` from a single unit without checking that it's a
     /// valid codepoint on its own.
@@ -543,7 +562,7 @@ impl Utf16Char {
     /// In other words, not part of a surrogate pair.  
     /// Violating this can easily lead to undefined behavior.
     #[inline]
-    pub unsafe fn from_bmp_unchecked(bmp_codepoint: u16) -> Self {
+    pub const unsafe fn from_bmp_unchecked(bmp_codepoint: u16) -> Self {
         Utf16Char{ units: [bmp_codepoint, 0] }
     }
     /// Checks that the codepoint is in the basic multilingual plane.
@@ -556,7 +575,7 @@ impl Utf16Char {
     /// assert_eq!(Utf16Char::from('𝔼').is_bmp(), false);
     /// ```
     #[inline]
-    pub fn is_bmp(&self) -> bool {
+    pub const fn is_bmp(&self) -> bool {
         self.units[1] == 0
     }
 
@@ -565,14 +584,14 @@ impl Utf16Char {
     /// Is either 1 or 2 and identical to `.as_char().len_utf16()`
     /// or `.as_ref().len()`.
     #[inline]
-    pub fn len(self) -> usize {
+    pub const fn len(self) -> usize {
         1 + (self.units[1] as usize >> 15)
     }
     // There is no `.is_emty()` because it would always return false.
 
     /// Checks that the codepoint is an ASCII character.
     #[inline]
-    pub fn is_ascii(&self) -> bool {
+    pub const fn is_ascii(&self) -> bool {
         self.units[0] <= 127
     }
     /// Checks that two characters are an ASCII case-insensitive match.
@@ -639,12 +658,12 @@ impl Utf16Char {
     ///
     /// The second `u16` is zero for codepoints that fit in one unit.
     #[inline]
-    pub fn to_array(self) -> [u16;2] {
+    pub const fn to_array(self) -> [u16;2] {
         self.units
     }
     /// The second `u16` is used for surrogate pairs.
     #[inline]
-    pub fn to_tuple(self) -> (u16,Option<u16>) {
-        (self.units[0],  if self.units[1]==0 {None} else {Some(self.units[1])})
+    pub const fn to_tuple(self) -> (u16,Option<u16>) {
+        (self.units[0], [None, Some(self.units[1])][self.units[1] as usize >> 15])
     }
 }
