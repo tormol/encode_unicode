@@ -462,7 +462,7 @@ impl Utf8Char {
     pub unsafe fn from_slice_start_unchecked(src: &[u8]) -> (Self,usize) {
         let len = 1+src.get_unchecked(0).extra_utf8_bytes_unchecked();
         let mut bytes = [0; 4];
-        ptr::copy_nonoverlapping(src.as_ptr(), &mut bytes[0] as *mut u8, len);
+        ptr::copy_nonoverlapping(src.as_ptr(), bytes.as_mut_ptr() as *mut u8, len);
         (Utf8Char{bytes}, len)
     }
     /// Create an `Utf8Char` from a byte array after validating it.
