@@ -1,0 +1,41 @@
+language: rust
+cache: cargo
+before_cache:
+  - rm -rf target/
+
+jobs:
+  include:
+  - name: stable
+    arch: amd64
+    rust: stable
+    script:
+      - cargo check
+      - RUST_BACKTRACE=1 cargo test --no-fail-fast
+      - cargo check --tests --no-default-features
+  - name: nightly
+    arch: amd64
+    rust: nightly
+    script:
+      - cargo check
+      - RUST_BACKTRACE=1 cargo test --no-fail-fast
+      - cargo check --tests --no-default-features
+  - name: MSRV
+    arch: amd64
+    rust: 1.44.0
+    script:
+      - cargo check
+      - cargo check --no-default-features
+      - cargo check --no-default-features --features alloc
+  - name: big-endian
+    arch: s390x
+    rust: stable
+    script:
+      - cargo check
+      - RUST_BACKTRACE=1 cargo test --no-fail-fast
+  - name: clippy
+    arch: amd64
+    rust: stable
+    before_script:
+    - rustup component add clippy
+    script:
+    - cargo clippy
