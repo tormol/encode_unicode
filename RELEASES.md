@@ -11,10 +11,10 @@ Version 0.3.5 (2018-10-23)
 
 Version 0.3.4 (2018-10-23)
 ==========================
-* Fix UB in UTF-8 validation which lead to invalid codepoints being accepted in release mode
+* Fix UB in UTF-8 validation which lead to invalid codepoints being accepted in release mode.
 * Add fallible decoding iterator adapters `Utf8CharMerger` and `Utf16CharMerger`
   and slice-based iterators `Utf8CharDecoder` and `Utf16CharDecoder`
-* Widen ascii version requirement from 0.8.* to 0.8.0 - 0.10.*
+* Widen ascii version requirement from 0.8.\* to 0.8.0 - 0.10.\*
 * Implement creating / extending `String`s from `Utf16Char`-producing iterators
 
 Version 0.3.3 (2018-10-16)
