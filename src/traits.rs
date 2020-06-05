@@ -268,7 +268,7 @@ pub trait CharExt: Sized {
     /// use encode_unicode::CharExt;
     /// use encode_unicode::error::InvalidUtf8Array::*;
     /// use encode_unicode::error::InvalidUtf8::*;
-    /// use encode_unicode::error::InvalidCodepoint::*;
+    /// use encode_unicode::error::CodepointError::*;
     ///
     /// assert_eq!(char::from_utf8_array([b'A', 0, 0, 0]), Ok('A'));
     /// assert_eq!(char::from_utf8_array([0xf4, 0x8b, 0xbb, 0xbb]), Ok('\u{10befb}'));
@@ -358,16 +358,16 @@ pub trait CharExt: Sized {
     ///
     /// ```
     /// use encode_unicode::CharExt;
-    /// use encode_unicode::error::InvalidCodepoint;
+    /// use encode_unicode::error::CodepointError;
     ///
     /// assert_eq!(char::from_u32_detailed(0x41), Ok('A'));
-    /// assert_eq!(char::from_u32_detailed(0x40_00_00), Err(InvalidCodepoint::TooHigh));
-    /// assert_eq!(char::from_u32_detailed(0xd951), Err(InvalidCodepoint::Utf16Reserved));
-    /// assert_eq!(char::from_u32_detailed(0xdddd), Err(InvalidCodepoint::Utf16Reserved));
+    /// assert_eq!(char::from_u32_detailed(0x40_00_00), Err(CodepointError::TooHigh));
+    /// assert_eq!(char::from_u32_detailed(0xd951), Err(CodepointError::Utf16Reserved));
+    /// assert_eq!(char::from_u32_detailed(0xdddd), Err(CodepointError::Utf16Reserved));
     /// assert_eq!(char::from_u32_detailed(0xdd), Ok('Ý'));
     /// assert_eq!(char::from_u32_detailed(0x1f331), Ok('🌱'));
     /// ```
-    fn from_u32_detailed(c: u32) -> Result<Self,InvalidCodepoint>;
+    fn from_u32_detailed(c: u32) -> Result<Self,CodepointError>;
 }
 
 
@@ -549,11 +549,11 @@ impl CharExt for char {
     }
 
 
-    fn from_u32_detailed(c: u32) -> Result<Self,InvalidCodepoint> {
+    fn from_u32_detailed(c: u32) -> Result<Self,CodepointError> {
         match char::from_u32(c) {
             Some(c) => Ok(c),
-            None if c > 0x10_ff_ff => Err(InvalidCodepoint::TooHigh),
-            None => Err(InvalidCodepoint::Utf16Reserved),
+            None if c > 0x10_ff_ff => Err(CodepointError::TooHigh),
+            None => Err(CodepointError::Utf16Reserved),
         }
     }
 }
@@ -909,7 +909,7 @@ pub trait SliceExt: Index<RangeFull> {
     #[cfg_attr(not(feature="std"), doc=" ```no_compile")]
     /// use encode_unicode::{SliceExt, Utf8Char};
     /// use encode_unicode::error::InvalidUtf8Slice::*;
-    /// use encode_unicode::error::{InvalidUtf8, InvalidUtf8FirstByte, InvalidCodepoint};
+    /// use encode_unicode::error::{InvalidUtf8, InvalidUtf8FirstByte, CodepointError};
     ///
     /// let bytes = b"\xfa-\xf4\x8f\xee\xa1\x8f-\xed\xa9\x87\xf0\xcc\xbb";
     /// let mut errors = Vec::new();
@@ -931,7 +931,7 @@ pub trait SliceExt: Index<RangeFull> {
     ///     ( 0, Utf8(InvalidUtf8::FirstByte(InvalidUtf8FirstByte::TooLongSequence))),
     ///     ( 2, Utf8(InvalidUtf8::NotAContinuationByte(2))),
     ///     ( 3, Utf8(InvalidUtf8::FirstByte(InvalidUtf8FirstByte::ContinuationByte))),
-    ///     ( 8, Codepoint(InvalidCodepoint::Utf16Reserved)),
+    ///     ( 8, Codepoint(CodepointError::Utf16Reserved)),
     ///     ( 9, Utf8(InvalidUtf8::FirstByte(InvalidUtf8FirstByte::ContinuationByte))),
     ///     (10, Utf8(InvalidUtf8::FirstByte(InvalidUtf8FirstByte::ContinuationByte))),
     ///     (11, TooShort(4)), // (but it was not the last element returned!)

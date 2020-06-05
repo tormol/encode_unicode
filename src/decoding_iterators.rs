@@ -19,7 +19,7 @@ use errors::InvalidUtf8Slice::*;
 use errors::InvalidUtf8::*;
 use errors::InvalidUtf8FirstByte::*;
 use errors::InvalidUtf16Slice::*;
-use errors::InvalidCodepoint::*;
+use errors::CodepointError::*;
 use errors::Utf16PairError::*;
 use utf8_char::Utf8Char;
 use utf16_char::Utf16Char;

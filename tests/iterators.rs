@@ -17,7 +17,7 @@ use encode_unicode::iterator::Utf8CharSplitter;
 use encode_unicode::error::InvalidUtf8Slice::*;
 use encode_unicode::error::InvalidUtf8::*;
 use encode_unicode::error::InvalidUtf8FirstByte::*;
-use encode_unicode::error::InvalidCodepoint::*;
+use encode_unicode::error::CodepointError::*;
 use encode_unicode::error::Utf16PairError::*;
 use std::io::Read;
 use std::cmp::min;

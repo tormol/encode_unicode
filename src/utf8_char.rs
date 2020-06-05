@@ -480,7 +480,7 @@ impl Utf8Char {
     /// use encode_unicode::Utf8Char;
     /// use encode_unicode::error::InvalidUtf8Array::*;
     /// use encode_unicode::error::InvalidUtf8::*;
-    /// use encode_unicode::error::InvalidCodepoint::*;
+    /// use encode_unicode::error::CodepointError::*;
     ///
     /// assert_eq!(Utf8Char::from_array([b'A', 0, 0, 0]), Ok(Utf8Char::from('A')));
     /// assert_eq!(Utf8Char::from_array([0xf4, 0x8b, 0xbb, 0xbb]), Ok(Utf8Char::from('\u{10befb}')));

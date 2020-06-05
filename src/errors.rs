@@ -54,21 +54,21 @@ single_cause!{
 }
 
 single_cause!{
+    /// Error returned by [`Utf8Char::from_ascii()`](struct.Utf8Char.html#method.from_ascii)
+    /// for bytes that are not ASCII characters.
+    NonAsciiError => "not an ASCII character"
+}
+
+single_cause!{
+    /// Error returned by [`Utf16Char::from_bmp()`](struct.Utf16Char#method.from_bmp)
+    /// for units that are not a standalone codepoint.
+    NonBmpError => "not a codepoint in the basic multilingual plane"
+}
+
+single_cause!{
     /// Cannot create an `Utf8Char` or `Utf16Char` from the first codepoint of a str,
     /// because there are none.
     EmptyStrError => "is empty"
-}
-
-single_cause!{
-    /// Cannot create an `Utf8Char` from a standalone `u8`
-    /// that is not an ASCII character.
-    NonAsciiError => "is not an ASCII character"
-}
-
-single_cause!{
-    /// Cannot create an `Utf16Char` from a standalone `u16` that is not a
-    /// codepoint in the basic multilingual plane, but part of a suurrogate pair.
-    NonBmpError => "is not a codepoint in the basic multilingual plane"
 }
 
 
@@ -87,14 +87,14 @@ macro_rules! simple {($(#[$tydoc:meta])* $err:ident {
 
 simple!{
     /// Reasons why an `u32` is not a valid unicode codepoint. The enum values are not stable
-    InvalidCodepoint {
+    CodepointError {
         /// It's reserved for UTF-16 surrogate pairs.
         Utf16Reserved => "is reserved for UTF-16 surrogate pairs",
         /// It's higher than the highest codepoint (which is 0x10ffff).
         TooHigh => "is higher than the highest codepoint",
     }}
-use self::InvalidCodepoint::*;
-impl InvalidCodepoint {
+use self::CodepointError::*;
+impl CodepointError {
     /// Get the range of values for which this error would be given.
     pub fn error_range(self) -> RangeInclusive<u32> {match self {
         Utf16Reserved => 0xd8_00..=0xdf_ff,
@@ -149,11 +149,12 @@ simple!{/// Types of invalid sequences encountered by `Utf16CharDecoder`.
 
 simple!{/// Reasons why `Utf8Char::from_str()` or `Utf16Char::from_str()` failed.
     FromStrError {
-        /// `Utf8Char` or `Utf16Char` cannot store more than a single codepoint.
-        MultipleCodepoints => "has more than one codepoint",
-        /// `Utf8Char` or `Utf16Char` cannot be empty.
-        Empty => "is empty",
-    }}
+        /// `Utf8Char` and `Utf16Char` cannot store more than a single codepoint.
+        MultipleCodepoints => "Contains more than one codepoint",
+        /// `Utf8Char` and `Utf16Char` cannot be empty.
+        Empty => "Is empty",
+    }
+}
 
 
 simple!{/// Reasons why a byte is not the start of a UTF-8 codepoint.
@@ -250,11 +251,11 @@ pub enum InvalidUtf8Array {
     /// Not a valid UTF-8 sequence.
     Utf8(InvalidUtf8),
     /// Not a valid unicode codepoint.
-    Codepoint(InvalidCodepoint),
+    Codepoint(CodepointError),
 }
 complex!{InvalidUtf8Array {
         InvalidUtf8 => InvalidUtf8Array::Utf8,
-        InvalidCodepoint => InvalidUtf8Array::Codepoint,
+        CodepointError => InvalidUtf8Array::Codepoint,
     } {
         InvalidUtf8Array::Utf8(_) => "the sequence is invalid UTF-8",
         InvalidUtf8Array::Codepoint(_) => "the encoded codepoint is invalid",
@@ -271,13 +272,13 @@ pub enum InvalidUtf8Slice {
     /// Something is certainly wrong with the first byte.
     Utf8(InvalidUtf8),
     /// The encoded codepoint is invalid:
-    Codepoint(InvalidCodepoint),
+    Codepoint(CodepointError),
     /// The slice is too short; n bytes was required.
     TooShort(usize),
 }
 complex!{InvalidUtf8Slice {
         InvalidUtf8 => InvalidUtf8Slice::Utf8,
-        InvalidCodepoint => InvalidUtf8Slice::Codepoint,
+        CodepointError => InvalidUtf8Slice::Codepoint,
     } {
         InvalidUtf8Slice::Utf8(_) => "the sequence is invalid UTF-8",
         InvalidUtf8Slice::Codepoint(_) => "the encoded codepoint is invalid",

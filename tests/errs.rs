@@ -16,7 +16,7 @@ use encode_unicode::*;
 use encode_unicode::error::*;
 use encode_unicode::error::InvalidUtf8Array as a;
 use encode_unicode::error::InvalidUtf8Slice as s;
-use encode_unicode::error::InvalidCodepoint::*;
+use encode_unicode::error::CodepointError::*;
 use encode_unicode::error::InvalidUtf8::*;
 use encode_unicode::error::InvalidUtf8FirstByte::*;
 
