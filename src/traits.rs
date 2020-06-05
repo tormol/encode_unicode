@@ -14,6 +14,7 @@ use utf8_iterators::*;
 use utf16_iterators::*;
 use decoding_iterators::*;
 use error::*;
+use error::Utf8ErrorKind::*;
 extern crate core;
 use self::core::{char, u32};
 use self::core::ops::{Not, Index, RangeFull};
@@ -34,12 +35,12 @@ pub trait U8UtfExt {
     /// An error is returned if the byte is not a valid start of an UTF-8
     /// codepoint:
     ///
-    /// * `128..192`: ContinuationByte
-    /// * `248..`: TooLongSequence
+    /// * `128..192`: `UnexpectedContinuationByte`
+    /// * `248..`: `NonUtf8Byte`
     ///
     /// Values in 244..248 represent a too high codepoint, but do not cause an
     /// error.
-    fn extra_utf8_bytes(self) -> Result<usize,InvalidUtf8FirstByte>;
+    fn extra_utf8_bytes(self) -> Result<usize,Utf8Error>;
 
     /// How many more bytes will you need to complete this codepoint?
     ///
@@ -51,16 +52,15 @@ pub trait U8UtfExt {
 
 impl U8UtfExt for u8 {
     #[inline]
-    fn extra_utf8_bytes(self) -> Result<usize,InvalidUtf8FirstByte> {
-        use error::InvalidUtf8FirstByte::{ContinuationByte, TooLongSequence};
+    fn extra_utf8_bytes(self) -> Result<usize,Utf8Error> {
         // the bit twiddling is explained in extra_utf8_bytes_unchecked()
         if self < 128 {
             return Ok(0);// ASCII
         }
         match ((self as u32)<<25).not().leading_zeros() {
             n @ 1..=3 => Ok(n as usize),// start of multibyte
-            0 => Err(ContinuationByte),// following byte
-            _ => Err(TooLongSequence),// too big
+            0 => Err(Utf8Error{ kind: UnexpectedContinuationByte }),// following byte
+            _ => Err(Utf8Error{ kind: NonUtf8Byte }),// too big
         }
     }
     #[inline]
@@ -234,18 +234,17 @@ pub trait CharExt: Sized {
     ///
     /// ```
     /// use encode_unicode::CharExt;
-    /// use encode_unicode::error::InvalidUtf8Slice::*;
-    /// use encode_unicode::error::InvalidUtf8::*;
+    /// use encode_unicode::error::Utf8ErrorKind::*;
     ///
     /// assert_eq!(char::from_utf8_slice_start(&[b'A', b'B', b'C']), Ok(('A',1)));
     /// assert_eq!(char::from_utf8_slice_start(&[0xdd, 0xbb]), Ok(('\u{77b}',2)));
     ///
-    /// assert_eq!(char::from_utf8_slice_start(&[]), Err(TooShort(1)));
-    /// assert_eq!(char::from_utf8_slice_start(&[0xf0, 0x99]), Err(TooShort(4)));
-    /// assert_eq!(char::from_utf8_slice_start(&[0xee, b'F', 0x80]), Err(Utf8(NotAContinuationByte(1))));
-    /// assert_eq!(char::from_utf8_slice_start(&[0xee, 0x99, 0x0f]), Err(Utf8(NotAContinuationByte(2))));
+    /// assert_eq!(char::from_utf8_slice_start(&[]).unwrap_err(), TooFewBytes);
+    /// assert_eq!(char::from_utf8_slice_start(&[0xf0, 0x99]).unwrap_err(), TooFewBytes);
+    /// assert_eq!(char::from_utf8_slice_start(&[0xee, b'F', 0x80]).unwrap_err(), InterruptedSequence);
+    /// assert_eq!(char::from_utf8_slice_start(&[0xee, 0x99, 0x0f]).unwrap_err(), InterruptedSequence);
     /// ```
-    fn from_utf8_slice_start(src: &[u8]) -> Result<(Self,usize),InvalidUtf8Slice>;
+    fn from_utf8_slice_start(src: &[u8]) -> Result<(Self,usize),Utf8Error>;
 
     /// Create a `char` from the start of an UTF-16 slice,
     /// and also return how many units were used.
@@ -266,20 +265,18 @@ pub trait CharExt: Sized {
     ///
     /// ```
     /// use encode_unicode::CharExt;
-    /// use encode_unicode::error::InvalidUtf8Array::*;
-    /// use encode_unicode::error::InvalidUtf8::*;
-    /// use encode_unicode::error::CodepointError::*;
+    /// use encode_unicode::error::Utf8ErrorKind::*;
     ///
     /// assert_eq!(char::from_utf8_array([b'A', 0, 0, 0]), Ok('A'));
     /// assert_eq!(char::from_utf8_array([0xf4, 0x8b, 0xbb, 0xbb]), Ok('\u{10befb}'));
     /// assert_eq!(char::from_utf8_array([b'A', b'B', b'C', b'D']), Ok('A'));
     /// assert_eq!(char::from_utf8_array([0, 0, 0xcc, 0xbb]), Ok('\0'));
     ///
-    /// assert_eq!(char::from_utf8_array([0xef, b'F', 0x80, 0x80]), Err(Utf8(NotAContinuationByte(1))));
-    /// assert_eq!(char::from_utf8_array([0xc1, 0x80, 0, 0]), Err(Utf8(Overlong)));
-    /// assert_eq!(char::from_utf8_array([0xf7, 0xaa, 0x99, 0x88]), Err(Codepoint(TooHigh)));
+    /// assert_eq!(char::from_utf8_array([0xef, b'F', 0x80, 0x80]).unwrap_err(), InterruptedSequence);
+    /// assert_eq!(char::from_utf8_array([0xc1, 0x80, 0, 0]).unwrap_err(), OverlongEncoding);
+    /// assert_eq!(char::from_utf8_array([0xf7, 0xaa, 0x99, 0x88]).unwrap_err(), TooHighCodepoint);
     /// ```
-    fn from_utf8_array(utf8: [u8; 4]) -> Result<Self,InvalidUtf8Array>;
+    fn from_utf8_array(utf8: [u8; 4]) -> Result<Self,Utf8Error>;
 
     /// Convert a UTF-16 pair as returned from `.to_utf16_array()` into a `char`.
     ///
@@ -409,47 +406,51 @@ impl CharExt for char {
     }
 
 
-    fn from_utf8_slice_start(src: &[u8]) -> Result<(Self,usize),InvalidUtf8Slice> {
-        use errors::InvalidUtf8::*;
-        use errors::InvalidUtf8Slice::*;
+    fn from_utf8_slice_start(src: &[u8]) -> Result<(Self,usize),Utf8Error> {
         let first = match src.first() {
             Some(first) => *first,
-            None => return Err(TooShort(1)),
+            None => return Err(Utf8Error{ kind: TooFewBytes }),
         };
         let bytes = match first.extra_utf8_bytes() {
-            Err(e)    => return Err(Utf8(FirstByte(e))),
+            Err(e)    => return Err(e),
             Ok(0)     => return Ok((first as char, 1)),
             Ok(extra) if extra >= src.len()
-                      => return Err(TooShort(extra+1)),
+                      => return Err(Utf8Error{ kind: TooFewBytes }),
             Ok(extra) => &src[..=extra],
         };
-        if let Some(i) = bytes.iter().skip(1).position(|&b| (b >> 6) != 0b10 ) {
-            Err(Utf8(NotAContinuationByte(i+1)))
+        if bytes.iter().skip(1).any(|&b| (b >> 6) != 0b10 ) {
+            Err(Utf8Error{ kind: InterruptedSequence })
         } else if overlong(bytes[0], bytes[1]) {
-            Err(Utf8(Overlong))
+            Err(Utf8Error{ kind: OverlongEncoding })
         } else {
             match char::from_u32_detailed(merge_nonascii_unchecked_utf8(bytes)) {
                 Ok(c) => Ok((c, bytes.len())),
-                Err(e) => Err(Codepoint(e)),
+                Err(CodepointError::Utf16Reserved) => {
+                    Err(Utf8Error{ kind: Utf16ReservedCodepoint })
+                },
+                Err(CodepointError::TooHigh) => Err(Utf8Error{ kind: TooHighCodepoint }),
             }
         }
     }
 
-    fn from_utf8_array(utf8: [u8; 4]) -> Result<Self,InvalidUtf8Array> {
-        use errors::InvalidUtf8::*;
-        use errors::InvalidUtf8Array::*;
+    fn from_utf8_array(utf8: [u8; 4]) -> Result<Self,Utf8Error> {
         let src = match utf8[0].extra_utf8_bytes() {
-            Err(error) => return Err(Utf8(FirstByte(error))),
+            Err(error) => return Err(error),
             Ok(0)      => return Ok(utf8[0] as char),
             Ok(extra)  => &utf8[..=extra],
         };
-        if let Some(i) = src[1..].iter().position(|&b| (b >> 6) != 0b10 ) {
-            Err(Utf8(NotAContinuationByte(i+1)))
+        if src[1..].iter().any(|&b| (b >> 6) != 0b10 ) {
+            Err(Utf8Error{ kind: InterruptedSequence })
         } else if overlong(utf8[0], utf8[1]) {
-            Err(Utf8(Overlong))
+            Err(Utf8Error{ kind: OverlongEncoding })
         } else {
-            char::from_u32_detailed(merge_nonascii_unchecked_utf8(src))
-                 .map_err(|e| Codepoint(e) )
+            match char::from_u32_detailed(merge_nonascii_unchecked_utf8(src)) {
+                Ok(c) => Ok(c),
+                Err(CodepointError::Utf16Reserved) => {
+                    Err(Utf8Error{ kind: Utf16ReservedCodepoint })
+                },
+                Err(CodepointError::TooHigh) => Err(Utf8Error{ kind: TooHighCodepoint }),
+            }
         }
     }
 
@@ -789,13 +790,13 @@ pub trait IterExt: Iterator+Sized {
     #[cfg_attr(feature="std", doc=" ```")]
     #[cfg_attr(not(feature="std"), doc=" ```no_compile")]
     /// use encode_unicode::{IterExt, Utf8Char};
-    /// use encode_unicode::error::{InvalidUtf8Slice, InvalidUtf8};
+    /// use encode_unicode::error::{Utf8Error, Utf8ErrorKind};
     ///
     /// let result = b"ab\0\xe0\xbc\xa9 \xf3\x80\x77".iter()
     ///     .to_utf8chars()
-    ///     .collect::<Result<String,InvalidUtf8Slice>>();
+    ///     .collect::<Result<String,Utf8Error>>();
     ///
-    /// assert_eq!(result, Err(InvalidUtf8Slice::Utf8(InvalidUtf8::NotAContinuationByte(2))));
+    /// assert_eq!(result.unwrap_err().kind(), Utf8ErrorKind::InterruptedSequence);
     /// ```
     fn to_utf8chars(self) -> Utf8CharMerger<Self::Item,Self> where Self::Item: Borrow<u8>;
 
@@ -878,15 +879,14 @@ pub trait SliceExt: Index<RangeFull> {
     /// Get the index and error type of the first error:
     #[cfg_attr(feature="std", doc=" ```")]
     #[cfg_attr(not(feature="std"), doc=" ```no_compile")]
-    /// use encode_unicode::{SliceExt, Utf8Char};
-    /// use encode_unicode::error::InvalidUtf8Slice;
+    /// use encode_unicode::{SliceExt, Utf8Char, error::Utf8ErrorKind};
     ///
     /// let slice = b"ab\0\xe0\xbc\xa9 \xf3\x80\x77";
     /// let result = slice.utf8char_indices()
-    ///     .map(|(offset,r,length)| r.map_err(|e| (offset,e,length) ) )
-    ///     .collect::<Result<String,(usize,InvalidUtf8Slice,usize)>>();
+    ///     .map(|(offset,r,length)| r.map_err(|e| (offset,e.kind(),length) ) )
+    ///     .collect::<Result<String,(usize,Utf8ErrorKind,usize)>>();
     ///
-    /// assert_eq!(result, Err((7, InvalidUtf8Slice::TooShort(4), 1)));
+    /// assert_eq!(result, Err((7, Utf8ErrorKind::TooFewBytes, 1)));
     /// ```
     ///
     /// ```
@@ -907,9 +907,7 @@ pub trait SliceExt: Index<RangeFull> {
     ///
     #[cfg_attr(feature="std", doc=" ```")]
     #[cfg_attr(not(feature="std"), doc=" ```no_compile")]
-    /// use encode_unicode::{SliceExt, Utf8Char};
-    /// use encode_unicode::error::InvalidUtf8Slice::*;
-    /// use encode_unicode::error::{InvalidUtf8, InvalidUtf8FirstByte, CodepointError};
+    /// use encode_unicode::{SliceExt, Utf8Char, error::Utf8ErrorKind};
     ///
     /// let bytes = b"\xfa-\xf4\x8f\xee\xa1\x8f-\xed\xa9\x87\xf0\xcc\xbb";
     /// let mut errors = Vec::new();
@@ -918,7 +916,7 @@ pub trait SliceExt: Index<RangeFull> {
     /// for (offset,result,length) in bytes.utf8char_indices() {
     ///     lengths.push((offset,length));
     ///     let c = result.unwrap_or_else(|error| {
-    ///         errors.push((offset,error));
+    ///         errors.push((offset, error.kind()));
     ///         Utf8Char::from('\u{fffd}') // replacement character
     ///     });
     ///     string.push_str(c.as_str());
@@ -928,13 +926,13 @@ pub trait SliceExt: Index<RangeFull> {
     /// assert_eq!(lengths, [(0,1), (1,1), (2,1), (3,1), (4,3), (7,1),
     ///                      (8,1), (9,1), (10,1), (11,1), (12,2)]);
     /// assert_eq!(errors, [
-    ///     ( 0, Utf8(InvalidUtf8::FirstByte(InvalidUtf8FirstByte::TooLongSequence))),
-    ///     ( 2, Utf8(InvalidUtf8::NotAContinuationByte(2))),
-    ///     ( 3, Utf8(InvalidUtf8::FirstByte(InvalidUtf8FirstByte::ContinuationByte))),
-    ///     ( 8, Codepoint(CodepointError::Utf16Reserved)),
-    ///     ( 9, Utf8(InvalidUtf8::FirstByte(InvalidUtf8FirstByte::ContinuationByte))),
-    ///     (10, Utf8(InvalidUtf8::FirstByte(InvalidUtf8FirstByte::ContinuationByte))),
-    ///     (11, TooShort(4)), // (but it was not the last element returned!)
+    ///     ( 0, Utf8ErrorKind::NonUtf8Byte),
+    ///     ( 2, Utf8ErrorKind::InterruptedSequence),
+    ///     ( 3, Utf8ErrorKind::UnexpectedContinuationByte),
+    ///     ( 8, Utf8ErrorKind::Utf16ReservedCodepoint),
+    ///     ( 9, Utf8ErrorKind::UnexpectedContinuationByte),
+    ///     (10, Utf8ErrorKind::UnexpectedContinuationByte),
+    ///     (11, Utf8ErrorKind::TooFewBytes), // (but it was not the last element returned!)
     /// ]);
     /// ```
     fn utf8char_indices(&self) -> Utf8CharDecoder where Self::Output: Borrow<[u8]>;

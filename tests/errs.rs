@@ -14,15 +14,11 @@ use core::char;
 extern crate encode_unicode;
 use encode_unicode::*;
 use encode_unicode::error::*;
-use encode_unicode::error::InvalidUtf8Array as a;
-use encode_unicode::error::InvalidUtf8Slice as s;
 use encode_unicode::error::CodepointError::*;
-use encode_unicode::error::InvalidUtf8::*;
-use encode_unicode::error::InvalidUtf8FirstByte::*;
+use encode_unicode::error::Utf8ErrorKind::*;
 
 
-#[test]
-fn from_u32() {
+#[test] fn from_u32() {
     for c in 0xd800..0xe000 {
         assert_eq!(char::from_u32_detailed(c),  Err(Utf16Reserved));
     }
@@ -37,12 +33,16 @@ fn from_u32() {
     }
 }
 
-#[test]
-fn utf8_extra_bytes() {
+fn kind<T>(result: Result<T,Utf8Error>) -> Result<T,Utf8ErrorKind> {
+    result.map_err(|e| e.kind() )
+}
+
+
+#[test] fn utf8_extra_bytes() {
     for c in 0..256 {
-        assert_eq!( (c as u8).extra_utf8_bytes(), match c {
-            0b_1000_0000..=0b_1011_1111 => Err(ContinuationByte),
-            0b_1111_1000..=0b_1111_1111 => Err(TooLongSequence),
+        assert_eq!( kind((c as u8).extra_utf8_bytes()), match c {
+            0b_1000_0000..=0b_1011_1111 => Err(UnexpectedContinuationByte),
+            0b_1111_1000..=0b_1111_1111 => Err(NonUtf8Byte),
             0b_0000_0000..=0b_0111_1111 => Ok(0),
             0b_1100_0000..=0b_1101_1111 => Ok(1),
             0b_1110_0000..=0b_1110_1111 => Ok(2),
@@ -52,8 +52,7 @@ fn utf8_extra_bytes() {
     }
 }
 
-#[test]
-fn utf16_extra_unit() {
+#[test] fn utf16_extra_unit() {
     for c in 0..0x1_00_00 {
         assert_eq!( (c as u16).utf16_needs_extra_unit(), match c {
             0b_0000_0000_0000_0000..=0b_1101_0111_1111_1111 => Ok(false),
@@ -66,8 +65,7 @@ fn utf16_extra_unit() {
 }
 
 
-#[test]
-fn from_utf16_tuple() {
+#[test] fn from_utf16_tuple() {
     use encode_unicode::error::InvalidUtf16Tuple::*;
     for u in 0xdc00..0xe000 {
         let close = if u%3==0 {u-100} else {u+100};
@@ -86,8 +84,7 @@ fn from_utf16_tuple() {
     }
 }
 
-#[test]
-fn from_utf16_slice_start() {
+#[test] fn from_utf16_slice_start() {
     use encode_unicode::error::InvalidUtf16Slice::*;
     assert_eq!(char::from_utf16_slice_start(&[]), Err(EmptySlice));
     let mut buf = [0; 6];
@@ -107,8 +104,7 @@ fn from_utf16_slice_start() {
     }
 }
 
-#[test]
-fn utf8_overlong() {
+#[test] fn utf8_overlong() {
     let overlongs = [
         [0xf0,0x8f], [0xf0,0x87], [0xf0,0x80], // 4-byte
         [0xe0,0x9f], [0xe0,0x8f], [0xe0,0x80], // 3-byte
@@ -118,63 +114,62 @@ fn utf8_overlong() {
     for o in overlongs.iter() {
         for &last in &[0x80, 0xbf] {
             let arr = [o[0], o[1], last, last];
-            assert_eq!(char::from_utf8_slice_start(&arr), Err(InvalidUtf8Slice::Utf8(Overlong)));
-            assert_eq!(char::from_utf8_array(arr), Err(InvalidUtf8Array::Utf8(Overlong)));
-            assert_eq!(Utf8Char::from_slice_start(&arr), Err(InvalidUtf8Slice::Utf8(Overlong)));
-            assert_eq!(Utf8Char::from_array(arr), Err(InvalidUtf8Array::Utf8(Overlong)));
+            assert_eq!(kind(char::from_utf8_slice_start(&arr)), Err(OverlongEncoding));
+            assert_eq!(kind(char::from_utf8_array(arr)), Err(OverlongEncoding));
+            assert_eq!(kind(Utf8Char::from_slice_start(&arr)), Err(OverlongEncoding));
+            assert_eq!(kind(Utf8Char::from_array(arr)), Err(OverlongEncoding));
         }
     }
 }
 
-#[test]
-fn from_str_start() {
+#[test] fn from_str_start() {
     assert_eq!(Utf8Char::from_str_start(""), Err(EmptyStrError));
     assert_eq!(Utf16Char::from_str_start(""), Err(EmptyStrError));
 }
 
 #[test] fn utf8_codepoint_is_too_high() {
-    assert_eq!(Utf8Char::from_array([0xf4, 0x90, 0x80, 0x80]), Err(a::Codepoint(TooHigh)));
-    assert_eq!(char::from_utf8_array([0xf4, 0x90, 0x80, 0x80]), Err(a::Codepoint(TooHigh)));
-    assert_eq!(Utf8Char::from_slice_start(&[0xf4, 0x90, 0x80, 0x80]), Err(s::Codepoint(TooHigh)));
-    assert_eq!(char::from_utf8_slice_start(&[0xf4, 0x90, 0x80, 0x80]), Err(s::Codepoint(TooHigh)));
+    assert_eq!(kind(Utf8Char::from_array([0xf4, 0x90, 0x80, 0x80])), Err(TooHighCodepoint));
+    assert_eq!(kind(char::from_utf8_array([0xf4, 0x90, 0x80, 0x80])), Err(TooHighCodepoint));
+    assert_eq!(kind(Utf8Char::from_slice_start(&[0xf4, 0x90, 0x80, 0x80])), Err(TooHighCodepoint));
+    assert_eq!(kind(char::from_utf8_slice_start(&[0xf4, 0x90, 0x80, 0x80])), Err(TooHighCodepoint));
 
-    assert_eq!(Utf8Char::from_array([0xf5, 0x88, 0x99, 0xaa]), Err(a::Codepoint(TooHigh)));
-    assert_eq!(char::from_utf8_array([0xf5, 0xaa, 0xbb, 0x88]), Err(a::Codepoint(TooHigh)));
-    assert_eq!(Utf8Char::from_slice_start(&[0xf5, 0x99, 0xaa, 0xbb]), Err(s::Codepoint(TooHigh)));
-    assert_eq!(char::from_utf8_slice_start(&[0xf5, 0xbb, 0x88, 0x99]), Err(s::Codepoint(TooHigh)));
+    assert_eq!(kind(Utf8Char::from_array([0xf5, 0x88, 0x99, 0xaa])), Err(TooHighCodepoint));
+    assert_eq!(kind(char::from_utf8_array([0xf5, 0xaa, 0xbb, 0x88])), Err(TooHighCodepoint));
+    assert_eq!(kind(Utf8Char::from_slice_start(&[0xf5, 0x99, 0xaa, 0xbb])), Err(TooHighCodepoint));
+    assert_eq!(kind(char::from_utf8_slice_start(&[0xf5, 0xbb, 0x88, 0x99])), Err(TooHighCodepoint));
 }
 
 #[test] fn utf8_codepoint_is_utf16_reserved() {
-    assert_eq!(Utf8Char::from_array([0xed, 0xa0, 0x80, 0xff]), Err(a::Codepoint(Utf16Reserved)));
-    assert_eq!(char::from_utf8_array([0xed, 0xa0, 0x8f, 0x00]), Err(a::Codepoint(Utf16Reserved)));
-    assert_eq!(Utf8Char::from_slice_start(&[0xed, 0xa0, 0xbe, 0xa5]), Err(s::Codepoint(Utf16Reserved)));
-    assert_eq!(char::from_utf8_slice_start(&[0xed, 0xa0, 0xbf]), Err(s::Codepoint(Utf16Reserved)));
-    assert_eq!(Utf8Char::from_array([0xed, 0xbf, 0x80, 0xff]), Err(a::Codepoint(Utf16Reserved)));
-    assert_eq!(char::from_utf8_array([0xed, 0xbf, 0x8f, 0x00]), Err(a::Codepoint(Utf16Reserved)));
-    assert_eq!(Utf8Char::from_slice_start(&[0xed, 0xbf, 0xbe, 0xa5]), Err(s::Codepoint(Utf16Reserved)));
-    assert_eq!(char::from_utf8_slice_start(&[0xed, 0xbf, 0xbf]), Err(s::Codepoint(Utf16Reserved)));
+    assert_eq!(kind(Utf8Char::from_array([0xed, 0xa0, 0x80, 0xff])), Err(Utf16ReservedCodepoint));
+    assert_eq!(kind(char::from_utf8_array([0xed, 0xa0, 0x8f, 0x00])), Err(Utf16ReservedCodepoint));
+    assert_eq!(kind(Utf8Char::from_slice_start(&[0xed, 0xa0, 0xbe, 0xa5])), Err(Utf16ReservedCodepoint));
+    assert_eq!(kind(char::from_utf8_slice_start(&[0xed, 0xa0, 0xbf])), Err(Utf16ReservedCodepoint));
+    assert_eq!(kind(Utf8Char::from_array([0xed, 0xbf, 0x80, 0xff])), Err(Utf16ReservedCodepoint));
+    assert_eq!(kind(char::from_utf8_array([0xed, 0xbf, 0x8f, 0x00])), Err(Utf16ReservedCodepoint));
+    assert_eq!(kind(Utf8Char::from_slice_start(&[0xed, 0xbf, 0xbe, 0xa5])), Err(Utf16ReservedCodepoint));
+    assert_eq!(kind(char::from_utf8_slice_start(&[0xed, 0xbf, 0xbf])), Err(Utf16ReservedCodepoint));
 }
 
 #[test] fn utf8_first_is_continuation_byte() {
     for first in 0x80..0xc0 {
         let arr = [first, first<<2, first<<4, first<<6];
-        assert_eq!(Utf8Char::from_array(arr), Err(a::Utf8(FirstByte(ContinuationByte))));
-        assert_eq!(char::from_utf8_array(arr), Err(a::Utf8(FirstByte(ContinuationByte))));
+        assert_eq!(kind(Utf8Char::from_array(arr)), Err(UnexpectedContinuationByte));
+        assert_eq!(kind(char::from_utf8_array(arr)), Err(UnexpectedContinuationByte));
         let len = (1 + first%3) as usize;
-        assert_eq!(Utf8Char::from_slice_start(&arr[..len]), Err(s::Utf8(FirstByte(ContinuationByte))));
-        assert_eq!(char::from_utf8_slice_start(&arr[..len]), Err(s::Utf8(FirstByte(ContinuationByte))));
+        assert_eq!(kind(Utf8Char::from_slice_start(&arr[..len])), Err(UnexpectedContinuationByte));
+        assert_eq!(kind(char::from_utf8_slice_start(&arr[..len])), Err(UnexpectedContinuationByte));
     }
 }
 
 #[test] fn utf8_too_long() {
     for first in 0xf8..0x100 {
         let arr = [first as u8, 0x88, 0x80, 0x80];
-        assert_eq!(Utf8Char::from_array(arr), Err(a::Utf8(FirstByte(TooLongSequence))));
-        assert_eq!(char::from_utf8_array(arr), Err(a::Utf8(FirstByte(TooLongSequence))));
+        assert_eq!(kind(Utf8Char::from_array(arr)), Err(NonUtf8Byte));
+        assert_eq!(kind(char::from_utf8_array(arr)), Err(NonUtf8Byte));
         let arr = [first as u8, 0x88, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80];
         let slice = &arr[..if first&1 == 0 {1} else {8}];
-        assert_eq!(Utf8Char::from_slice_start(slice), Err(s::Utf8(FirstByte(TooLongSequence))));
-        assert_eq!(char::from_utf8_slice_start(slice), Err(s::Utf8(FirstByte(TooLongSequence))));
+        assert_eq!(kind(Utf8Char::from_slice_start(slice)), Err(NonUtf8Byte));
+        assert_eq!(kind(char::from_utf8_slice_start(slice)), Err(NonUtf8Byte));
     }
 }
 
@@ -183,14 +178,13 @@ fn from_str_start() {
         let mut arr = [first, 0x90, 0xa0, 0xb0];
         let extra = first.extra_utf8_bytes().unwrap();
         for corrupt in (1..extra).rev() {
-            let expected = NotAContinuationByte(corrupt);
             for &bad in &[0x00, 0x3f,  0x40, 0x7f,  0xc0, 0xff] {
                 arr[corrupt] = bad;
-                assert_eq!(Utf8Char::from_array(arr), Err(a::Utf8(expected)), "{:?}", arr);
-                assert_eq!(char::from_utf8_array(arr), Err(a::Utf8(expected)));
+                assert_eq!(kind(Utf8Char::from_array(arr)), Err(InterruptedSequence), "{:?}", arr);
+                assert_eq!(kind(char::from_utf8_array(arr)), Err(InterruptedSequence));
                 let slice = if first&1 == 0 {&arr[..1+extra]} else {&arr};
-                assert_eq!(Utf8Char::from_slice_start(slice), Err(s::Utf8(expected)), "{:?}", slice);
-                assert_eq!(char::from_utf8_slice_start(slice), Err(s::Utf8(expected)));
+                assert_eq!(kind(Utf8Char::from_slice_start(slice)), Err(InterruptedSequence), "{:?}", slice);
+                assert_eq!(kind(char::from_utf8_slice_start(slice)), Err(InterruptedSequence));
             }
         }
     }

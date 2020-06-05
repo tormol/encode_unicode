@@ -157,136 +157,136 @@ simple!{/// Reasons why `Utf8Char::from_str()` or `Utf16Char::from_str()` failed
 }
 
 
-simple!{/// Reasons why a byte is not the start of a UTF-8 codepoint.
-    InvalidUtf8FirstByte {
-        /// Sequences cannot be longer than 4 bytes. Is given for values >= 240.
-        TooLongSequence => "is greater than 247 (UTF-8 sequences cannot be longer than four bytes)",
-        /// This byte belongs to a previous sequence. Is given for values between 128 and 192 (exclusive).
-        ContinuationByte => "is a continuation of a previous sequence",
-    }}
-use self::InvalidUtf8FirstByte::*;
 
+/// Error returned when an invalid UTF-8 sequence is encountererd.
+///
+/// See [`Utf8ErrorKind`](enum.Utf8ErrorKind.html) for the types of errors
+/// that this type can be returned for.
+#[derive(Clone,Copy, Debug, PartialEq,Eq)]
+pub struct Utf8Error {
+    pub(crate) kind: Utf8ErrorKind,
+}
+impl Utf8Error {
+    /// Get the type of error.
+    pub fn kind(&self) -> Utf8ErrorKind {
+        self.kind
+    }
 
-
-macro_rules! complex {
-($err:ty
- {$($sub:ty => $to:expr,)*}
- {$($desc:pat => $string:expr),+,}
- => $use_cause:expr =>
- {$($cause:pat => $result:expr),+,} $(#[$sourcedoc:meta])*
-) => {
-    $(impl From<$sub> for $err {
-          fn from(error: $sub) -> $err {
-              $to(error)
-          }
-      })*
     #[cfg(not(feature="std"))]
-    impl $err {
-        #[allow(missing_docs)]
-        pub fn description(&self) -> &'static str {
-            match *self{ $($desc => $string,)* }
-        }
-        /// A hack to avoid two Display impls
-        fn cause(&self) -> Option<&Display> {None}
+    #[allow(missing_docs)]
+    pub fn description(&self) -> &'static str {
+        utf8_error_description(self.kind)
     }
-    #[cfg(feature="std")]
-    impl Error for $err {
-        fn description(&self) -> &'static str {
-            match *self{ $($desc => $string,)* }
-        }
-        $(#[$sourcedoc])*
-        fn source(&self) -> Option<&(dyn Error+'static)> {
-            match *self{ $($cause => $result,)* }
-        }
-        $(#[$sourcedoc])*
-        fn cause(&self) -> Option<&dyn Error> {
-            self.source()
-        }
+}
+#[cfg(feature="std")]
+impl Error for Utf8Error {
+    fn description(&self) -> &'static str {
+        utf8_error_description(self.kind)
     }
-    impl Display for $err {
-        fn fmt(&self,  fmtr: &mut Formatter) -> fmt::Result {
-            #![allow(deprecated)]
-            match (self.source(), $use_cause) {
-                (Some(d),true) => write!(fmtr, "{}: {}", self.description(), d),
-                        _      => write!(fmtr, "{}", self.description()),
-            }
-        }
+}
+impl Display for Utf8Error {
+    fn fmt(&self,  fmtr: &mut Formatter) -> fmt::Result {
+        fmtr.write_str(utf8_error_description(self.kind))
     }
-}}
+}
 
-
-/// Reasons why a byte sequence is not valid UTF-8, excluding invalid codepoint.
-/// In sinking precedence.
+/// The types of errors that can occur when decoding a UTF-8 codepoint.
+///
+/// The variants are more technical than what an end user is likely interested
+/// in, but might be useful for deciding how to handle the error.
+///
+/// They can be grouped into three categories:
+/// * Will happen regularly if decoding chunked or buffered text: `TooFewBytes`.
+/// * Input might be binary, a different encoding or corrupted, `UnexpectedContinuationByte`
+///   and `InterruptedSequence`.  
+///   (Broken UTF-8 sequence).
+/// * Less likely to happen accidentaly and might be malicious:
+///   `OverlongEncoding`, `Utf16ReservedCodepoint` and `TooHighCodepoint`.
+///   Note that theese can still be caused by certain valid latin-1 strings
+///   such as `"Á©"` (`b"\xC1\xA9"`).
 #[derive(Clone,Copy, Debug, PartialEq,Eq)]
-pub enum InvalidUtf8 {
-    /// Something is wrong with the first byte.
-    FirstByte(InvalidUtf8FirstByte),
-    /// The byte at index 1...3 should be a continuation byte,
-    /// but dosesn't fit the pattern 0b10xx_xxxx.
-    NotAContinuationByte(usize),
-    /// There are too many leading zeros: it could be a byte shorter.
+pub enum Utf8ErrorKind {
+    /// There are too few bytes to decode the codepoint.
     ///
-    /// [Decoding this could allow someone to input otherwise prohibited
-    /// characters and sequences, such as "../"](https://tools.ietf.org/html/rfc3629#section-10).
-    Overlong,
+    /// This can happen when a slice is empty or too short, or an iterator
+    /// returned `None` while in the middle of a codepoint.  
+    /// This error is never produced by functions accepting fixed-size
+    /// `[u8; 4]` arrays.
+    ///
+    /// If decoding text coming chunked (such as in buffers passed to `Read`),
+    /// the remaing bytes should be carried over into the next chunk or buffer.
+    /// (including the byte this error was produced for.)
+    TooFewBytes,
+    /// A byte which is never used by well-formed UTF-8 was encountered.
+    ///
+    /// This means that the input is using a different encoding,
+    /// is corrupted or binary.
+    ///
+    /// This error is returned when a byte in the following ranges
+    /// is encountered anywhere in an UTF-8 sequence:
+    ///
+    /// * `192..=193` (`0b1100_000x`): Can only appear as part of an overlong
+    ///   encoding of an ASCII character, and should therefore never occur.
+    /// * `240..=255` (`0b1111_1xxx`): Sequences cannot be longer than 4 bytes.
+    NonUtf8Byte,
+    /// The first byte is not a valid start of a codepoint.
+    ///
+    /// This might happen as a result of slicing into the middle of a codepoint,
+    /// the input not being UTF-8 encoded or being corrupted.
+    /// Errors of this type coming right after another error should probably
+    /// be ignored, unless returned more than three times in a row.
+    ///
+    /// This error is returned when the first byte has a value in the range
+    /// `128..=191` (`0b1000_0000..=0b1011_1111`).
+    UnexpectedContinuationByte,
+    /// The byte at index 1..=3 should be a continuation byte,
+    /// but doesn't fit the pattern `0b10xx_xxxx`.
+    ///
+    /// When the input slice or iterator has too few bytes,
+    /// [`TooFewBytes`](#Incomplete) is returned instead.
+    InterruptedSequence,
+    /// The encoding of the codepoint has so many leading zeroes that it
+    /// could be a byte shorter.
+    ///
+    /// [Successfully decoding this can present a security issue](https://tools.ietf.org/html/rfc3629#section-10):
+    /// Doing so could allow an attacker to circumvent input validation that
+    /// only checks for ASCII characters, and input characters or strings that
+    /// would otherwise be rejected, such as `/../`.
+    ///
+    /// This error is only returned for 3 and 4-byte encodings;
+    /// `NonUtf8Byte` is returned for bytes that start longer or shorter
+    /// overlong encodings.
+    OverlongEncoding,
+    /// The codepoint is reserved for UTF-16 surrogate pairs.
+    ///
+    /// (`Utf8Char` cannot be used to work with the
+    /// [WTF-8](https://simonsapin.github.io/wtf-8) encoding for UCS-2 strings.)
+    ///
+    /// This error is returned for codepoints in the range `\ud800`..=`\udfff`.
+    /// (which are three bytes long as UTF-8)
+    Utf16ReservedCodepoint,
+    /// The codepoint is higher than `\u10ffff`, which is the highest codepoint
+    /// unicode permits.
+    TooHighCodepoint,
 }
-use self::InvalidUtf8::*;
-complex!{InvalidUtf8 {
-        InvalidUtf8FirstByte => FirstByte,
-    } {
-        FirstByte(TooLongSequence) => "the first byte is greater than 239 (UTF-8 sequences cannot be longer than four bytes)",
-        FirstByte(ContinuationByte) => "the first byte is a continuation of a previous sequence",
-        Overlong => "the sequence contains too many zeros and could be shorter",
-        NotAContinuationByte(_) => "the sequence is too short",
-    } => false => {
-        FirstByte(ref cause) => Some(cause),
-        _ => None,
-    }/// Returns `Some` if the error is a `InvalidUtf8FirstByte`.
+fn utf8_error_description(kind: Utf8ErrorKind) -> &'static str {
+    match kind {
+        Utf8ErrorKind::TooFewBytes => "Too few bytes",
+        Utf8ErrorKind::NonUtf8Byte => "Not UTF-8",
+        Utf8ErrorKind::UnexpectedContinuationByte => "Not UTF-8",
+        Utf8ErrorKind::InterruptedSequence => "Not UTF-8",
+        Utf8ErrorKind::OverlongEncoding => "Malformed input",
+        Utf8ErrorKind::Utf16ReservedCodepoint => "Malformed input",
+        Utf8ErrorKind::TooHighCodepoint => "Invalid character",
+    }
 }
-
-
-/// Reasons why a byte array is not valid UTF-8, in sinking precedence.
-#[derive(Clone,Copy, Debug, PartialEq,Eq)]
-pub enum InvalidUtf8Array {
-    /// Not a valid UTF-8 sequence.
-    Utf8(InvalidUtf8),
-    /// Not a valid unicode codepoint.
-    Codepoint(CodepointError),
+impl PartialEq<Utf8ErrorKind> for Utf8Error {
+    fn eq(&self,  kind: &Utf8ErrorKind) -> bool {
+        self.kind == *kind
+    }
 }
-complex!{InvalidUtf8Array {
-        InvalidUtf8 => InvalidUtf8Array::Utf8,
-        CodepointError => InvalidUtf8Array::Codepoint,
-    } {
-        InvalidUtf8Array::Utf8(_) => "the sequence is invalid UTF-8",
-        InvalidUtf8Array::Codepoint(_) => "the encoded codepoint is invalid",
-    } => true => {
-        InvalidUtf8Array::Utf8(ref u) => Some(u),
-        InvalidUtf8Array::Codepoint(ref c) => Some(c),
-    }/// Always returns `Some`.
-}
-
-
-/// Reasons why a byte slice is not valid UTF-8, in sinking precedence.
-#[derive(Clone,Copy, Debug, PartialEq,Eq)]
-pub enum InvalidUtf8Slice {
-    /// Something is certainly wrong with the first byte.
-    Utf8(InvalidUtf8),
-    /// The encoded codepoint is invalid:
-    Codepoint(CodepointError),
-    /// The slice is too short; n bytes was required.
-    TooShort(usize),
-}
-complex!{InvalidUtf8Slice {
-        InvalidUtf8 => InvalidUtf8Slice::Utf8,
-        CodepointError => InvalidUtf8Slice::Codepoint,
-    } {
-        InvalidUtf8Slice::Utf8(_) => "the sequence is invalid UTF-8",
-        InvalidUtf8Slice::Codepoint(_) => "the encoded codepoint is invalid",
-        InvalidUtf8Slice::TooShort(1) => "the slice is empty",
-        InvalidUtf8Slice::TooShort(_) => "the slice is shorter than the sequence",
-    } => true => {
-        InvalidUtf8Slice::Utf8(ref u) => Some(u),
-        InvalidUtf8Slice::Codepoint(ref c) => Some(c),
-        InvalidUtf8Slice::TooShort(_) => None,
+impl PartialEq<Utf8Error> for Utf8ErrorKind {
+    fn eq(&self,  error: &Utf8Error) -> bool {
+        *self == error.kind
     }
 }

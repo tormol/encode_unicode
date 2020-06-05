@@ -4,7 +4,7 @@ extern crate libfuzzer_sys;
 extern crate encode_unicode;
 
 use encode_unicode::{IterExt, SliceExt, U8UtfExt, Utf8Char};
-use encode_unicode::error::{InvalidUtf8Slice::*, InvalidUtf8::*};
+use encode_unicode::error::{Utf8Error::*, InvalidUtf8::*};
 use std::str;
 
 fuzz_target!(|data: &[u8]| {

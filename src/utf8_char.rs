@@ -6,7 +6,7 @@
  * copied, modified, or distributed except according to those terms.
  */
 
-use errors::{FromStrError, EmptyStrError, NonAsciiError, InvalidUtf8Slice, InvalidUtf8Array};
+use errors::{FromStrError, EmptyStrError, NonAsciiError, Utf8Error};
 use utf8_iterators::Utf8Iterator;
 use traits::{CharExt, U8UtfExt};
 use utf16_char::Utf16Char;
@@ -435,18 +435,17 @@ impl Utf8Char {
     ///
     /// ```
     /// use encode_unicode::Utf8Char;
-    /// use encode_unicode::error::InvalidUtf8Slice::*;
-    /// use encode_unicode::error::InvalidUtf8::*;
+    /// use encode_unicode::error::Utf8ErrorKind::*;
     ///
     /// assert_eq!(Utf8Char::from_slice_start(&[b'A', b'B', b'C']), Ok((Utf8Char::from('A'),1)));
     /// assert_eq!(Utf8Char::from_slice_start(&[0xdd, 0xbb]), Ok((Utf8Char::from('\u{77b}'),2)));
     ///
-    /// assert_eq!(Utf8Char::from_slice_start(&[]), Err(TooShort(1)));
-    /// assert_eq!(Utf8Char::from_slice_start(&[0xf0, 0x99]), Err(TooShort(4)));
-    /// assert_eq!(Utf8Char::from_slice_start(&[0xee, b'F', 0x80]), Err(Utf8(NotAContinuationByte(1))));
-    /// assert_eq!(Utf8Char::from_slice_start(&[0xee, 0x99, 0x0f]), Err(Utf8(NotAContinuationByte(2))));
+    /// assert_eq!(Utf8Char::from_slice_start(&[]).unwrap_err().kind(), TooFewBytes);
+    /// assert_eq!(Utf8Char::from_slice_start(&[0xf0, 0x99]).unwrap_err().kind(), TooFewBytes);
+    /// assert_eq!(Utf8Char::from_slice_start(&[0xee, b'F', 0x80]).unwrap_err().kind(), InterruptedSequence);
+    /// assert_eq!(Utf8Char::from_slice_start(&[0xee, 0x99, 0x0f]).unwrap_err().kind(), InterruptedSequence);
     /// ```
-    pub fn from_slice_start(src: &[u8]) -> Result<(Self,usize),InvalidUtf8Slice> {
+    pub fn from_slice_start(src: &[u8]) -> Result<(Self,usize),Utf8Error> {
         char::from_utf8_slice_start(src).map(|(_,len)| {
             let mut bytes = [0; 4];
             bytes[..len].copy_from_slice(&src[..len]);
@@ -478,20 +477,18 @@ impl Utf8Char {
     ///
     /// ```
     /// use encode_unicode::Utf8Char;
-    /// use encode_unicode::error::InvalidUtf8Array::*;
-    /// use encode_unicode::error::InvalidUtf8::*;
-    /// use encode_unicode::error::CodepointError::*;
+    /// use encode_unicode::error::Utf8ErrorKind::*;
     ///
     /// assert_eq!(Utf8Char::from_array([b'A', 0, 0, 0]), Ok(Utf8Char::from('A')));
     /// assert_eq!(Utf8Char::from_array([0xf4, 0x8b, 0xbb, 0xbb]), Ok(Utf8Char::from('\u{10befb}')));
     /// assert_eq!(Utf8Char::from_array([b'A', b'B', b'C', b'D']), Ok(Utf8Char::from('A')));
     /// assert_eq!(Utf8Char::from_array([0, 0, 0xcc, 0xbb]), Ok(Utf8Char::from('\0')));
     ///
-    /// assert_eq!(Utf8Char::from_array([0xef, b'F', 0x80, 0x80]), Err(Utf8(NotAContinuationByte(1))));
-    /// assert_eq!(Utf8Char::from_array([0xc1, 0x80, 0, 0]), Err(Utf8(Overlong)));
-    /// assert_eq!(Utf8Char::from_array([0xf7, 0xaa, 0x99, 0x88]), Err(Codepoint(TooHigh)));
+    /// assert_eq!(Utf8Char::from_array([0xef, b'F', 0x80, 0x80]).unwrap_err().kind(), InterruptedSequence);
+    /// assert_eq!(Utf8Char::from_array([0xc1, 0x80, 0, 0]).unwrap_err().kind(), OverlongEncoding);
+    /// assert_eq!(Utf8Char::from_array([0xf7, 0xaa, 0x99, 0x88]).unwrap_err().kind(), TooHighCodepoint);
     /// ```
-    pub fn from_array(utf8: [u8;4]) -> Result<Self,InvalidUtf8Array> {
+    pub fn from_array(utf8: [u8;4]) -> Result<Self,Utf8Error> {
         // perform all validation
         char::from_utf8_array(utf8)?;
         let extra = utf8[0].extra_utf8_bytes_unchecked() as u32;

@@ -14,10 +14,7 @@ extern crate encode_unicode;
 
 use encode_unicode::{IterExt, SliceExt, CharExt, Utf8Char};
 use encode_unicode::iterator::Utf8CharSplitter;
-use encode_unicode::error::InvalidUtf8Slice::*;
-use encode_unicode::error::InvalidUtf8::*;
-use encode_unicode::error::InvalidUtf8FirstByte::*;
-use encode_unicode::error::CodepointError::*;
+use encode_unicode::error::Utf8ErrorKind::*;
 use encode_unicode::error::Utf16PairError::*;
 use std::io::Read;
 use std::cmp::min;
@@ -29,14 +26,14 @@ use std::cmp::min;
     assert_eq!(format!("{:?}", &iter),
                format!("Utf8CharMerger {{ buffered: [], inner: {:?} }}", slice.iter()));
 
-    assert_eq!(iter.next(), Some(Err(Utf8(NotAContinuationByte(3)))));
+    assert_eq!(iter.next().map(|v| v.map_err(|e| e.kind() ) ), Some(Err(InterruptedSequence)));
     assert_eq!(iter.size_hint(), (0, Some(5)));
     assert_eq!(
         format!("{:?}", &iter),
         format!("Utf8CharMerger {{ buffered: [161, 146, 88], inner: {:?} }}", slice[4..].iter())
     );
 
-    assert_eq!(iter.next(), Some(Err(Utf8(FirstByte(ContinuationByte)))));
+    assert_eq!(iter.next().map(|v| v.map_err(|e| e.kind() ) ), Some(Err(UnexpectedContinuationByte)));
     assert_eq!(iter.into_inner().next(), Some(&b'\xcc'));
 }
 
@@ -49,7 +46,10 @@ use std::cmp::min;
         format!("Utf8CharDecoder {{ bytes[0..]: {:?} }}", &slice)
     );
 
-    assert_eq!(iter.next(), Some((0, Err(Codepoint(TooHigh)), 1)));
+    match iter.next() {
+        Some((0, Err(e), 1)) => assert_eq!(e.kind(), TooHighCodepoint),
+        wrong => panic!("Expected Some((0, Err(TooHighCodepoint), 1), got {:?}", wrong),
+    }
     assert_eq!(
         format!("{:?}", &iter),
         format!("Utf8CharDecoder {{ bytes[1..]: {:?} }}", &slice[1..])

@@ -72,11 +72,10 @@ pub use utf16_char::Utf16Char;
 pub mod error {// keeping the public interface in one file
     //! Errors returned by various conversion methods in this crate.
     pub use errors::{FromStrError, EmptyStrError};
-    pub use errors::{CodepointError, InvalidUtf8};
-    pub use errors::{InvalidUtf8FirstByte,InvalidUtf16FirstUnit,NonBmpError};
-    pub use errors::{InvalidUtf8Slice,InvalidUtf16Slice};
-    pub use errors::{InvalidUtf8Array,InvalidUtf16Array,InvalidUtf16Tuple};
-    pub use errors::Utf16PairError;
+    pub use errors::{CodepointError, NonAsciiError, NonBmpError};
+    pub use errors::{Utf8Error, Utf8ErrorKind};
+    pub use errors::{InvalidUtf16Slice, InvalidUtf16Array, InvalidUtf16Tuple};
+    pub use errors::{InvalidUtf16FirstUnit, Utf16PairError};
 }
 
 pub mod iterator {
