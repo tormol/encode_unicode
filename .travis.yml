@@ -33,6 +33,7 @@ jobs:
       - cargo check
       - RUST_BACKTRACE=1 cargo test --no-fail-fast
   - name: clippy
+    allow_failures: true
     arch: amd64
     rust: stable
     before_script:
