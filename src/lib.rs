@@ -28,7 +28,7 @@ The minimum supported Rust version for 1.0.\* releases is 1.44.0.
 Later 1.y.0 releases might require newer Rust versions, but the three most
 recent stable releases at the time of publishing will always be supported.
 For example this means that if the current stable Rust version is 1.55 when
-encode_unicode 1.1.0 is released, then encode_unicode 1.1.\* will
+`encode_unicode` 1.1.0 is released, then `encode_unicode` 1.1.\* will
 not require a newer Rust version than 1.53.
 
 [crates.io page](https://crates.io/crates/encode_unicode)  
@@ -40,10 +40,10 @@ not require a newer Rust version than 1.53.
 
 #![warn(missing_docs)]
 #![allow(
-    clippy::inconsistent_digit_grouping,
+    clippy::inconsistent_digit_grouping,// I sometimes group into UTF-8 control part and codepoint part
     clippy::large_digit_groups,// I sometimes group into UTF-8 control part and codepoint part
     clippy::derive_hash_xor_eq,// tested
-    clippy::len_without_is_empty,// tha character types are never empty
+    clippy::len_without_is_empty,// the character types are never empty
     clippy::needless_return,// `foo.bar();\n foo` looks unfinished
     clippy::redundant_closure,// looks weird just passing the name of an enum variant
     clippy::redundant_closure_call,// not redundant in macros

@@ -339,6 +339,14 @@ pub trait CharExt: Sized {
     fn from_utf16_array_unchecked(utf16: [u16;2]) -> Self;
 
     /// Convert a UTF-16 tuple as returned from `.to_utf16_tuple()` into a `char`.
+    ///
+    /// # Safety
+    ///
+    /// If the second element is `None`, the first element must be a codepoint
+    /// in the basic multilingual pane.
+    /// (In other words, outside the range`0xd8_00..0xe0_00`.)  
+    /// Violating this results in an invalid `char` in that reserved range
+    /// being created, which is (or can easily lead to) undefined behavior.
     unsafe fn from_utf16_tuple_unchecked(utf16: (u16, Option<u16>)) -> Self;
 
 
@@ -587,7 +595,7 @@ fn merge_nonascii_unchecked_utf8(src: &[u8]) -> u32 {
 /// Create a `char` from a leading and a trailing surrogate.
 ///
 /// This function is safe because it ignores the six most significant bits of
-/// each arguments and always produces a codepoint in 0x01_00_00..=0x10_ff_ff.
+/// each argument and always produces a codepoint in `0x01_00_00..=0x10_ff_ff`.
 fn combine_surrogates(first: u16,  second: u16) -> char {
     unsafe {
         let high = (first & 0x_03_ff) as u32;

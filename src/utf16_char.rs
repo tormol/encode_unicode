@@ -532,8 +532,9 @@ impl Utf16Char {
     }
     /// Create an `Utf16Char` from a single unit.
     ///
-    /// Codepoints < '\u{1_0000}' (which fit in a `u16`) are part of the basic
-    /// multilingual plane unless they are reserved for surrogate pairs.
+    /// Codepoints less than `'\u{1_00_00}'` (which fit in an `u16`)
+    /// are part of the basic multilingual plane
+    /// unless they are reserved for surrogate pairs.
     ///
     /// # Errors
     ///
