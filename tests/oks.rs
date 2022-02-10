@@ -211,7 +211,7 @@ fn test(c: char) {
         let mut boxed = Box::new([0xffu8; 16]);
         let start = boxed.len()-len; // reach the end
         boxed[start..].copy_from_slice(reference);
-        let slice = &boxed[start..start]; // length of slice should be ignored.
+        let slice = &boxed[start..];
         assert_eq!(Utf8Char::from_slice_start_unchecked(slice), (u8c,len));
     }
     assert_eq!(&Vec::<u8>::from_iter(Some(u8c))[..], reference);
@@ -247,7 +247,7 @@ fn test(c: char) {
         let mut boxed = Box::new([0u16; 8]);
         let start = boxed.len()-len; // reach the end
         boxed[start..].copy_from_slice(reference);
-        let slice = &boxed[start..start]; // length of slice should be ignored.
+        let slice = &boxed[start..];
         assert_eq!(Utf16Char::from_slice_start_unchecked(slice), (u16c,len));
     }
     let array = c.to_utf16_array();
