@@ -106,7 +106,7 @@ impl From<Utf16Char> for Utf8Char {
 }
 impl From<char> for Utf8Char {
     fn from(c: char) -> Self {
-        Utf8Char{ bytes: c.to_utf8_array().0 }
+        Utf8Char::new(c)
     }
 }
 impl From<Utf8Char> for char {
@@ -353,10 +353,6 @@ impl PartialOrd<Utf8Char> for AsciiChar {
 impl Utf8Char {
     /// A `const fn` alternative to the trait-based `Utf8Char::from(char)`.
     ///
-    /// It might currently be slightly slower than `Utf8Char::from()` at
-    /// run-time, due to the limited language features available in `const fn`s
-    /// as of Rust 1.44.
-    ///
     /// # Example
     ///
     /// ```
@@ -364,8 +360,9 @@ impl Utf8Char {
     /// const REPLACEMENT_CHARACTER: Utf8Char = Utf8Char::new('\u{fffd}');
     /// ```
     pub const fn new(c: char) -> Self {
-        let ascii = Utf8Char{bytes: [c as u8, 0, 0, 0]};
-        let multibyte = {
+        if c.is_ascii() {
+            Utf8Char{bytes: [c as u8, 0, 0, 0]}
+        } else {
             // How many extra UTF-8 bytes that are needed to represent an
             // UTF-32 codepoint with a number of bits.
             // Stored as a bit-packed array using two bits per value.
@@ -393,8 +390,7 @@ impl Utf8Char {
             parts &= !(1u32 << (7-len));// clear the next bit after it
 
             Utf8Char {bytes: parts.to_le_bytes()}
-        };
-        [ascii, multibyte][((c as u32) > 127) as usize]
+        }
     }
 
     /// Create an `Utf8Char` from the first codepoint in a `str`.

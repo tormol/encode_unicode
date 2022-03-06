@@ -383,9 +383,6 @@ impl PartialOrd<Utf16Char> for AsciiChar {
 impl Utf16Char {
     /// A `const fn` alternative to the trait-based `Utf16Char::from(char)`.
     ///
-    /// It might currently be slightly slower than `Utf16Char::from()` at
-    /// run-time, due to the current lack of branching in `const fn`.
-    ///
     /// # Examples
     ///
     /// ```
@@ -393,14 +390,14 @@ impl Utf16Char {
     /// const REPLACEMENT_CHARACTER: Utf16Char = Utf16Char::new('\u{fffd}');
     /// ```
     pub const fn new(c: char) -> Self {
-        let single = Utf16Char{ units: [c as u16, 0] };
-        let pair = {
+        if c <= '\u{ffff}' {
+            Utf16Char{ units: [c as u16, 0] }
+        } else {
             let c = (c as u32).wrapping_sub(0x01_00_00);
             let first = 0xd8_00 | (c >> 10) as u16;
             let second = 0xdc_00 | (c & 0x0_03_ff) as u16;
             Utf16Char{ units: [first, second] }
-        };
-        [single, pair][(c as u32 > 0xffff) as usize]
+        }
     }
     /// Create an `Utf16Char` from the first codepoint in a string slice,
     /// converting from UTF-8 to UTF-16.
