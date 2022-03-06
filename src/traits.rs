@@ -9,21 +9,21 @@
 
 #![allow(unused_unsafe)]// explicit unsafe{} blocks in unsafe functions are a good thing.
 
-use utf8_char::Utf8Char;
-use utf16_char::Utf16Char;
-use utf8_iterators::*;
-use utf16_iterators::*;
-use decoding_iterators::*;
-use error::*;
-use error::Utf8ErrorKind::*;
+use crate::utf8_char::Utf8Char;
+use crate::utf16_char::Utf16Char;
+use crate::utf8_iterators::*;
+use crate::utf16_iterators::*;
+use crate::decoding_iterators::*;
+use crate::error::*;
+use crate::error::Utf8ErrorKind::*;
 extern crate core;
-use self::core::{char, u32};
-use self::core::ops::{Not, Index, RangeFull};
-use self::core::borrow::Borrow;
+use core::{char, u32};
+use core::ops::{Not, Index, RangeFull};
+use core::borrow::Borrow;
 #[cfg(feature="ascii")]
 extern crate ascii;
 #[cfg(feature="ascii")]
-use self::ascii::AsciiStr;
+use ascii::AsciiStr;
 
 // TODO better docs and tests
 
@@ -76,7 +76,7 @@ impl U8UtfExt for u8 {
         //    0b1111_0000...0b1111_0100 => 3,
         //                _             => whatever()
         //}
-        // Using `unsafe{self::core::hint::unreachable_unchecked()}` for the
+        // Using `unsafe{core::hint::unreachable_unchecked()}` for the
         // "don't care" case is a terrible idea: while having the function
         // non-deterministically return whatever happens to be in a register
         // MIGHT be acceptable, it permits the function to not `ret`urn at all,
@@ -501,7 +501,7 @@ impl CharExt for char {
 
 
     fn from_utf16_slice_start(src: &[u16]) -> Result<(Self,usize), InvalidUtf16Slice> {
-        use errors::InvalidUtf16Slice::*;
+        use crate::errors::InvalidUtf16Slice::*;
         unsafe {match (src.get(0), src.get(1)) {
             (Some(&u @ 0x00_00..=0xd7_ff), _) |
             (Some(&u @ 0xe0_00..=0xff_ff), _)
@@ -516,7 +516,7 @@ impl CharExt for char {
     }
 
     fn from_utf16_array(utf16: [u16;2]) -> Result<Self, InvalidUtf16Array> {
-        use errors::InvalidUtf16Array::*;
+        use crate::errors::InvalidUtf16Array::*;
         if let Some(c) = char::from_u32(utf16[0] as u32) {
             Ok(c) // single
         } else if utf16[0] < 0xdc_00  &&  utf16[1] & 0xfc_00 == 0xdc_00 {
@@ -529,7 +529,7 @@ impl CharExt for char {
         }
     }
     fn from_utf16_tuple(utf16: (u16, Option<u16>)) -> Result<Self, InvalidUtf16Tuple> {
-        use errors::InvalidUtf16Tuple::*;
+        use crate::errors::InvalidUtf16Tuple::*;
         unsafe{ match utf16 {
             (0x00_00..=0xd7_ff, None) | // single
             (0xe0_00..=0xff_ff, None) | // single

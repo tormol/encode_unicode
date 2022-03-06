@@ -6,12 +6,12 @@
  * copied, modified, or distributed except according to those terms.
  */
 
-use traits::CharExt;
-use utf16_char::Utf16Char;
-use errors::EmptyStrError;
+use crate::traits::CharExt;
+use crate::utf16_char::Utf16Char;
+use crate::errors::EmptyStrError;
 extern crate core;
-use self::core::fmt;
-use self::core::borrow::Borrow;
+use core::fmt;
+use core::borrow::Borrow;
 
 // Invalid values that says the field is consumed or empty.
 const FIRST_USED: u16 = 0x_dc_00;

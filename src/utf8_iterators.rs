@@ -6,13 +6,13 @@
  * copied, modified, or distributed except according to those terms.
  */
 
-use utf8_char::Utf8Char;
-use errors::EmptyStrError;
+use crate::utf8_char::Utf8Char;
+use crate::errors::EmptyStrError;
 extern crate core;
-use self::core::{u32, u64};
-use self::core::ops::Not;
-use self::core::fmt;
-use self::core::borrow::Borrow;
+use core::{u32, u64};
+use core::ops::Not;
+use core::fmt;
+use core::borrow::Borrow;
 #[cfg(feature="std")]
 use std::io::{Read, Error as ioError};
 

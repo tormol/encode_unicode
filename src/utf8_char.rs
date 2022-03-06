@@ -6,21 +6,21 @@
  * copied, modified, or distributed except according to those terms.
  */
 
-use errors::{FromStrError, EmptyStrError, NonAsciiError, Utf8Error};
-use utf8_iterators::Utf8Iterator;
-use traits::{CharExt, U8UtfExt};
-use utf16_char::Utf16Char;
+use crate::errors::{FromStrError, EmptyStrError, NonAsciiError, Utf8Error};
+use crate::utf8_iterators::Utf8Iterator;
+use crate::traits::{CharExt, U8UtfExt};
+use crate::utf16_char::Utf16Char;
 extern crate core;
-use self::core::{hash, fmt, str, ptr};
-use self::core::cmp::Ordering;
-use self::core::borrow::Borrow;
-use self::core::ops::Deref;
+use core::{hash, fmt, str, ptr};
+use core::cmp::Ordering;
+use core::borrow::Borrow;
+use core::ops::Deref;
 #[cfg(feature="std")]
-use self::core::iter::FromIterator;
+use core::iter::FromIterator;
 #[cfg(feature="ascii")]
 extern crate ascii;
 #[cfg(feature="ascii")]
-use self::ascii::{AsciiChar,ToAsciiChar,ToAsciiCharError};
+use ascii::{AsciiChar,ToAsciiChar,ToAsciiCharError};
 
 
 // I don't think there is any good default value for char, but char does.

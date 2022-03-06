@@ -10,8 +10,8 @@
 //! Boilerplatey error types
 
 extern crate core;
-use self::core::fmt::{self,Display,Formatter};
-use self::core::ops::RangeInclusive;
+use core::fmt::{self,Display,Formatter};
+use core::ops::RangeInclusive;
 #[cfg(feature="std")]
 use std::error::Error;
 
@@ -93,7 +93,7 @@ simple!{
         /// It's higher than the highest codepoint (which is 0x10ffff).
         TooHigh => "is higher than the highest codepoint",
     }}
-use self::CodepointError::*;
+use CodepointError::*;
 impl CodepointError {
     /// Get the range of values for which this error would be given.
     pub fn error_range(self) -> RangeInclusive<u32> {match self {

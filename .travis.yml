@@ -21,7 +21,7 @@ jobs:
       - cargo check --tests --no-default-features
   - name: MSRV
     arch: amd64
-    rust: 1.44.0
+    rust: 1.56.1
     script:
       - cargo check
       - cargo check --no-default-features

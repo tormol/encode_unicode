@@ -14,18 +14,18 @@
 //! well with other adaptors,
 //! while the slice iterators yield both to make more advanced use cases easy.
 
-use errors::{InvalidUtf16FirstUnit, Utf16PairError, Utf8Error};
-use errors::InvalidUtf16Slice::*;
-use errors::Utf16PairError::*;
-use errors::Utf8ErrorKind::*;
-use utf8_char::Utf8Char;
-use utf16_char::Utf16Char;
-use traits::U16UtfExt;
+use crate::errors::{InvalidUtf16FirstUnit, Utf16PairError, Utf8Error};
+use crate::errors::InvalidUtf16Slice::*;
+use crate::errors::Utf16PairError::*;
+use crate::errors::Utf8ErrorKind::*;
+use crate::utf8_char::Utf8Char;
+use crate::utf16_char::Utf16Char;
+use crate::traits::U16UtfExt;
 extern crate core;
-use self::core::borrow::Borrow;
-use self::core::fmt::{self, Debug};
-use self::core::iter::Chain;
-use self::core::option;
+use core::borrow::Borrow;
+use core::fmt::{self, Debug};
+use core::iter::Chain;
+use core::option;
 
 
 /// Decodes UTF-8 characters from a byte iterator into `Utf8Char`s.

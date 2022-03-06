@@ -25,12 +25,12 @@ Miscellaneous UTF-8 and UTF-16 types and methods.
 
 # Minimum supported Rust version
 
-The minimum supported Rust version for 1.0.\* releases is 1.44.0.  
+The minimum supported Rust version for 1.0.\* releases is 1.56.  
 Later 1.y.0 releases might require newer Rust versions, but the three most
 recent stable releases at the time of publishing will always be supported.
-For example this means that if the current stable Rust version is 1.55 when
+For example this means that if the current stable Rust version is 1.66 when
 `encode_unicode` 1.1.0 is released, then `encode_unicode` 1.1.\* will
-not require a newer Rust version than 1.53.
+not require a newer Rust version than 1.63.
 
 [crates.io page](https://crates.io/crates/encode_unicode)  
 [github repository](https://github.com/tormol/encode_unicode)
@@ -72,17 +72,17 @@ pub use utf16_char::Utf16Char;
 
 pub mod error {// keeping the public interface in one file
     //! Errors returned by various conversion methods in this crate.
-    pub use errors::{FromStrError, EmptyStrError};
-    pub use errors::{CodepointError, NonAsciiError, NonBmpError};
-    pub use errors::{Utf8Error, Utf8ErrorKind};
-    pub use errors::{InvalidUtf16Slice, InvalidUtf16Array, InvalidUtf16Tuple};
-    pub use errors::{InvalidUtf16FirstUnit, Utf16PairError};
+    pub use crate::errors::{FromStrError, EmptyStrError};
+    pub use crate::errors::{CodepointError, NonAsciiError, NonBmpError};
+    pub use crate::errors::{Utf8Error, Utf8ErrorKind};
+    pub use crate::errors::{InvalidUtf16Slice, InvalidUtf16Array, InvalidUtf16Tuple};
+    pub use crate::errors::{InvalidUtf16FirstUnit, Utf16PairError};
 }
 
 pub mod iterator {
     //! Iterator types that you should rarely need to name
-    pub use utf8_iterators::{Utf8Iterator, Utf8CharSplitter, Utf8Chars, Utf8CharIndices};
-    pub use utf16_iterators::{Utf16Iterator, Utf16CharSplitter, Utf16Chars, Utf16CharIndices};
-    pub use decoding_iterators::{Utf8CharMerger, Utf8CharDecoder};
-    pub use decoding_iterators::{Utf16CharMerger, Utf16CharDecoder};
+    pub use crate::utf8_iterators::{Utf8Iterator, Utf8CharSplitter, Utf8Chars, Utf8CharIndices};
+    pub use crate::utf16_iterators::{Utf16Iterator, Utf16CharSplitter, Utf16Chars, Utf16CharIndices};
+    pub use crate::decoding_iterators::{Utf8CharMerger, Utf8CharDecoder};
+    pub use crate::decoding_iterators::{Utf16CharMerger, Utf16CharDecoder};
 }

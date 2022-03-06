@@ -6,25 +6,25 @@
  * copied, modified, or distributed except according to those terms.
  */
 
-use utf16_iterators::Utf16Iterator;
-use traits::{CharExt, U16UtfExt};
-use utf8_char::Utf8Char;
-use errors::{InvalidUtf16Slice, InvalidUtf16Array, InvalidUtf16Tuple};
-use errors::{NonBmpError, EmptyStrError, FromStrError};
+use crate::utf16_iterators::Utf16Iterator;
+use crate::traits::{CharExt, U16UtfExt};
+use crate::utf8_char::Utf8Char;
+use crate::errors::{InvalidUtf16Slice, InvalidUtf16Array, InvalidUtf16Tuple};
+use crate::errors::{NonBmpError, EmptyStrError, FromStrError};
 extern crate core;
-use self::core::{hash,fmt};
-use self::core::cmp::Ordering;
-use self::core::borrow::Borrow;
-use self::core::ops::Deref;
-use self::core::str::FromStr;
+use core::{hash,fmt};
+use core::cmp::Ordering;
+use core::borrow::Borrow;
+use core::ops::Deref;
+use core::str::FromStr;
 #[cfg(feature="std")]
-use self::core::iter::FromIterator;
+use core::iter::FromIterator;
 #[cfg(feature="ascii")]
-use self::core::char;
+use core::char;
 #[cfg(feature="ascii")]
 extern crate ascii;
 #[cfg(feature="ascii")]
-use self::ascii::{AsciiChar,ToAsciiChar,ToAsciiCharError};
+use ascii::{AsciiChar,ToAsciiChar,ToAsciiCharError};
 
 
 // I don't think there is any good default value for char, but char does.

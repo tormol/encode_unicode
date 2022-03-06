@@ -11,6 +11,7 @@ license = "MIT/Apache-2.0"
 repository = "https://github.com/tormol/encode_unicode"
 documentation = "https://docs.rs/encode_unicode/"
 authors = ["Torbjørn Birch Moltu <t.b.moltu@lyse.net>"]
+edition = "2021"
 
 [dependencies.ascii]
 optional = true
