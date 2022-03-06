@@ -567,8 +567,8 @@ impl Utf8Char {
     // There is no .is_emty() because this type is never empty.
 
     /// Checks that the codepoint is an ASCII character.
-    pub const fn is_ascii(&self) -> bool {
-        self.bytes[0] <= 127
+    pub const fn is_ascii(self) -> bool {
+        self.bytes[0].is_ascii()
     }
     /// Checks that two characters are an ASCII case-insensitive match.
     ///
@@ -581,19 +581,17 @@ impl Utf8Char {
     ///
     /// ASCII letters 'a' to 'z' are mapped to 'A' to 'Z',
     /// but non-ASCII letters are unchanged.
-    pub fn to_ascii_uppercase(&self) -> Self {
-        let mut uc = *self;
-        uc.make_ascii_uppercase();
-        uc
+    pub fn to_ascii_uppercase(mut self) -> Self {
+        self.make_ascii_uppercase();
+        self
     }
     /// Converts the character to its ASCII lower case equivalent.
     ///
     /// ASCII letters 'A' to 'Z' are mapped to 'a' to 'z',
     /// but non-ASCII letters are unchanged.
-    pub fn to_ascii_lowercase(&self) -> Self {
-        let mut uc = *self;
-        uc.make_ascii_lowercase();
-        uc
+    pub fn to_ascii_lowercase(mut self) -> Self {
+        self.make_ascii_lowercase();
+        self
     }
     /// Converts the character to its ASCII upper case equivalent in-place.
     ///

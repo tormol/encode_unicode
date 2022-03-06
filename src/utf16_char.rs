@@ -575,7 +575,7 @@ impl Utf16Char {
     /// assert_eq!(Utf16Char::from('𝔼').is_bmp(), false);
     /// ```
     #[inline]
-    pub const fn is_bmp(&self) -> bool {
+    pub const fn is_bmp(self) -> bool {
         self.units[1] == 0
     }
 
@@ -591,7 +591,7 @@ impl Utf16Char {
 
     /// Checks that the codepoint is an ASCII character.
     #[inline]
-    pub const fn is_ascii(&self) -> bool {
+    pub const fn is_ascii(self) -> bool {
         self.units[0] <= 127
     }
     /// Checks that two characters are an ASCII case-insensitive match.
@@ -604,19 +604,19 @@ impl Utf16Char {
     ///
     /// ASCII letters 'a' to 'z' are mapped to 'A' to 'Z',
     /// but non-ASCII letters are unchanged.
-    pub fn to_ascii_uppercase(&self) -> Self {
+    pub fn to_ascii_uppercase(self) -> Self {
         let n = self.units[0].wrapping_sub(b'a' as u16);
         if n < 26 {Utf16Char{ units: [n+b'A' as u16, 0] }}
-        else      {*self}
+        else      {self}
     }
     /// Converts the character to its ASCII lower case equivalent.
     ///
     /// ASCII letters 'A' to 'Z' are mapped to 'a' to 'z',
     /// but non-ASCII letters are unchanged.
-    pub fn to_ascii_lowercase(&self) -> Self {
+    pub fn to_ascii_lowercase(self) -> Self {
         let n = self.units[0].wrapping_sub(b'A' as u16);
         if n < 26 {Utf16Char{ units: [n+b'a' as u16, 0] }}
-        else      {*self}
+        else      {self}
     }
     /// Converts the character to its ASCII upper case equivalent in-place.
     ///
