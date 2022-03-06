@@ -1,4 +1,4 @@
-/* Copyright 2016-2020 Torbjørn Birch Moltu
+/* Copyright 2016-2022 Torbjørn Birch Moltu
  * Copyright 2018 Aljoscha Meyer
  *
  * Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
@@ -21,7 +21,7 @@ Miscellaneous UTF-8 and UTF-16 types and methods.
   `encode_unicode = {version="0.3.4", default-features=false}`
 * Integration with the [ascii](https://tomprogrammer.github.io/rust-ascii/ascii/index.html) crate:  
   Convert `Utf8Char` and `Utf16Char` to and from
-  [ascii::`AsciiChar`](https://tomprogrammer.github.io/rust-ascii/ascii/enum.AsciiChar.html).
+  [`ascii::AsciiChar`](https://tomprogrammer.github.io/rust-ascii/ascii/enum.AsciiChar.html).
 
 # Minimum supported Rust version
 
@@ -41,8 +41,7 @@ not require a newer Rust version than 1.53.
 
 #![warn(missing_docs)]
 #![allow(
-    clippy::inconsistent_digit_grouping,// I sometimes group into UTF-8 control part and codepoint part
-    clippy::large_digit_groups,// I sometimes group into UTF-8 control part and codepoint part
+    clippy::unusual_byte_groupings,// I sometimes group into UTF-8 control part and codepoint part
     clippy::derive_hash_xor_eq,// tested
     clippy::len_without_is_empty,// the character types are never empty
     clippy::needless_return,// `foo.bar();\n foo` looks unfinished
@@ -50,13 +49,14 @@ not require a newer Rust version than 1.53.
     clippy::redundant_closure_call,// not redundant in macros
     clippy::cast_lossless,// the sizes are part of the struct name and so won't change
     clippy::many_single_char_names,// the variables are in different scopes
+    clippy::cmp_owned,// smaller than pointer, and no allocations anyway
+    clippy::wrong_self_convention,// smaller than pointer
     clippy::needless_range_loop,// the suggested iterator chains are less intuitive
-    clippy::trivially_copy_pass_by_ref,// compatibility with char methods originally from AsciiExt
     clippy::identity_op,// applying a set of opereations with varying arguments to many elements looks nice
 )]
-#![warn(clippy::doc_markdown, clippy::filter_map)]
+#![warn(clippy::doc_markdown, clippy::manual_filter_map)]
 // opt-in lints that might be interesting to recheck once in a while:
-//#![warn(clippy::result_unwrap_used, clippy::option_unwrap_used))]
+//#![warn(clippy::unwrap_used)]
 
 mod errors;
 mod traits;
