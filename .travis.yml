@@ -25,7 +25,6 @@ jobs:
     script:
       - cargo check
       - cargo check --no-default-features
-      - cargo check --no-default-features --features alloc
   - name: big-endian
     arch: s390x
     rust: stable
