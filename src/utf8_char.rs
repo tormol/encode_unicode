@@ -1,4 +1,4 @@
-/* Copyright 2016-2020 Torbjørn Birch Moltu
+/* Copyright 2016-2022 Torbjørn Birch Moltu
  *
  * Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
  * http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
@@ -233,7 +233,7 @@ impl ToAsciiChar for Utf8Char {
         self.bytes[0].to_ascii_char()
     }
     unsafe fn to_ascii_char_unchecked(self) -> AsciiChar {
-        self.bytes[0].to_ascii_char_unchecked()
+        unsafe { self.bytes[0].to_ascii_char_unchecked() }
     }
 }
 
@@ -459,10 +459,12 @@ impl Utf8Char {
     /// The slice must be non-empty and start with a valid UTF-8 codepoint.  
     /// Invalid or incomplete values might cause reads of uninitalized memory.
     pub unsafe fn from_slice_start_unchecked(src: &[u8]) -> (Self,usize) {
-        let len = 1+src.get_unchecked(0).extra_utf8_bytes_unchecked();
-        let mut bytes = [0; 4];
-        ptr::copy_nonoverlapping(src.as_ptr(), bytes.as_mut_ptr() as *mut u8, len);
-        (Utf8Char{bytes}, len)
+        unsafe {
+            let len = 1+src.get_unchecked(0).extra_utf8_bytes_unchecked();
+            let mut bytes = [0; 4];
+            ptr::copy_nonoverlapping(src.as_ptr(), bytes.as_mut_ptr() as *mut u8, len);
+            (Utf8Char{bytes}, len)
+        }
     }
     /// Create an `Utf8Char` from a byte array after validating it.
     ///

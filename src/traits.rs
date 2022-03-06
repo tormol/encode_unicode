@@ -1,4 +1,4 @@
-/* Copyright 2016-2020 Torbjørn Birch Moltu
+/* Copyright 2016-2022 Torbjørn Birch Moltu
  * Copyright 2018 Aljoscha Meyer
  *
  * Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
@@ -6,8 +6,6 @@
  * http://opensource.org/licenses/MIT>, at your option. This file may not be
  * copied, modified, or distributed except according to those terms.
  */
-
-#![allow(unused_unsafe)]// explicit unsafe{} blocks in unsafe functions are a good thing.
 
 use crate::utf8_char::Utf8Char;
 use crate::utf16_char::Utf16Char;
@@ -464,10 +462,12 @@ impl CharExt for char {
     }
 
     unsafe fn from_utf8_exact_slice_unchecked(src: &[u8]) -> Self {
-        if src.len() == 1 {
-            src[0] as char
-        } else {
-            char::from_u32_unchecked(merge_nonascii_unchecked_utf8(src))
+        unsafe {
+            if src.len() == 1 {
+                src[0] as char
+            } else {
+                char::from_u32_unchecked(merge_nonascii_unchecked_utf8(src))
+            }
         }
     }
 
@@ -552,9 +552,11 @@ impl CharExt for char {
             .unwrap_or_else(|| combine_surrogates(utf16[0], utf16[1]) )
     }
     unsafe fn from_utf16_tuple_unchecked(utf16: (u16, Option<u16>)) -> Self {
-        match utf16.1 {
-            Some(second) => combine_surrogates(utf16.0, second),
-            None         => char::from_u32_unchecked(utf16.0 as u32)
+        unsafe {
+            match utf16.1 {
+                Some(second) => combine_surrogates(utf16.0, second),
+                None         => char::from_u32_unchecked(utf16.0 as u32)
+            }
         }
     }
 

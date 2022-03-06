@@ -1,4 +1,4 @@
-/* Copyright 2016-2020 Torbjørn Birch Moltu
+/* Copyright 2016-2022 Torbjørn Birch Moltu
  *
  * Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
  * http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
@@ -224,7 +224,7 @@ impl ToAsciiChar for Utf16Char {
     }
     #[inline]
     unsafe fn to_ascii_char_unchecked(self) -> AsciiChar {
-        self.units[0].to_ascii_char_unchecked()
+        unsafe { self.units[0].to_ascii_char_unchecked() }
     }
 }
 
@@ -470,11 +470,13 @@ impl Utf16Char {
     /// The slice must be non-empty and start with a valid UTF-16 codepoint.  
     /// The length of the slice is never checked.
     pub unsafe fn from_slice_start_unchecked(src: &[u16]) -> (Self,usize) {
-        let first = *src.get_unchecked(0);
-        if first.is_utf16_leading_surrogate() {
-            (Utf16Char{ units: [first, *src.get_unchecked(1)] }, 2)
-        } else {
-            (Utf16Char{ units: [first, 0] }, 1)
+        unsafe {
+            let first = *src.get_unchecked(0);
+            if first.is_utf16_leading_surrogate() {
+                (Utf16Char{ units: [first, *src.get_unchecked(1)] }, 2)
+            } else {
+                (Utf16Char{ units: [first, 0] }, 1)
+            }
         }
     }
     /// Validate and store an UTF-16 array as returned from `char.to_utf16_array()`.

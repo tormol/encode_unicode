@@ -39,7 +39,7 @@ not require a newer Rust version than 1.63.
 
 #![cfg_attr(not(feature="std"), no_std)]
 
-#![warn(missing_docs)]
+#![warn(missing_docs, unsafe_op_in_unsafe_fn)]
 #![allow(
     clippy::unusual_byte_groupings,// I sometimes group into UTF-8 control part and codepoint part
     clippy::derive_hash_xor_eq,// tested
