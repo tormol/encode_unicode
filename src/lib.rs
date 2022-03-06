@@ -45,7 +45,6 @@ not require a newer Rust version than 1.63.
     clippy::derive_hash_xor_eq,// tested
     clippy::len_without_is_empty,// the character types are never empty
     clippy::needless_return,// `foo.bar();\n foo` looks unfinished
-    clippy::redundant_closure,// looks weird just passing the name of an enum variant
     clippy::redundant_closure_call,// not redundant in macros
     clippy::cast_lossless,// the sizes are part of the struct name and so won't change
     clippy::many_single_char_names,// the variables are in different scopes

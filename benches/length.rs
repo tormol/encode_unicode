@@ -1,4 +1,4 @@
-/* Copyright 2018 Torbjørn Birch Moltu
+/* Copyright 2018-2022 Torbjørn Birch Moltu
  *
  * Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
  * http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
@@ -93,8 +93,7 @@ lazy_static!{
         println!("chars: {} (limited by {})", chars, least);
         STRINGS.iter().map(|(&language, string)| {
             let cut = string.char_indices()
-                .skip(chars)
-                .next()
+                .nth(chars)
                 .map_or(string.len(), |(i,_)| i );
             let string = &string[..cut];
             assert_eq!(string.chars().count(), chars);

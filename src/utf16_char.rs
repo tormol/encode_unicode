@@ -155,7 +155,7 @@ impl<'a> FromIterator<&'a Utf16Char> for Vec<u16> {
 #[cfg(feature="std")]
 impl Extend<Utf16Char> for String {
     fn extend<I:IntoIterator<Item=Utf16Char>>(&mut self,  iter: I) {
-        self.extend(iter.into_iter().map(|u16c| Utf8Char::from(u16c) ));
+        self.extend(iter.into_iter().map(Utf8Char::from));
     }
 }
 #[cfg(feature="std")]

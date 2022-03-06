@@ -9,6 +9,10 @@
 //! Test that every method gives the correct result for valid values.
 //! Except iterators, which are stateful.
 
+#![allow(
+    clippy::eq_op, // testing the comparison
+)]
+
 use std::char;
 use std::str::{self,FromStr};
 use std::cmp::Ordering;
@@ -35,7 +39,7 @@ fn same_size_as_char() {
 #[test]
 fn utf16chars_to_string() {
     let s = "aå\u{10ffff}‽\u{100000}\u{fee1}";
-    let u16cs = s.chars().map(|c| Utf16Char::from(c) ).collect::<Vec<Utf16Char>>();
+    let u16cs = s.chars().map(Utf16Char::from).collect::<Vec<Utf16Char>>();
 
     let mut from_refs: String = u16cs.iter().collect();
     assert_eq!(&from_refs, s);
