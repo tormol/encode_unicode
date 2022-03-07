@@ -111,7 +111,7 @@ impl From<char> for Utf8Char {
 }
 impl From<Utf8Char> for char {
     fn from(uc: Utf8Char) -> char {
-        unsafe{ char::from_utf8_exact_slice_unchecked(&uc.bytes[..uc.len()]) }
+        uc.to_char()
     }
 }
 impl IntoIterator for Utf8Char {
@@ -573,24 +573,28 @@ impl Utf8Char {
     /// Checks that two characters are an ASCII case-insensitive match.
     ///
     /// Is equivalent to `a.to_ascii_lowercase() == b.to_ascii_lowercase()`.
-    pub fn eq_ignore_ascii_case(&self,  other: &Self) -> bool {
-        if self.is_ascii() {self.bytes[0].eq_ignore_ascii_case(&other.bytes[0])}
-        else               {self == other}
+    pub const fn eq_ignore_ascii_case(&self,  other: &Self) -> bool {
+        if self.is_ascii() {
+            self.bytes[0].eq_ignore_ascii_case(&other.bytes[0])
+        } else {
+            // [u8; 4] can't be const compared as of Rust 1.60, but u32 can
+            u32::from_le_bytes(self.bytes) == u32::from_le_bytes(other.bytes)
+        }
     }
     /// Converts the character to its ASCII upper case equivalent.
     ///
     /// ASCII letters 'a' to 'z' are mapped to 'A' to 'Z',
     /// but non-ASCII letters are unchanged.
-    pub fn to_ascii_uppercase(mut self) -> Self {
-        self.make_ascii_uppercase();
+    pub const fn to_ascii_uppercase(mut self) -> Self {
+        self.bytes[0] = self.bytes[0].to_ascii_uppercase();
         self
     }
     /// Converts the character to its ASCII lower case equivalent.
     ///
     /// ASCII letters 'A' to 'Z' are mapped to 'a' to 'z',
     /// but non-ASCII letters are unchanged.
-    pub fn to_ascii_lowercase(mut self) -> Self {
-        self.make_ascii_lowercase();
+    pub const fn to_ascii_lowercase(mut self) -> Self {
+        self.bytes[0] = self.bytes[0].to_ascii_lowercase();
         self
     }
     /// Converts the character to its ASCII upper case equivalent in-place.
@@ -612,7 +616,7 @@ impl Utf8Char {
 
     /// Convert from UTF-8 to UTF-32
     pub fn to_char(self) -> char {
-        self.into()
+        unsafe { char::from_utf8_exact_slice_unchecked(&self.bytes[..self.len()]) }
     }
     /// Write the internal representation to a slice,
     /// and then returns the number of bytes written.
@@ -630,7 +634,7 @@ impl Utf8Char {
         self.len()
     }
     /// Expose the internal array and the number of used bytes.
-    pub fn to_array(self) -> ([u8;4],usize) {
+    pub const fn to_array(self) -> ([u8;4],usize) {
         (self.bytes, self.len())
     }
     /// Return a `str` view of the array the codepoint is stored as.

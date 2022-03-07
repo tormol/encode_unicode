@@ -418,7 +418,7 @@ impl Utf16Char {
     /// assert_eq!(Utf16Char::from_str_start("é"), Ok((Utf16Char::from('e'),1)));// 'e'+u301 combining mark
     /// assert!(Utf16Char::from_str_start("").is_err());
     /// ```
-    pub fn from_str_start(s: &str) -> Result<(Self,usize), EmptyStrError> {
+    pub const fn from_str_start(s: &str) -> Result<(Self,usize), EmptyStrError> {
         if s.is_empty() {
             return Err(EmptyStrError);
         }
@@ -491,7 +491,7 @@ impl Utf16Char {
     /// assert_eq!(Utf16Char::from_array([0xdaaf, 0xdaaf]), Err(InvalidUtf16Array::SecondIsNotTrailingSurrogate));
     /// assert_eq!(Utf16Char::from_array([0xdcac, 0x9000]), Err(InvalidUtf16Array::FirstIsTrailingSurrogate));
     /// ```
-    pub fn from_array(units: [u16; 2]) -> Result<Self,InvalidUtf16Array> {
+    pub const fn from_array(units: [u16; 2]) -> Result<Self,InvalidUtf16Array> {
         if (units[0] & 0xf8_00) != 0xd8_00 {
             Ok(Utf16Char { units: [units[0], 0] })
         } else if units[0] < 0xdc_00  &&  (units[1] & 0xfc_00) == 0xdc_00 {
@@ -597,14 +597,18 @@ impl Utf16Char {
     /// Checks that two characters are an ASCII case-insensitive match.
     ///
     /// Is equivalent to `a.to_ascii_lowercase() == b.to_ascii_lowercase()`.
-    pub fn eq_ignore_ascii_case(&self,  other: &Self) -> bool {
-        self.to_ascii_lowercase() == other.to_ascii_lowercase()
+    pub const fn eq_ignore_ascii_case(&self,  other: &Self) -> bool {
+        if self.is_ascii() && other.is_ascii() {
+            (self.units[0] as u8).eq_ignore_ascii_case(&(other.units[0] as u8))
+        } else {
+            self.units[0] == other.units[0] && self.units[1] == other.units[1]
+        }
     }
     /// Converts the character to its ASCII upper case equivalent.
     ///
     /// ASCII letters 'a' to 'z' are mapped to 'A' to 'Z',
     /// but non-ASCII letters are unchanged.
-    pub fn to_ascii_uppercase(self) -> Self {
+    pub const fn to_ascii_uppercase(self) -> Self {
         let n = self.units[0].wrapping_sub(b'a' as u16);
         if n < 26 {Utf16Char{ units: [n+b'A' as u16, 0] }}
         else      {self}
@@ -613,7 +617,7 @@ impl Utf16Char {
     ///
     /// ASCII letters 'A' to 'Z' are mapped to 'a' to 'z',
     /// but non-ASCII letters are unchanged.
-    pub fn to_ascii_lowercase(self) -> Self {
+    pub const fn to_ascii_lowercase(self) -> Self {
         let n = self.units[0].wrapping_sub(b'A' as u16);
         if n < 26 {Utf16Char{ units: [n+b'a' as u16, 0] }}
         else      {self}
