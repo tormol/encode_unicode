@@ -271,18 +271,40 @@ fn test(c: char) {
 
 
 #[test]
-fn edges_middle() {
+fn edges_and_middle() {
     for &c in &EDGES_AND_BETWEEN {
         test(c);
     }
 }
 
 
-#[test]
-#[ignore]
-fn all() {
-    for cp in std::iter::Iterator::chain(0..0xd800, 0xe000..0x110000) {
-        let c = char::from_u32(cp).expect("not a valid char");
-        test(c);
+// Test EVERY codepoint.
+// By splitting into multiple tests we get multithreading for free.
+macro_rules! test_codepoint_range {($name:ident, $range:expr) => {
+    #[test]
+    #[ignore]
+    fn $name() {
+        for cp in $range {
+            let c = char::from_u32(cp).expect("not a valid char");
+            test(c);
+        }
     }
-}
+}}
+test_codepoint_range!{all_0000_d800,     0x0000..0xd800}
+test_codepoint_range!{all_e000_10000,    0xe000..0x10000}
+test_codepoint_range!{all_10000_20000,   0x10000..0x20000}
+test_codepoint_range!{all_20000_30000,   0x20000..0x30000}
+test_codepoint_range!{all_30000_40000,   0x30000..0x40000}
+test_codepoint_range!{all_40000_50000,   0x40000..0x50000}
+test_codepoint_range!{all_50000_60000,   0x50000..0x60000}
+test_codepoint_range!{all_60000_70000,   0x60000..0x70000}
+test_codepoint_range!{all_70000_80000,   0x70000..0x80000}
+test_codepoint_range!{all_80000_90000,   0x80000..0x90000}
+test_codepoint_range!{all_90000_a0000,   0x90000..0xa0000}
+test_codepoint_range!{all_a0000_b0000,   0xa0000..0xb0000}
+test_codepoint_range!{all_b0000_c0000,   0xb0000..0xc0000}
+test_codepoint_range!{all_c0000_d0000,   0xc0000..0xd0000}
+test_codepoint_range!{all_d0000_e0000,   0xd0000..0xe0000}
+test_codepoint_range!{all_e0000_f0000,   0xe0000..0xf0000}
+test_codepoint_range!{all_f0000_100000,  0xf0000..0x100000}
+test_codepoint_range!{all_100000_110000, 0x100000..0x110000}
