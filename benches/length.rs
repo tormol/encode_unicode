@@ -13,11 +13,11 @@ use test::{Bencher, black_box};
 
 use std::fs;
 use std::path::Path;
-use std::io::{ErrorKind,Read};
+use std::io::ErrorKind;
 use std::thread::sleep;
 use std::time::Duration;
 use std::collections::HashMap;
-extern crate reqwest;
+extern crate minreq;
 #[macro_use] extern crate lazy_static;
 extern crate encode_unicode;
 use encode_unicode::{CharExt, Utf8Char, U8UtfExt, Utf16Char, U16UtfExt};
@@ -46,16 +46,15 @@ fn load_wikipedia(language: &str,  article: &str,  english: &str,  revision: usi
         language, article, revision
     );
     println!("Downloading {} and saving to {}", &url, path);
-    let mut reader = reqwest::get(&url).unwrap_or_else(|e| {
+    let response = minreq::get(&url).send().unwrap_or_else(|e| {
         panic!("Cannot get {}: {}", url, e);
     });
-    if reader.status() != reqwest::StatusCode::OK {
-        panic!("Bad URL {}: {}", url, reader.status());
+    if response.status_code != 200 {
+        panic!("Bad URL {}: {} {}", url, response.status_code, response.reason_phrase);
     }
-    let mut content = String::new();
-    if let Err(e) = reader.read_to_string(&mut content) {
-        panic!("Cannot get {}: {}", url, e);
-    }
+    let content = String::from_utf8(response.into_bytes()).unwrap_or_else(|_| {
+        panic!("Response from {} is not UTF-8", url);
+    });
     if let Err(e) = fs::create_dir_all(cache_path) {
         eprintln!("Warning: failed to create directory {}: {}", cache_path, e);
     } else if let Err(e) = fs::write(&path, &content) {
@@ -68,7 +67,8 @@ const ARTICLES: &[(&str, &str, &str, usize)] = &[
     ("en", "United_Kingdom", "United_Kingdom", 855522252),// 99,7% ASCII
     ("es", "España", "Spain", 109861222),// 1,75% 2-byte characters
     ("ru", "Россия", "Russia", 94607243),// 36% 2-byte characters
-    ("zh", "中國", "China", 50868604),// 30% 3-byte characters
+    // Only UCS / bmp characters are allowed unescaped in URLs:
+    ("zh", "%E4%B8%AD%E5%9C%8B", "China", 50868604),// 30% 3-byte characters
 ];
 lazy_static!{
     static ref STRINGS: HashMap<&'static str, String> = {

@@ -21,8 +21,9 @@ default-features = false # don't need std for the parts we use
 [target.'cfg(unix)'.dev-dependencies]
 lazy_static = "1.0"
 
-[dev-dependencies]
-reqwest = "0.9"
+[dev-dependencies.minreq]
+version = "2.6"
+features = ["https-native"]
 
 [features]
 std = []
