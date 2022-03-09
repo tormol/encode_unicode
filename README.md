@@ -2,7 +2,7 @@
 
 UTF-8 and UTF-16 character types, iterators and related methods for `char`, `u8` and `u16`.
 
-[![crates.io page](https://img.shields.io/crates/v/encode_unicode.svg)](https://crates.io/crates/encode_unicode/) ![License: Apache-2 or MIT](https://img.shields.io/crates/l/encode_unicode.svg) [![Documentation on docs.rs](https://docs.rs/encode_unicode/badge.svg)](https://docs.rs/encode_unicode/) [![CI build status](https://travis-ci.com/tormol/encode_unicode.svg?branch=master)](https://travis-ci.com/tormol/encode_unicode)
+[![crates.io page](https://img.shields.io/crates/v/encode_unicode.svg)](https://crates.io/crates/encode_unicode/) ![License: Apache-2 or MIT](https://img.shields.io/crates/l/encode_unicode.svg) [![Documentation on docs.rs](https://docs.rs/encode_unicode/badge.svg)](https://docs.rs/encode_unicode/) [![CI build status](https://api.cirrus-ci.com/github/tormol/encode_unicode.svg)](https://cirrus-ci.com/github/tormol/encode_unicode)
 
 ## Features
 
