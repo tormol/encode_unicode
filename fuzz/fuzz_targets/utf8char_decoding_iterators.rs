@@ -4,7 +4,7 @@ extern crate libfuzzer_sys;
 extern crate encode_unicode;
 
 use encode_unicode::{IterExt, SliceExt, U8UtfExt, Utf8Char};
-use encode_unicode::error::{Utf8Error::*, InvalidUtf8::*};
+use encode_unicode::error::Utf8ErrorKind::*;
 use std::str;
 
 fuzz_target!(|data: &[u8]| {
@@ -35,9 +35,9 @@ fuzz_target!(|data: &[u8]| {
             assert_eq!(from_bytes.len(), error_start);
             break;
         } else {
-            let extra = data[byte_start + valid_up_to].extra_utf8_bytes().unwrap();
+            data[byte_start + valid_up_to].extra_utf8_bytes().unwrap();
             assert_eq!(from_bytes.len() - error_start, data.len() - valid_up_to - byte_start);
-            assert_eq!(from_bytes[error_start], Err(TooShort(1+extra)));
+            assert_eq!(from_bytes[error_start].map_err(|e| e.kind() ), Err(TooFewBytes));
             break;
         }
     }
@@ -47,7 +47,7 @@ fuzz_target!(|data: &[u8]| {
         match sr {
             // the slice-based iterator might detect too short earlier,
             // but that should be the only difference
-            Err(TooShort(_)) | Err(Utf8(NotAContinuationByte(_)))
+            Err(e) if e.kind() == TooFewBytes || e.kind() == InterruptedSequence
                 => assert!(br.is_err(), "byte {}", i),
             _ => assert_eq!(sr, br, "byte {}", i),
         }
