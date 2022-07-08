@@ -51,21 +51,19 @@ task:
     - rm -rf $HOME/.cargo/registry/index
 
 task:
-  name: nightly
+  name: nightly check
   container:
     image: rustlang/rust:nightly
     cpu: 1
     memory: 1G
   allow_failures: false
-  env:
-    RUST_BACKTRACE: 1
   cargo_cache:
     folder: $HOME/.cargo/registry
     fingerprint_script: cat Cargo.lock 2> /dev/null || true
-  # rustc version so likely to have changed that build artefacts are not worth caching
+  # rustc version is so likely to have changed that build artefacts are not worth caching
   info_script:
     - rustc --version
-  build_script:
-    - cargo check --all --all-features
+  check_script:
+    - cargo check --all --benches --all-features
   before_cache_script:
     - rm -rf $HOME/.cargo/registry/index
