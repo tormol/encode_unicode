@@ -29,6 +29,10 @@ features = ["https-native"]
 std = []
 default = ["std"]
 
+[[bench]]
+name="length"
+required-features = ["std"]
+
 [badges.maintenance]
 status = "passively-maintained"
 # Too low activity for is-it-maintained-issue-resolution
