@@ -61,9 +61,12 @@ task:
     folder: $HOME/.cargo/registry
     fingerprint_script: cat Cargo.lock 2> /dev/null || true
   # rustc version is so likely to have changed that build artefacts are not worth caching
+  setup_script:
+    - cargo install cargo-fuzz
   info_script:
     - rustc --version
   check_script:
     - cargo check --all --benches --all-features
+    - cargo fuzz build --all-features
   before_cache_script:
     - rm -rf $HOME/.cargo/registry/index
