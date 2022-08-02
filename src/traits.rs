@@ -34,32 +34,28 @@ pub trait U8UtfExt {
     /// An error is returned if the byte is not a valid start of an UTF-8
     /// codepoint:
     ///
-    /// * `128..192`: `UnexpectedContinuationByte`
-    /// * `248..`: `NonUtf8Byte`
-    ///
-    /// Values in 244..248 represent a too high codepoint, but do not cause an
-    /// error.
+    /// * `128..192`: [`UnexpectedContinuationByte`](error/enum.Utf8ErrorKind.html#variant.UnexpectedContinuationByte)
+    /// * `245..`, `192` and `193`: [`NonUtf8Byte`](error/enum.Utf8ErrorKind.html#variant.NonUtf8Byte)  
     fn extra_utf8_bytes(self) -> Result<usize,Utf8Error>;
 
     /// How many more bytes will you need to complete this codepoint?
     ///
     /// This function assumes that the byte is a valid UTF-8 start, and might
-    /// return any value otherwise. (but the function is pure and safe to call
-    /// with any value).
+    /// return any value otherwise. (but the function is safe to call with any
+    /// value and will return a consistent result).
     fn extra_utf8_bytes_unchecked(self) -> usize;
 }
 
 impl U8UtfExt for u8 {
     #[inline]
     fn extra_utf8_bytes(self) -> Result<usize,Utf8Error> {
-        // the bit twiddling is explained in extra_utf8_bytes_unchecked()
-        if self < 128 {
-            return Ok(0);// ASCII
-        }
-        match ((self as u32)<<25).not().leading_zeros() {
-            n @ 1..=3 => Ok(n as usize),// start of multibyte
-            0 => Err(Utf8Error{ kind: UnexpectedContinuationByte }),// following byte
-            _ => Err(Utf8Error{ kind: NonUtf8Byte }),// too big
+        match self {
+            0x00..=0x7f => Ok(0),
+            0xc2..=0xdf => Ok(1),
+            0xe0..=0xef => Ok(2),
+            0xf0..=0xf4 => Ok(3),
+            0xc0..=0xc1 | 0xf5..=0xff => Err(Utf8Error{ kind: NonUtf8Byte }),// too big or overlong
+            0x80..=0xbf => Err(Utf8Error{ kind: UnexpectedContinuationByte }),// following byte
         }
     }
     #[inline]
@@ -272,8 +268,9 @@ pub trait CharExt: Sized {
     /// assert_eq!(char::from_utf8_array([0, 0, 0xcc, 0xbb]), Ok('\0'));
     ///
     /// assert_eq!(char::from_utf8_array([0xef, b'F', 0x80, 0x80]).unwrap_err(), InterruptedSequence);
-    /// assert_eq!(char::from_utf8_array([0xc1, 0x80, 0, 0]).unwrap_err(), OverlongEncoding);
-    /// assert_eq!(char::from_utf8_array([0xf7, 0xaa, 0x99, 0x88]).unwrap_err(), TooHighCodepoint);
+    /// assert_eq!(char::from_utf8_array([0xc1, 0x80, 0, 0]).unwrap_err().kind(), NonUtf8Byte);
+    /// assert_eq!(char::from_utf8_array([0xe0, 0x9a, 0xbf, 0]).unwrap_err().kind(), OverlongEncoding);
+    /// assert_eq!(char::from_utf8_array([0xf4, 0xaa, 0x99, 0x88]).unwrap_err(), TooHighCodepoint);
     /// ```
     fn from_utf8_array(utf8: [u8; 4]) -> Result<Self,Utf8Error>;
 

@@ -483,8 +483,9 @@ impl Utf8Char {
     /// assert_eq!(Utf8Char::from_array([0, 0, 0xcc, 0xbb]), Ok(Utf8Char::from('\0')));
     ///
     /// assert_eq!(Utf8Char::from_array([0xef, b'F', 0x80, 0x80]).unwrap_err().kind(), InterruptedSequence);
-    /// assert_eq!(Utf8Char::from_array([0xc1, 0x80, 0, 0]).unwrap_err().kind(), OverlongEncoding);
-    /// assert_eq!(Utf8Char::from_array([0xf7, 0xaa, 0x99, 0x88]).unwrap_err().kind(), TooHighCodepoint);
+    /// assert_eq!(Utf8Char::from_array([0xc1, 0x80, 0, 0]).unwrap_err().kind(), NonUtf8Byte);
+    /// assert_eq!(Utf8Char::from_array([0xe0, 0x9a, 0xbf, 0]).unwrap_err().kind(), OverlongEncoding);
+    /// assert_eq!(Utf8Char::from_array([0xf4, 0xaa, 0x99, 0x88]).unwrap_err().kind(), TooHighCodepoint);
     /// ```
     pub fn from_array(utf8: [u8;4]) -> Result<Self,Utf8Error> {
         // perform all validation

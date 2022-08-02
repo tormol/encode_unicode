@@ -1,4 +1,4 @@
-/* Copyright 2016-2020 Torbjørn Birch Moltu
+/* Copyright 2016-2022 Torbjørn Birch Moltu
  *
  * Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
  * http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
@@ -225,9 +225,11 @@ pub enum Utf8ErrorKind {
     /// This error is returned when a byte in the following ranges
     /// is encountered anywhere in an UTF-8 sequence:
     ///
-    /// * `192..=193` (`0b1100_000x`): Can only appear as part of an overlong
-    ///   encoding of an ASCII character, and should therefore never occur.
-    /// * `240..=255` (`0b1111_1xxx`): Sequences cannot be longer than 4 bytes.
+    /// * `192` and `193` (`0b1100_000x`): Indicates an overlong encoding
+    ///   of a single-byte, ASCII, character, and should therefore never occur.
+    /// * `248..` (`0b1111_1xxx`): Sequences cannot be longer than 4 bytes.
+    /// * `245..=247` (`0b1111_0101 | 0b1111_0110`): Indicates a too high
+    ///   codepoint. (above `\u10ffff`)
     NonUtf8Byte,
     /// The first byte is not a valid start of a codepoint.
     ///

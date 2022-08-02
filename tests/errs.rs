@@ -1,4 +1,4 @@
-/* Copyright 2016-2020 Torbjørn Birch Moltu
+/* Copyright 2016-2022 Torbjørn Birch Moltu
  * Copyright 2018 Aljoscha Meyer
  *
  * Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
@@ -43,12 +43,26 @@ fn kind<T>(result: Result<T,Utf8Error>) -> Result<T,Utf8ErrorKind> {
     for c in 0..256 {
         assert_eq!( kind((c as u8).extra_utf8_bytes()), match c {
             0b_1000_0000..=0b_1011_1111 => Err(UnexpectedContinuationByte),
+            0b_1100_0000..=0b_1100_0001 => Err(NonUtf8Byte),
+            0b_1111_0101..=0b_1111_0111 => Err(NonUtf8Byte),
             0b_1111_1000..=0b_1111_1111 => Err(NonUtf8Byte),
             0b_0000_0000..=0b_0111_1111 => Ok(0),
-            0b_1100_0000..=0b_1101_1111 => Ok(1),
+            0b_1100_0010..=0b_1101_1111 => Ok(1),
             0b_1110_0000..=0b_1110_1111 => Ok(2),
-            0b_1111_0000..=0b_1111_0111 => Ok(3),
+            0b_1111_0000..=0b_1111_0100 => Ok(3),
                          _              => unreachable!(),
+        });
+    }
+
+    for c in 0..256 {
+        assert_eq!((c as u8).extra_utf8_bytes_unchecked(), match c {
+            0b_0000_0000..=0b_0111_1111 => 0,
+            0b_1100_0000..=0b_1101_1111 => 1,
+            0b_1110_0000..=0b_1110_1111 => 2,
+            0b_1111_0000..=0b_1111_0111 => 3,
+            0b_1000_0000..=0b_1011_1111 => 0,
+            0b_1111_1111 => 7,
+            _ => continue,
         });
     }
 }
@@ -109,8 +123,6 @@ fn kind<T>(result: Result<T,Utf8Error>) -> Result<T,Utf8ErrorKind> {
     let overlongs = [
         [0xf0,0x8f], [0xf0,0x87], [0xf0,0x80], // 4-byte
         [0xe0,0x9f], [0xe0,0x8f], [0xe0,0x80], // 3-byte
-        [0xc1,0xbf], [0xc1,0x92], [0xc1,0x80], // 2-byte
-        [0xc0,0xbf], [0xc0,0x9f], [0xc0,0x80], // 2-byte
     ];
     for o in overlongs.iter() {
         for &last in &[0x80, 0xbf] {
@@ -119,6 +131,20 @@ fn kind<T>(result: Result<T,Utf8Error>) -> Result<T,Utf8ErrorKind> {
             assert_eq!(kind(char::from_utf8_array(arr)), Err(OverlongEncoding));
             assert_eq!(kind(Utf8Char::from_slice_start(&arr)), Err(OverlongEncoding));
             assert_eq!(kind(Utf8Char::from_array(arr)), Err(OverlongEncoding));
+        }
+    }
+
+    let non_utf8 = [
+        [0xc1,0xbf], [0xc1,0x92], [0xc1,0x80], // 2-byte
+        [0xc0,0xbf], [0xc0,0x9f], [0xc0,0x80], // 2-byte
+    ];
+    for non in non_utf8.iter() {
+        for &last in &[0x80, 0xbf] {
+            let arr = [non[0], non[1], last, last];
+            assert_eq!(kind(char::from_utf8_slice_start(&arr)), Err(NonUtf8Byte));
+            assert_eq!(kind(char::from_utf8_array(arr)), Err(NonUtf8Byte));
+            assert_eq!(kind(Utf8Char::from_slice_start(&arr)), Err(NonUtf8Byte));
+            assert_eq!(kind(Utf8Char::from_array(arr)), Err(NonUtf8Byte));
         }
     }
 }
@@ -134,10 +160,15 @@ fn kind<T>(result: Result<T,Utf8Error>) -> Result<T,Utf8ErrorKind> {
     assert_eq!(kind(Utf8Char::from_slice_start(&[0xf4, 0x90, 0x80, 0x80])), Err(TooHighCodepoint));
     assert_eq!(kind(char::from_utf8_slice_start(&[0xf4, 0x90, 0x80, 0x80])), Err(TooHighCodepoint));
 
-    assert_eq!(kind(Utf8Char::from_array([0xf5, 0x88, 0x99, 0xaa])), Err(TooHighCodepoint));
-    assert_eq!(kind(char::from_utf8_array([0xf5, 0xaa, 0xbb, 0x88])), Err(TooHighCodepoint));
-    assert_eq!(kind(Utf8Char::from_slice_start(&[0xf5, 0x99, 0xaa, 0xbb])), Err(TooHighCodepoint));
-    assert_eq!(kind(char::from_utf8_slice_start(&[0xf5, 0xbb, 0x88, 0x99])), Err(TooHighCodepoint));
+    assert_eq!(kind(Utf8Char::from_array([0xf4, 0xa4, 0xb0, 0x9f])), Err(TooHighCodepoint));
+    assert_eq!(kind(char::from_utf8_array([0xf4, 0xa4, 0xb0, 0x9f])), Err(TooHighCodepoint));
+    assert_eq!(kind(Utf8Char::from_slice_start(&[0xf4, 0xa4, 0xb0, 0x9f])), Err(TooHighCodepoint));
+    assert_eq!(kind(char::from_utf8_slice_start(&[0xf4, 0xa4, 0xb8, 0x9f])), Err(TooHighCodepoint));
+
+    assert_eq!(kind(Utf8Char::from_array([0xf5, 0x88, 0x99, 0xaa])), Err(NonUtf8Byte));
+    assert_eq!(kind(char::from_utf8_array([0xf5, 0xaa, 0xbb, 0x88])), Err(NonUtf8Byte));
+    assert_eq!(kind(Utf8Char::from_slice_start(&[0xf5, 0x99, 0xaa, 0xbb])), Err(NonUtf8Byte));
+    assert_eq!(kind(char::from_utf8_slice_start(&[0xf5, 0xbb, 0x88, 0x99])), Err(NonUtf8Byte));
 }
 
 #[test] fn utf8_codepoint_is_utf16_reserved() {
