@@ -52,6 +52,8 @@ not require a newer Rust version than 1.63.
     clippy::wrong_self_convention,// smaller than pointer
     clippy::needless_range_loop,// the suggested iterator chains are less intuitive
     clippy::identity_op,// applying a set of opereations with varying arguments to many elements looks nice
+    clippy::get_first,// .get(0), .get(1) is more readable
+    clippy::question_mark,// I prefer it very explicit
 )]
 #![warn(clippy::doc_markdown, clippy::manual_filter_map)]
 // opt-in lints that might be interesting to recheck once in a while:
