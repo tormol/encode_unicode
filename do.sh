@@ -24,7 +24,8 @@ fi
 # check all feature combinations
 if [[ -z $1 || $1 == check ]]; then
     cargo check --examples --tests --no-default-features
-    cargo check --examples --tests
+    cargo check --examples --tests --no-default-features --features std
+    cargo check --examples --tests --no-default-features --features ascii
     cargo check --examples --tests --all-features
 fi
 
@@ -65,7 +66,9 @@ fi
 # benchmarks, nightly
 if [[ -z $1 || $1 == bench ]]; then
     cargo +nightly check --benches --no-default-features
-    cargo +nightly check --benches
+    cargo +nightly check --benches --no-default-features --features std
+    cargo +nightly check --benches --no-default-features --features ascii
+    cargo +nightly check --benches --all-features
     # need nocapture to not hide error if setup fails
     exec cargo +nightly bench --all-features -- --nocapture
 fi

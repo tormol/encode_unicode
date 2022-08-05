@@ -18,9 +18,10 @@ task:
   info_script:
     - rustc --version
   check_script:
-    - cargo check --tests --examples --no-default-features
-    - cargo check --tests --examples
-    - cargo build --tests --examples --features ascii
+    - cargo check --examples --tests --no-default-features
+    - cargo check --examples --tests --no-default-features --features std
+    - cargo check --examples --tests --no-default-features --features ascii
+    - cargo build --examples --tests --all-features
     - cargo clippy --tests --examples --all-features
   test_script:
     - cargo test --all-features --no-fail-fast -- --test-threads=1
@@ -52,7 +53,8 @@ task:
     # Tests and examples don't need to work at MSRV anyway.
     - sed -i 's/"^/"~/' Cargo.toml
     - cargo check --no-default-features
-    - cargo check
+    - cargo check --no-default-features --features std
+    - cargo check --no-default-features --features ascii
     - cargo check --all-features
   before_cache_script:
     - rm -rf $HOME/.cargo/registry/index
@@ -74,8 +76,9 @@ task:
     - rustc --version
   check_script:
     - cargo check --benches --no-default-features
-    - cargo check --benches
-    - cargo check --benches --all-features
+    - cargo check --benches --no-default-features --features std
+    - cargo check --benches --no-default-features --features ascii
+    - cargo build --benches --all-features
     - cargo fuzz build
     # fuzz supports feature selection,
     # but --no-default-features doesn't seem to have any effect.
