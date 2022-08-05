@@ -6,6 +6,9 @@
  * copied, modified, or distributed except according to those terms.
  */
 
+// Run with -- --nocapture to show error messages if setup fails.
+// (or use ./do.sh)
+
 #![cfg(feature="std")]
 #![feature(test)]
 extern crate test;

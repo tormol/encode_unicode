@@ -32,16 +32,13 @@ fn read(file: &mut dyn Read) -> (Distribution, Option<io::Error>) {
         };
         r.bytes += read;
         for (o, &b) in buf[..read].iter().enumerate() {
-            match b.extra_utf8_bytes() {
-                Ok(i) => {
-                    r.utf8[i] += 1;
-                    if i == 3 {
-                        let min = o.saturating_sub(20);
-                        let max = if o+23 <= read {o+23} else {read};
-                        println!("{}", String::from_utf8_lossy(&buf[min..max]));
-                    }
-                },
-                Err(_) => {}
+            if let Ok(i) = b.extra_utf8_bytes() {
+                r.utf8[i] += 1;
+                if i == 3 {
+                    let min = o.saturating_sub(20);
+                    let max = if o+23 <= read {o+23} else {read};
+                    println!("{}", String::from_utf8_lossy(&buf[min..max]));
+                }
             }
         }
     }

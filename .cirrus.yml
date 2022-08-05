@@ -18,9 +18,10 @@ task:
   info_script:
     - rustc --version
   check_script:
-    - cargo build --no-default-features
-    - cargo build --all
-    - cargo build --all --features ascii
+    - cargo check --tests --examples --no-default-features
+    - cargo check --tests --examples
+    - cargo build --tests --examples --features ascii
+    - cargo clippy --tests --examples --all-features
   test_script:
     - cargo test --all-features --no-fail-fast -- --test-threads=1
   before_cache_script:
@@ -44,9 +45,12 @@ task:
   info_script:
     - rustc --version
   build_script:
-    - cargo build --all-features
+    # feel free to stop checking tests and examples at MSRV
+    - cargo check --no-default-features
+    - cargo check --examples --tests
+    - cargo build --all-features --examples --tests
   test_script:
-    - cargo test --all-features --no-fail-fast -- --test-threads=1
+    - cargo test --no-fail-fast -- --test-threads=1
   before_cache_script:
     - rm -rf $HOME/.cargo/registry/index
 
@@ -66,7 +70,11 @@ task:
   info_script:
     - rustc --version
   check_script:
-    - cargo check --all --benches --all-features
-    - cargo fuzz build --all-features
+    - cargo check --benches --no-default-features
+    - cargo check --benches
+    - cargo check --benches --all-features
+    - cargo fuzz build
+    # fuzz supports feature selection,
+    # but --no-default-features doesn't seem to have any effect.
   before_cache_script:
     - rm -rf $HOME/.cargo/registry/index

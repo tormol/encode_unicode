@@ -9,6 +9,7 @@
 //! Test that every method gives the correct result for valid values.
 //! Except iterators, which are stateful.
 
+#![cfg(feature="std")]
 #![allow(
     clippy::eq_op, // testing the comparison
 )]

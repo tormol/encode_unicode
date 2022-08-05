@@ -6,6 +6,9 @@
  * copied, modified, or distributed except according to those terms.
  */
 
+// Run with -- --nocapture to show error messages if setup fails.
+// (or use ./do.sh)
+
 // uses /usr/share/dict/ for text to convert to Vec<Utf*Char> and iterate over
 #![cfg(all(unix, feature="std"))]
 #![feature(test)]
