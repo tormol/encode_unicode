@@ -15,9 +15,27 @@ use test::{Bencher, black_box};
 extern crate encode_unicode;
 use encode_unicode::{CharExt, Utf8Char, Utf16Char, IterExt};
 
-static ENGLISH: &str = include_str!("/usr/share/dict/american-english");
-// TODO find a big chinese file; `aptitude search '?provides(wordlist)'` didn't have one
+fn read_or_exit(file: &str) -> String {
+    let mut fd = std::fs::File::open(file).unwrap_or_else(|err| {
+        if err.kind() == std::io::ErrorKind::NotFound {
+            eprintln!("{} not found, skipping benchmarks.", file);
+            std::process::exit(0);
+        } else {
+            eprintln!("Failed to open {}: {}.", file, err);
+            std::process::exit(1);
+        }
+    });
+    let mut content = String::new();
+    std::io::Read::read_to_string(&mut fd, &mut content).unwrap_or_else(|err| {
+        eprintln!("Failed to read {}: {}.", file, err);
+        std::process::exit(1);
+    });
+    content
+}
+
 lazy_static!{
+    // TODO find a big chinese file; `aptitude search '?provides(wordlist)'` didn't have one
+    static ref ENGLISH: String = read_or_exit("/usr/share/dict/american-english");
     static ref UTF8CHARS: Vec<Utf8Char> = ENGLISH.chars().map(|c| c.to_utf8() ).collect();
     static ref UTF16CHARS: Vec<Utf16Char> = ENGLISH.chars().map(|c| c.to_utf16() ).collect();
 }
