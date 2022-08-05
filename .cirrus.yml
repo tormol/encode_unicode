@@ -45,12 +45,15 @@ task:
   info_script:
     - rustc --version
   build_script:
-    # feel free to stop checking tests and examples at MSRV
+    # Lock to the specified minor versions of dependencies
+    # to test that they work with our MSRV.
+    # But that doesn't cover recursive dependencies,
+    # so avoid checking examples and tests because they build dev dependencies.
+    # Tests and examples don't need to work at MSRV anyway.
+    - sed -i 's/"^/"~/' Cargo.toml
     - cargo check --no-default-features
-    - cargo check --examples --tests
-    - cargo build --all-features --examples --tests
-  test_script:
-    - cargo test --no-fail-fast -- --test-threads=1
+    - cargo check
+    - cargo check --all-features
   before_cache_script:
     - rm -rf $HOME/.cargo/registry/index
 
