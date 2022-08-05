@@ -157,7 +157,7 @@ fn utf8char_len(language: &str,  b: &mut Bencher) {
 }
 #[bench] fn utf8char_len_ascii(b: &mut Bencher) {utf8char_len("ascii", b)}
 #[bench] fn utf8char_len_en(b: &mut Bencher) {utf8char_len("en", b)}
-#[bench] fn utf8char_len_es(b: &mut Bencher) {utf8char_len("en", b)}
+#[bench] fn utf8char_len_es(b: &mut Bencher) {utf8char_len("es", b)}
 #[bench] fn utf8char_len_ru(b: &mut Bencher) {utf8char_len("ru", b)}
 #[bench] fn utf8char_len_zh(b: &mut Bencher) {utf8char_len("zh", b)}
 
@@ -240,7 +240,7 @@ fn utf16_is_leading_surrogate(language: &str,  b: &mut Bencher) {
 }
 #[bench] fn utf16_is_leading_surrogate_ascii(b: &mut Bencher) {utf16_is_leading_surrogate("ascii", b)}
 #[bench] fn utf16_is_leading_surrogate_en(b: &mut Bencher) {utf16_is_leading_surrogate("en", b)}
-#[bench] fn utf16_is_leading_surrogate_es(b: &mut Bencher) {utf16_is_leading_surrogate("en", b)}
+#[bench] fn utf16_is_leading_surrogate_es(b: &mut Bencher) {utf16_is_leading_surrogate("es", b)}
 #[bench] fn utf16_is_leading_surrogate_ru(b: &mut Bencher) {utf16_is_leading_surrogate("ru", b)}
 #[bench] fn utf16_is_leading_surrogate_zh(b: &mut Bencher) {utf16_is_leading_surrogate("zh", b)}
 
@@ -266,6 +266,6 @@ fn utf16_needs_extra_unit(language: &str,  b: &mut Bencher) {
 }
 #[bench] fn utf16_needs_extra_unit_ascii(b: &mut Bencher) {utf16_needs_extra_unit("ascii", b)}
 #[bench] fn utf16_needs_extra_unit_en(b: &mut Bencher) {utf16_needs_extra_unit("en", b)}
-#[bench] fn utf16_needs_extra_unit_es(b: &mut Bencher) {utf16_needs_extra_unit("en", b)}
+#[bench] fn utf16_needs_extra_unit_es(b: &mut Bencher) {utf16_needs_extra_unit("es", b)}
 #[bench] fn utf16_needs_extra_unit_ru(b: &mut Bencher) {utf16_needs_extra_unit("ru", b)}
 #[bench] fn utf16_needs_extra_unit_zh(b: &mut Bencher) {utf16_needs_extra_unit("zh", b)}
