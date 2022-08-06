@@ -56,6 +56,12 @@ submitted for inclusion in the work by you, as defined in the Apache-2.0
 license, shall be dual licensed as above, without any additional terms or
 conditions.
 
+## Developing
+
+`do.sh` can be used to check all feature combinations, test everything, show output from benchmarks in case setup fails, run fuzz tests for a while and lint everything (except fuzz tests).  
+It assumes [rustup](https://rustup.rs) is installed and that [`cargo +release`](https://rust-lang.github.io/rustup/concepts/index.html#how-rustup-works) works.  
+(It is named the way it is to autocomplete fully from the first character after `./`.)
+
 ## History
 
 The original purpose of this crate was to provide standins for the then
