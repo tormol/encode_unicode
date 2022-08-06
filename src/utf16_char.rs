@@ -513,11 +513,27 @@ impl Utf16Char {
     pub const unsafe fn from_array_unchecked(units: [u16; 2]) -> Self {
         Utf16Char { units }
     }
+    pub(crate) const fn validate_tuple(utf16: (u16,Option<u16>)) -> Result<(),InvalidUtf16Tuple> {
+        use crate::errors::InvalidUtf16Tuple::*;
+        match utf16 {
+            (0x00_00..=0xd7_ff, None) | // single
+            (0xe0_00..=0xff_ff, None) | // single
+            (0xd8_00..=0xdb_ff, Some(0xdc_00..=0xdf_ff)) // correct surrogate
+                => Ok(()),
+            (0xd8_00..=0xdb_ff, Some(_)) => Err(SecondIsNotTrailingSurrogate),
+            (0xd8_00..=0xdb_ff, None   ) => Err(MissingSecond),
+            (0xdc_00..=0xdf_ff,    _   ) => Err(FirstIsTrailingSurrogate),
+            (        _        , Some(_)) => Err(SuperfluousSecond),
+        }
+    }
     /// Validate and store a UTF-16 pair as returned from `char.to_utf16_tuple()`.
-    pub fn from_tuple(utf16: (u16,Option<u16>)) -> Result<Self,InvalidUtf16Tuple> {
-        unsafe {char::from_utf16_tuple(utf16).map(|_|
-            Self::from_tuple_unchecked(utf16)
-        )}
+    pub const fn from_tuple(utf16: (u16,Option<u16>)) -> Result<Self,InvalidUtf16Tuple> {
+        unsafe {
+            match Self::validate_tuple(utf16) {
+                Ok(()) => Ok(Self::from_tuple_unchecked(utf16)),
+                Err(e) => Err(e),
+            }
+        }
     }
     /// Create an `Utf16Char` from a tuple as returned from `char.to_utf16_tuple()`.
     ///
@@ -526,8 +542,12 @@ impl Utf16Char {
     /// The units must form a valid codepoint with the second being 0 when a
     /// surrogate pair is not required.
     /// Violating this can easily lead to undefined behavior.
-    pub unsafe fn from_tuple_unchecked(utf16: (u16,Option<u16>)) -> Self {
-        Utf16Char { units: [utf16.0, utf16.1.unwrap_or(0)] }
+    pub const unsafe fn from_tuple_unchecked(utf16: (u16,Option<u16>)) -> Self {
+        let second = match utf16.1 {
+            Some(extra) => extra,
+            None => 0,
+        };
+        Utf16Char { units: [utf16.0, second] }
     }
     /// Create an `Utf16Char` from a single unit.
     ///

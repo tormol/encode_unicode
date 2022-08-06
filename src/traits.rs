@@ -526,17 +526,12 @@ impl CharExt for char {
         }
     }
     fn from_utf16_tuple(utf16: (u16, Option<u16>)) -> Result<Self, InvalidUtf16Tuple> {
-        use crate::errors::InvalidUtf16Tuple::*;
-        unsafe{ match utf16 {
-            (0x00_00..=0xd7_ff, None) | // single
-            (0xe0_00..=0xff_ff, None) | // single
-            (0xd8_00..=0xdb_ff, Some(0xdc_00..=0xdf_ff)) // correct surrogate
-                => Ok(char::from_utf16_tuple_unchecked(utf16)),
-            (0xd8_00..=0xdb_ff, Some(_)) => Err(SecondIsNotTrailingSurrogate),
-            (0xd8_00..=0xdb_ff, None   ) => Err(MissingSecond),
-            (0xdc_00..=0xdf_ff,    _   ) => Err(FirstIsTrailingSurrogate),
-            (        _        , Some(_)) => Err(SuperfluousSecond),
-        }}
+        unsafe {
+            match Utf16Char::validate_tuple(utf16) {
+                Ok(()) => Ok(Self::from_utf16_tuple_unchecked(utf16)),
+                Err(e) => Err(e),
+            }
+        }
     }
 
     fn from_utf16_array_unchecked(utf16: [u16;2]) -> Self {
