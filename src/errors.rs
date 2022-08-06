@@ -100,7 +100,7 @@ simple!{
 use CodepointError::*;
 impl CodepointError {
     /// Get the range of values for which this error would be given.
-    pub fn error_range(self) -> RangeInclusive<u32> {match self {
+    pub const fn error_range(self) -> RangeInclusive<u32> {match self {
         Utf16Reserved => 0xd8_00..=0xdf_ff,
         TooHigh => 0x00_10_ff_ff..=0xff_ff_ff_ff,
     }}
@@ -183,13 +183,13 @@ pub struct Utf8Error {
 }
 impl Utf8Error {
     /// Get the type of error.
-    pub fn kind(&self) -> Utf8ErrorKind {
+    pub const fn kind(&self) -> Utf8ErrorKind {
         self.kind
     }
 
     #[cfg(not(feature="std"))]
     #[allow(missing_docs)]
-    pub fn description(&self) -> &'static str {
+    pub const fn description(&self) -> &'static str {
         utf8_error_description(self.kind)
     }
 }
@@ -286,7 +286,7 @@ pub enum Utf8ErrorKind {
     /// unicode permits.
     TooHighCodepoint,
 }
-fn utf8_error_description(kind: Utf8ErrorKind) -> &'static str {
+const fn utf8_error_description(kind: Utf8ErrorKind) -> &'static str {
     match kind {
         Utf8ErrorKind::TooFewBytes => "too few bytes",
         Utf8ErrorKind::NonUtf8Byte => "not UTF-8",
