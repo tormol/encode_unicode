@@ -9,7 +9,7 @@ if [[ ${1:0:1} == - || $1 == help ]] || (( $# > 1 )); then
     echo "A script to make it easy to check & lint & test everything." >&2
     echo "It assumes rustup is installed and that cargo +release works." >&2
     echo >&2
-    echo "Usage: $0 ([setup|MSRV|check|test|ignored|clippy|fuzz|bench|shellcheck|help])" >&2
+    echo "Usage: $0 ([setup|MSRV|check|test|ignored|clippy|miri|fuzz|bench|shellcheck|help])" >&2
     echo "If no argument is provided, all parts except ignored and help are run," >&2
     echo "but setup is only done if auto-detection fails." >&2
     exit 1
@@ -53,6 +53,15 @@ if [[ $1 == setup ]] || ! cargo +nightly help clippy >/dev/null 2>/dev/null; the
 fi
 if [[ -z $1 || $1 == clippy ]]; then
     cargo +nightly clippy --all-features --tests --benches --examples
+fi
+
+# miri, nightly
+if [[ $1 == setup ]] || ! cargo +nightly help miri >/dev/null 2>/dev/null; then
+    rustup component add miri --toolchain nightly
+    cargo +nightly miri setup
+fi
+if [[ -z $1 || $1 == miri ]]; then
+    cargo +nightly miri test --all-features -- --quiet
 fi
 
 # fuzzing tests, nightly

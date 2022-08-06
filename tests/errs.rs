@@ -67,7 +67,9 @@ fn kind<T>(result: Result<T,Utf8Error>) -> Result<T,Utf8ErrorKind> {
     }
 }
 
-#[test] fn utf16_extra_unit() {
+#[test]
+#[cfg_attr(miri, ignore)]
+fn utf16_extra_unit() {
     for c in 0..0x1_00_00 {
         assert_eq!( (c as u16).utf16_needs_extra_unit(), match c {
             0b_0000_0000_0000_0000..=0b_1101_0111_1111_1111 => Ok(false),
@@ -80,7 +82,9 @@ fn kind<T>(result: Result<T,Utf8Error>) -> Result<T,Utf8ErrorKind> {
 }
 
 
-#[test] fn from_utf16_tuple() {
+#[test]
+#[cfg_attr(miri, ignore)]
+fn from_utf16_tuple() {
     use encode_unicode::error::InvalidUtf16Tuple::*;
     for u in 0xdc00..0xe000 {
         let close = if u%3==0 {u-100} else {u+100};

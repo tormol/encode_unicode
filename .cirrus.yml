@@ -72,6 +72,7 @@ task:
   # rustc version is so likely to have changed that build artefacts are not worth caching
   setup_script:
     - cargo install cargo-fuzz
+    - rustup component add miri
   info_script:
     - rustc --version
   check_script:
@@ -81,6 +82,9 @@ task:
     - cargo build --benches --all-features
     - cargo fuzz build
     # fuzz supports feature selection,
-    # but --no-default-features doesn't seem to have any effect.
+    # but --no-default-features doesn't seem to have any effect
+  test_script:
+    # the doc tets are fast and should cover a lot of code
+    - cargo miri test --all-features --doc -- --test-threads=1
   before_cache_script:
     - rm -rf $HOME/.cargo/registry/index

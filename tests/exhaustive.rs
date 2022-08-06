@@ -24,6 +24,7 @@ fn from_ascii() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)]
 fn from_bmp() {
     for cp in 0u32..0x1_00_00 {
         assert_eq!(
