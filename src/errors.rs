@@ -7,7 +7,10 @@
  */
 
 
-//! Boilerplatey error types
+//! Boilerplate-y error types.
+//!
+//! The discriminant values of the enums might change in minor releases.
+//! (to reduce the size of the `Result<>` types they are returned in)
 
 extern crate core;
 use core::fmt::{self,Display,Formatter};
@@ -48,26 +51,27 @@ macro_rules! single_cause {($(#[$doc:meta])* $err:ident => $desc:expr) => {
 
 
 single_cause!{
-    /// Cannot tell whether an `u16` needs an extra unit,
-    /// because it's a trailing surrogate itself.
+    /// Error returned by [`U16UtfExt::utf16_needs_extra_unit()`](../trait.U16UtfExt.html#tymethod.utf16_needs_extra_unit)
+    /// when called on an `u16` that's a trailing surrogate.
     InvalidUtf16FirstUnit => "is a trailing surrogate"
 }
 
 single_cause!{
-    /// Error returned by [`Utf8Char::from_ascii()`](struct.Utf8Char.html#method.from_ascii)
+    /// Error returned by [`Utf8Char::from_ascii()`](../struct.Utf8Char.html#method.from_ascii)
     /// for bytes that are not ASCII characters.
     NonAsciiError => "not an ASCII character"
 }
 
 single_cause!{
-    /// Error returned by [`Utf16Char::from_bmp()`](struct.Utf16Char#method.from_bmp)
+    /// Error returned by [`Utf16Char::from_bmp()`](../struct.Utf16Char.html#method.from_bmp)
     /// for units that are not a standalone codepoint.
     NonBmpError => "not a codepoint in the basic multilingual plane"
 }
 
 single_cause!{
-    /// Cannot create an `Utf8Char` or `Utf16Char` from the first codepoint of a str,
-    /// because there are none.
+    /// Error returned by [`Utf8Char::from_str_start()`](../struct.Utf8Char.html#method.from_str_start)
+    /// and [`Utf16Char::from_str_start()`](../struct.Utf16Char.html#method.from_str_start)
+    /// when called with an empty string.
     EmptyStrError => "is empty"
 }
 
@@ -86,7 +90,7 @@ macro_rules! simple {($(#[$tydoc:meta])* $err:ident {
 
 
 simple!{
-    /// Reasons why an `u32` is not a valid unicode codepoint. The enum values are not stable
+    /// Error returned when an `u32` is not a valid unicode codepoint.
     CodepointError {
         /// It's reserved for UTF-16 surrogate pairs.
         Utf16Reserved => "is reserved for UTF-16 surrogate pairs",
@@ -103,7 +107,8 @@ impl CodepointError {
 }
 
 
-simple!{/// Reasons why a `[u16; 2]` doesn't form a valid UTF-16 codepoint.
+simple!{
+    /// Error returned when an `[u16; 2]` doesn't form a valid UTF-16 codepoint.
     InvalidUtf16Array {
         /// The first element is a trailing / low surrogate, which is never valid.
         FirstIsTrailingSurrogate => "the first element is a trailing surrogate",
@@ -111,11 +116,16 @@ simple!{/// Reasons why a `[u16; 2]` doesn't form a valid UTF-16 codepoint.
         SecondIsNotTrailingSurrogate => "the second element is needed but is not a trailing surrogate",
     }}
 
-simple!{/// Reasons why one or two `u16`s are not valid UTF-16, in sinking precedence.
+simple!{
+    /// Error returned when one or two `u16`s are not valid UTF-16.
+    ///
+    /// They are returned in sinking precedence;
+    /// The condition that causes the first variant to be returned is checked
+    /// for before the condition the next variant is returned for.
     InvalidUtf16Tuple {
         /// The first unit is a trailing / low surrogate, which is never valid.
         FirstIsTrailingSurrogate => "the first unit is a trailing surrogate",
-        /// The provided second elemented is not necessary.
+        /// The provided second unit is not necessary.
         SuperfluousSecond => "the second unit is superfluous",
         /// The first and only unit requires a second unit.
         MissingSecond => "the first unit requires a second unit",
@@ -124,7 +134,8 @@ simple!{/// Reasons why one or two `u16`s are not valid UTF-16, in sinking prece
     }}
 
 
-simple!{/// Reasons why a slice of `u16`s doesn't start with valid UTF-16.
+simple!{
+    /// Error returned when a slice of `u16`s doesn't start with valid UTF-16.
     InvalidUtf16Slice {
         /// The slice is empty.
         EmptySlice => "the slice is empty",
@@ -136,7 +147,9 @@ simple!{/// Reasons why a slice of `u16`s doesn't start with valid UTF-16.
         SecondIsNotTrailingSurrogate => "the required second unit is not a trailing surrogate",
     }}
 
-simple!{/// Types of invalid sequences encountered by `Utf16CharDecoder`.
+simple!{
+    /// Error returned by [`Utf16CharDecoder`](../iterator/struct.Utf16CharMerger.html#impl-Iterator)
+    /// when it encounters an invalid sequence.
     Utf16PairError {
         /// A trailing surrogate was not preceeded by a leading surrogate.
         UnexpectedTrailingSurrogate => "a trailing surrogate was not preceeded by a leading surrogate",
@@ -147,18 +160,20 @@ simple!{/// Types of invalid sequences encountered by `Utf16CharDecoder`.
     }}
 
 
-simple!{/// Reasons why `Utf8Char::from_str()` or `Utf16Char::from_str()` failed.
+simple!{
+    /// Error returned when [`Utf8Char::from_str()`](../struct.Utf8Char.html#impl-FromStr)
+    /// or [`Utf16Char::from_str()`](../struct.Utf16Char.html#impl-FromStr) fails.
     FromStrError {
         /// `Utf8Char` and `Utf16Char` cannot store more than a single codepoint.
-        MultipleCodepoints => "Contains more than one codepoint",
+        MultipleCodepoints => "contains more than one codepoint",
         /// `Utf8Char` and `Utf16Char` cannot be empty.
-        Empty => "Is empty",
+        Empty => "is empty",
     }
 }
 
 
 
-/// Error returned when an invalid UTF-8 sequence is encountererd.
+/// Error returned when an invalid UTF-8 sequence is encountered.
 ///
 /// See [`Utf8ErrorKind`](enum.Utf8ErrorKind.html) for the types of errors
 /// that this type can be returned for.
@@ -273,13 +288,13 @@ pub enum Utf8ErrorKind {
 }
 fn utf8_error_description(kind: Utf8ErrorKind) -> &'static str {
     match kind {
-        Utf8ErrorKind::TooFewBytes => "Too few bytes",
-        Utf8ErrorKind::NonUtf8Byte => "Not UTF-8",
-        Utf8ErrorKind::UnexpectedContinuationByte => "Not UTF-8",
-        Utf8ErrorKind::InterruptedSequence => "Not UTF-8",
-        Utf8ErrorKind::OverlongEncoding => "Malformed input",
-        Utf8ErrorKind::Utf16ReservedCodepoint => "Malformed input",
-        Utf8ErrorKind::TooHighCodepoint => "Invalid character",
+        Utf8ErrorKind::TooFewBytes => "too few bytes",
+        Utf8ErrorKind::NonUtf8Byte => "not UTF-8",
+        Utf8ErrorKind::UnexpectedContinuationByte => "not UTF-8",
+        Utf8ErrorKind::InterruptedSequence => "not UTF-8",
+        Utf8ErrorKind::OverlongEncoding => "malformed input",
+        Utf8ErrorKind::Utf16ReservedCodepoint => "malformed input",
+        Utf8ErrorKind::TooHighCodepoint => "invalid character",
     }
 }
 impl PartialEq<Utf8ErrorKind> for Utf8Error {
