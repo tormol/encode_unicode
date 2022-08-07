@@ -124,7 +124,7 @@ pub trait U16UtfExt {
     ///
     /// Returns `Err` for trailing surrogates, `Ok(true)` for leading surrogates,
     /// and `Ok(false)` for others.
-    fn utf16_needs_extra_unit(self) -> Result<bool,InvalidUtf16FirstUnit>;
+    fn utf16_needs_extra_unit(self) -> Result<bool,Utf16FirstUnitError>;
 
     /// Does this `u16` need another `u16` to complete a codepoint?
     /// Returns `(self & 0xfc00) == 0xd800`
@@ -134,12 +134,12 @@ pub trait U16UtfExt {
 }
 impl U16UtfExt for u16 {
     #[inline]
-    fn utf16_needs_extra_unit(self) -> Result<bool,InvalidUtf16FirstUnit> {
+    fn utf16_needs_extra_unit(self) -> Result<bool,Utf16FirstUnitError> {
         match self {
             // https://en.wikipedia.org/wiki/UTF-16#U.2B10000_to_U.2B10FFFF
             0x00_00..=0xd7_ff | 0xe0_00..=0xff_ff => Ok(false),
             0xd8_00..=0xdb_ff => Ok(true),
-                    _         => Err(InvalidUtf16FirstUnit)
+                    _         => Err(Utf16FirstUnitError)
         }
     }
     #[inline]
@@ -245,7 +245,7 @@ pub trait CharExt: Sized {
     /// and also return how many units were used.
     ///
     /// If you want to continue after an error, continue with the next `u16` unit.
-    fn from_utf16_slice_start(src: &[u16]) -> Result<(Self,usize), InvalidUtf16Slice>;
+    fn from_utf16_slice_start(src: &[u16]) -> Result<(Self,usize), Utf16SliceError>;
 
 
     /// Convert an UTF-8 sequence as returned from `.to_utf8_array()` into a `char`
@@ -282,19 +282,19 @@ pub trait CharExt: Sized {
     ///
     /// ```
     /// use encode_unicode::CharExt;
-    /// use encode_unicode::error::InvalidUtf16Array;
+    /// use encode_unicode::error::Utf16ArrayError;
     ///
     /// assert_eq!(char::from_utf16_array(['x' as u16, 'y' as u16]), Ok('x'));
     /// assert_eq!(char::from_utf16_array(['睷' as u16, 0]), Ok('睷'));
     /// assert_eq!(char::from_utf16_array([0xda6f, 0xdcde]), Ok('\u{abcde}'));
     /// assert_eq!(char::from_utf16_array([0xf111, 0xdbad]), Ok('\u{f111}'));
-    /// assert_eq!(char::from_utf16_array([0xdaaf, 0xdaaf]), Err(InvalidUtf16Array::SecondIsNotTrailingSurrogate));
-    /// assert_eq!(char::from_utf16_array([0xdcac, 0x9000]), Err(InvalidUtf16Array::FirstIsTrailingSurrogate));
+    /// assert_eq!(char::from_utf16_array([0xdaaf, 0xdaaf]), Err(Utf16ArrayError::SecondIsNotTrailingSurrogate));
+    /// assert_eq!(char::from_utf16_array([0xdcac, 0x9000]), Err(Utf16ArrayError::FirstIsTrailingSurrogate));
     /// ```
-    fn from_utf16_array(utf16: [u16; 2]) -> Result<Self, InvalidUtf16Array>;
+    fn from_utf16_array(utf16: [u16; 2]) -> Result<Self, Utf16ArrayError>;
 
     /// Convert a UTF-16 pair as returned from `.to_utf16_tuple()` into a `char`.
-    fn from_utf16_tuple(utf16: (u16, Option<u16>)) -> Result<Self, InvalidUtf16Tuple>;
+    fn from_utf16_tuple(utf16: (u16, Option<u16>)) -> Result<Self, Utf16TupleError>;
 
 
     /// Convert an UTF-8 sequence into a char.
@@ -497,8 +497,8 @@ impl CharExt for char {
     }
 
 
-    fn from_utf16_slice_start(src: &[u16]) -> Result<(Self,usize), InvalidUtf16Slice> {
-        use crate::errors::InvalidUtf16Slice::*;
+    fn from_utf16_slice_start(src: &[u16]) -> Result<(Self,usize), Utf16SliceError> {
+        use crate::errors::Utf16SliceError::*;
         unsafe {match (src.get(0), src.get(1)) {
             (Some(&u @ 0x00_00..=0xd7_ff), _) |
             (Some(&u @ 0xe0_00..=0xff_ff), _)
@@ -512,8 +512,8 @@ impl CharExt for char {
         }}
     }
 
-    fn from_utf16_array(utf16: [u16;2]) -> Result<Self, InvalidUtf16Array> {
-        use crate::errors::InvalidUtf16Array::*;
+    fn from_utf16_array(utf16: [u16;2]) -> Result<Self, Utf16ArrayError> {
+        use crate::errors::Utf16ArrayError::*;
         if let Some(c) = char::from_u32(utf16[0] as u32) {
             Ok(c) // single
         } else if utf16[0] < 0xdc_00  &&  utf16[1] & 0xfc_00 == 0xdc_00 {
@@ -525,7 +525,7 @@ impl CharExt for char {
             Err(FirstIsTrailingSurrogate)
         }
     }
-    fn from_utf16_tuple(utf16: (u16, Option<u16>)) -> Result<Self, InvalidUtf16Tuple> {
+    fn from_utf16_tuple(utf16: (u16, Option<u16>)) -> Result<Self, Utf16TupleError> {
         unsafe {
             match Utf16Char::validate_tuple(utf16) {
                 Ok(()) => Ok(Self::from_utf16_tuple_unchecked(utf16)),

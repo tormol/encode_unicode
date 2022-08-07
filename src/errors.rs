@@ -53,7 +53,7 @@ macro_rules! single_cause {($(#[$doc:meta])* $err:ident => $desc:expr) => {
 single_cause!{
     /// Error returned by [`U16UtfExt::utf16_needs_extra_unit()`](../trait.U16UtfExt.html#tymethod.utf16_needs_extra_unit)
     /// when called on an `u16` that's a trailing surrogate.
-    InvalidUtf16FirstUnit => "is a trailing surrogate"
+    Utf16FirstUnitError => "is a trailing surrogate"
 }
 
 single_cause!{
@@ -109,7 +109,7 @@ impl CodepointError {
 
 simple!{
     /// Error returned when an `[u16; 2]` doesn't form a valid UTF-16 codepoint.
-    InvalidUtf16Array {
+    Utf16ArrayError {
         /// The first element is a trailing / low surrogate, which is never valid.
         FirstIsTrailingSurrogate => "the first element is a trailing surrogate",
         /// The second element is needed, but is not a trailing surrogate.
@@ -122,7 +122,7 @@ simple!{
     /// They are returned in sinking precedence;
     /// The condition that causes the first variant to be returned is checked
     /// for before the condition the next variant is returned for.
-    InvalidUtf16Tuple {
+    Utf16TupleError {
         /// The first unit is a trailing / low surrogate, which is never valid.
         FirstIsTrailingSurrogate => "the first unit is a trailing surrogate",
         /// The provided second unit is not necessary.
@@ -136,7 +136,7 @@ simple!{
 
 simple!{
     /// Error returned when a slice of `u16`s doesn't start with valid UTF-16.
-    InvalidUtf16Slice {
+    Utf16SliceError {
         /// The slice is empty.
         EmptySlice => "the slice is empty",
         /// The first unit is a trailing surrogate.

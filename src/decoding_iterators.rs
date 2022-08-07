@@ -14,8 +14,8 @@
 //! well with other adaptors,
 //! while the slice iterators yield both to make more advanced use cases easy.
 
-use crate::errors::{InvalidUtf16FirstUnit, Utf16PairError, Utf8Error};
-use crate::errors::InvalidUtf16Slice::*;
+use crate::errors::{Utf16FirstUnitError, Utf16PairError, Utf8Error};
+use crate::errors::Utf16SliceError::*;
 use crate::errors::Utf16PairError::*;
 use crate::errors::Utf8ErrorKind::*;
 use crate::utf8_char::Utf8Char;
@@ -381,7 +381,7 @@ impl<B:Borrow<u16>, I:Iterator<Item=B>> Iterator for Utf16CharMerger<B,I> {
                 Ok(false) => Ok(Utf16Char::from_array_unchecked([*first.borrow(), 0])),
                 Ok(true) => match self.iter.next() {
                     Some(second) => match second.borrow().utf16_needs_extra_unit() {
-                        Err(InvalidUtf16FirstUnit) => Ok(Utf16Char::from_tuple_unchecked((
+                        Err(Utf16FirstUnitError) => Ok(Utf16Char::from_tuple_unchecked((
                             *first.borrow(),
                             Some(*second.borrow())
                         ))),
@@ -392,7 +392,7 @@ impl<B:Borrow<u16>, I:Iterator<Item=B>> Iterator for Utf16CharMerger<B,I> {
                     },
                     None => Err(Utf16PairError::Incomplete)
                 },
-                Err(InvalidUtf16FirstUnit) => Err(Utf16PairError::UnexpectedTrailingSurrogate),
+                Err(Utf16FirstUnitError) => Err(Utf16PairError::UnexpectedTrailingSurrogate),
             }
         })
     }

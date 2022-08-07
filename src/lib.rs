@@ -76,8 +76,8 @@ pub mod error {// keeping the public interface in one file
     pub use crate::errors::{FromStrError, EmptyStrError};
     pub use crate::errors::{CodepointError, NonAsciiError, NonBmpError};
     pub use crate::errors::{Utf8Error, Utf8ErrorKind};
-    pub use crate::errors::{InvalidUtf16Slice, InvalidUtf16Array, InvalidUtf16Tuple};
-    pub use crate::errors::{InvalidUtf16FirstUnit, Utf16PairError};
+    pub use crate::errors::{Utf16SliceError, Utf16ArrayError, Utf16TupleError};
+    pub use crate::errors::{Utf16FirstUnitError, Utf16PairError};
 }
 
 pub mod iterator {

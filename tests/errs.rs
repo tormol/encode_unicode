@@ -74,7 +74,7 @@ fn utf16_extra_unit() {
         assert_eq!( (c as u16).utf16_needs_extra_unit(), match c {
             0b_0000_0000_0000_0000..=0b_1101_0111_1111_1111 => Ok(false),
             0b_1101_1000_0000_0000..=0b_1101_1011_1111_1111 => Ok(true),
-            0b_1101_1100_0000_0000..=0b_1101_1111_1111_1111 => Err(InvalidUtf16FirstUnit),
+            0b_1101_1100_0000_0000..=0b_1101_1111_1111_1111 => Err(Utf16FirstUnitError),
             0b_1110_0000_0000_0000..=0b_1111_1111_1111_1111 => Ok(false),
                                    _                        => unreachable!(),
         });
@@ -85,7 +85,7 @@ fn utf16_extra_unit() {
 #[test]
 #[cfg_attr(miri, ignore)]
 fn from_utf16_tuple() {
-    use encode_unicode::error::InvalidUtf16Tuple::*;
+    use encode_unicode::error::Utf16TupleError::*;
     for u in 0xdc00..0xe000 {
         let close = if u%3==0 {u-100} else {u+100};
         let doesnt_matter = if u%2==0 {Some(close)} else {None};
@@ -104,7 +104,7 @@ fn from_utf16_tuple() {
 }
 
 #[test] fn from_utf16_slice_start() {
-    use encode_unicode::error::InvalidUtf16Slice::*;
+    use encode_unicode::error::Utf16SliceError::*;
     assert_eq!(char::from_utf16_slice_start(&[]), Err(EmptySlice));
     let mut buf = [0; 6];
     for u in 0xd800..0xdc00 {
