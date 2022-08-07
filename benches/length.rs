@@ -45,8 +45,17 @@ fn load_wikipedia(language: &str,  article: &str,  english: &str,  revision: usi
         },
         Err(e) => panic!("{} exists but cannot be read ({})", path, e),
     }
+    let mut article_ascii = String::new();
+    for c in article.chars() {
+        if c.is_ascii() {
+            article_ascii.push(c);
+        } else {
+            let encoded = format!("%{:2X}", c as u32);
+            article_ascii.push_str(encoded.as_str());
+        }
+    }
     let url = format!("https://{}.m.wikipedia.org/w/index.php?title={}&oldid={}",
-        language, article, revision
+        language, article_ascii, revision
     );
     println!("Downloading {} and saving to {}", &url, path);
     let response = minreq::get(&url).send().unwrap_or_else(|e| {
@@ -70,8 +79,7 @@ const ARTICLES: &[(&str, &str, &str, usize)] = &[
     ("en", "United_Kingdom", "United_Kingdom", 855522252),// 99,7% ASCII
     ("es", "España", "Spain", 109861222),// 1,75% 2-byte characters
     ("ru", "Россия", "Russia", 94607243),// 36% 2-byte characters
-    // Only UCS / bmp characters are allowed unescaped in URLs:
-    ("zh", "%E4%B8%AD%E5%9C%8B", "China", 50868604),// 30% 3-byte characters
+    ("zh", "中國", "China", 50868604),// 30% 3-byte characters
 ];
 lazy_static!{
     static ref STRINGS: HashMap<&'static str, String> = {
