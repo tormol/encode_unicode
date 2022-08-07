@@ -60,7 +60,7 @@ task:
     - rm -rf $HOME/.cargo/registry/index
 
 task:
-  name: nightly check
+  name: nightly
   container:
     image: rustlang/rust:nightly
     cpu: 1
