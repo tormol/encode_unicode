@@ -119,7 +119,10 @@ impl U8UtfExt for u8 {
 
 
 /// Methods for working with `u16`s as UTF-16 units.
-pub trait U16UtfExt {
+///
+/// This trait is marked as unsafe because avoiding undefined behaviour
+/// necessarily depends on it being implemented correctly.
+pub unsafe trait U16UtfExt {
     /// Will you need an extra unit to complete this codepoint?
     ///
     /// Returns `Err` for trailing surrogates, `Ok(true)` for leading surrogates,
@@ -132,7 +135,7 @@ pub trait U16UtfExt {
     /// Is basically an unchecked variant of `utf16_needs_extra_unit()`.
     fn is_utf16_leading_surrogate(self) -> bool;
 }
-impl U16UtfExt for u16 {
+unsafe impl U16UtfExt for u16 {
     #[inline]
     fn utf16_needs_extra_unit(self) -> Result<bool,Utf16FirstUnitError> {
         match self {
