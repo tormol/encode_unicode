@@ -234,7 +234,7 @@ pub struct Utf8CharIndices<'a>{
     index: usize,
 }
 impl<'a> From<&'a str> for Utf8CharIndices<'a> {
-    fn from(s: &str) -> Utf8CharIndices {
+    fn from(s: &str) -> Utf8CharIndices<'_> {
         Utf8CharIndices{str: s, index: 0}
     }
 }
@@ -303,7 +303,7 @@ impl<'a> fmt::Debug for Utf8CharIndices<'a> {
 #[derive(Clone)]
 pub struct Utf8Chars<'a>(Utf8CharIndices<'a>);
 impl<'a> From<&'a str> for Utf8Chars<'a> {
-    fn from(s: &str) -> Utf8Chars {
+    fn from(s: &str) -> Utf8Chars<'_> {
         Utf8Chars(Utf8CharIndices::from(s))
     }
 }

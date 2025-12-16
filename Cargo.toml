@@ -12,6 +12,7 @@ repository = "https://github.com/tormol/encode_unicode"
 documentation = "https://docs.rs/encode_unicode/"
 authors = ["Torbjørn Birch Moltu <t.b.moltu@lyse.net>"]
 edition = "2021"
+include = ["Cargo.toml", "README.md", "LICENSE-MIT", "LICENSE-APACHE", "src/**/*.rs", "RELEASES.md", "AUTHORS.md"]
 
 [dependencies.ascii]
 optional = true

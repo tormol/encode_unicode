@@ -223,7 +223,7 @@ pub struct Utf8CharDecoder<'a> {
     index: usize,
 }
 impl<'a> From<&'a[u8]> for Utf8CharDecoder<'a> {
-    fn from(s: &[u8]) -> Utf8CharDecoder {
+    fn from(s: &[u8]) -> Utf8CharDecoder<'_> {
         Utf8CharDecoder { slice: s, index: 0 }
     }
 }

@@ -605,26 +605,26 @@ fn combine_surrogates(first: u16,  second: u16) -> char {
 /// Adds `.utf8chars()` and `.utf16chars()` iterator constructors to `&str`.
 pub trait StrExt: AsRef<str> {
     /// Equivalent to `.chars()` but produces `Utf8Char`s.
-    fn utf8chars(&self) -> Utf8Chars;
+    fn utf8chars(&self) -> Utf8Chars<'_>;
     /// Equivalent to `.chars()` but produces `Utf16Char`s.
-    fn utf16chars(&self) -> Utf16Chars;
+    fn utf16chars(&self) -> Utf16Chars<'_>;
     /// Equivalent to `.char_indices()` but produces `Utf8Char`s.
-    fn utf8char_indices(&self) -> Utf8CharIndices;
+    fn utf8char_indices(&self) -> Utf8CharIndices<'_>;
     /// Equivalent to `.char_indices()` but produces `Utf16Char`s.
-    fn utf16char_indices(&self) -> Utf16CharIndices;
+    fn utf16char_indices(&self) -> Utf16CharIndices<'_>;
 }
 
 impl StrExt for str {
-    fn utf8chars(&self) -> Utf8Chars {
+    fn utf8chars(&self) -> Utf8Chars<'_> {
         Utf8Chars::from(self)
     }
-    fn utf16chars(&self) -> Utf16Chars {
+    fn utf16chars(&self) -> Utf16Chars<'_> {
         Utf16Chars::from(self)
     }
-    fn utf8char_indices(&self) -> Utf8CharIndices {
+    fn utf8char_indices(&self) -> Utf8CharIndices<'_> {
         Utf8CharIndices::from(self)
     }
-    fn utf16char_indices(&self) -> Utf16CharIndices {
+    fn utf16char_indices(&self) -> Utf16CharIndices<'_> {
         Utf16CharIndices::from(self)
     }
 }
@@ -938,7 +938,7 @@ pub trait SliceExt: Index<RangeFull> {
     ///     (11, Utf8ErrorKind::TooFewBytes), // (but it was not the last element returned!)
     /// ]);
     /// ```
-    fn utf8char_indices(&self) -> Utf8CharDecoder where Self::Output: Borrow<[u8]>;
+    fn utf8char_indices(&self) -> Utf8CharDecoder<'_> where Self::Output: Borrow<[u8]>;
 
 
     /// Decode `u16` slices as UTF-16 and iterate over the codepoints as `Utf16Char`s,
@@ -999,14 +999,14 @@ pub trait SliceExt: Index<RangeFull> {
     /// assert_eq!(iter.next(), None);
     /// assert_eq!(iter.as_slice(), [])
     /// ```
-    fn utf16char_indices(&self) -> Utf16CharDecoder where Self::Output: Borrow<[u16]>;
+    fn utf16char_indices(&self) -> Utf16CharDecoder<'_> where Self::Output: Borrow<[u16]>;
 }
 
 impl<S: ?Sized+Index<RangeFull>> SliceExt for S {
-    fn utf8char_indices(&self) -> Utf8CharDecoder where Self::Output: Borrow<[u8]> {
+    fn utf8char_indices(&self) -> Utf8CharDecoder<'_> where Self::Output: Borrow<[u8]> {
         Utf8CharDecoder::from(self[..].borrow())
     }
-    fn utf16char_indices(&self) -> Utf16CharDecoder where Self::Output: Borrow<[u16]> {
+    fn utf16char_indices(&self) -> Utf16CharDecoder<'_> where Self::Output: Borrow<[u16]> {
         Utf16CharDecoder::from(self[..].borrow())
     }
 }
