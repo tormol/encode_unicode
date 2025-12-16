@@ -155,7 +155,7 @@ pub struct Utf16CharIndices<'a>{
     index: usize,
 }
 impl<'a> From<&'a str> for Utf16CharIndices<'a> {
-    fn from(s: &str) -> Utf16CharIndices {
+    fn from(s: &str) -> Utf16CharIndices<'_> {
         Utf16CharIndices{str: s, index: 0}
     }
 }
@@ -222,7 +222,7 @@ impl<'a> fmt::Debug for Utf16CharIndices<'a> {
 #[derive(Clone)]
 pub struct Utf16Chars<'a>(Utf16CharIndices<'a>);
 impl<'a> From<&'a str> for Utf16Chars<'a> {
-    fn from(s: &str) -> Utf16Chars {
+    fn from(s: &str) -> Utf16Chars<'_> {
         Utf16Chars(Utf16CharIndices::from(s))
     }
 }
